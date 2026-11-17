@@ -319,6 +319,7 @@ public struct SyaiBackend: Sendable {
         request.setValue(deviceId, forHTTPHeaderField: "deviceId")
         request.setValue(unit, forHTTPHeaderField: "unit")
         request.setValue(deviceModel, forHTTPHeaderField: "deviceModel")
+        applyCnForwardHeaders(&request)
     }
 
     /// Header set for the plaintext (CN) transport.
@@ -349,5 +350,17 @@ public struct SyaiBackend: Sendable {
         request.setValue(deviceId, forHTTPHeaderField: "deviceId")
         request.setValue(unit, forHTTPHeaderField: "unit")
         request.setValue(deviceModel, forHTTPHeaderField: "deviceModel")
+        applyCnForwardHeaders(&request)
+    }
+
+    /// The mainland backend only answers requests that look like they come from China.
+    /// xDrip's Ottai driver sends the same four headers on every CN call.
+    static let cnForwardIp = "114.114.114.114"
+
+    private func applyCnForwardHeaders(_ request: inout URLRequest) {
+        guard isOttaiCn else { return }
+        for name in ["X-Forwarded-For", "X-Real-IP", "CF-Connecting-IP", "True-Client-IP"] {
+            request.setValue(Self.cnForwardIp, forHTTPHeaderField: name)
+        }
     }
 }
