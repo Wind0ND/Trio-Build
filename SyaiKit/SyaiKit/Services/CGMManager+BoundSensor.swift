@@ -61,6 +61,10 @@ public extension SyaiCGMManager {
         return nil
     }
 
+    /// Onboarding-only handle on the account lookup, so the pairing screen can
+    /// show what the CN service answers without touching logs on the phone.
+    public func diagnosticsLookup() -> SyaiBoundSensorLookup? { makeBoundSensorLookup() }
+
     func makeBoundSensorLookup() -> SyaiBoundSensorLookup? {
         guard let account else { return nil }
         return SyaiBoundSensorLookup(

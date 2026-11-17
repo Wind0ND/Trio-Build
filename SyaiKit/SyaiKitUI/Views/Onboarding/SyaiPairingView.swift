@@ -165,6 +165,19 @@ struct SyaiPairingView: View {
                         Text("重新登录欧态账号", comment: "sign out and sign in again")
                     }
                     .buttonStyle(ActionButtonStyle(.secondary))
+                    Button(action: viewModel.runDiagnostics) {
+                        Text("账号诊断（复制到剪贴板）", comment: "account diagnostics button")
+                    }
+                    .buttonStyle(ActionButtonStyle(.secondary))
+                    if let diagnostics = viewModel.diagnostics {
+                        ScrollView {
+                            Text(diagnostics)
+                                .font(.caption2.monospaced())
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .frame(maxHeight: 220)
+                    }
                 }
                 .padding(.horizontal)
                 .padding(.bottom)
