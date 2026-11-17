@@ -21,9 +21,14 @@ public struct SyaiCredentials: Sendable {
     public var refreshToken: String
     public var accessToken: String?
 
-    public init(refreshToken: String, accessToken: String? = nil) {
+    /// Account id the server handed back at login. A mainland access token may
+    /// carry no `sub` claim, and `customerId` must never go out empty.
+    public var sessionUserId: String?
+
+    public init(refreshToken: String, accessToken: String? = nil, sessionUserId: String? = nil) {
         self.refreshToken = refreshToken
         self.accessToken = accessToken
+        self.sessionUserId = sessionUserId
     }
 
     public static let placeholder = SyaiCredentials(refreshToken: "")
@@ -33,7 +38,7 @@ public struct SyaiCredentials: Sendable {
         return refreshToken.isEmpty ? nil : refreshToken
     }
 
-    public var userId: String? { identityToken.flatMap { Self.jwtStringClaim("sub", in: $0) } }
+    public var userId: String? { sessionUserId ?? identityToken.flatMap { Self.jwtStringClaim("sub", in: $0) } }
     public var deviceIdClaim: String? { identityToken.flatMap { Self.jwtStringClaim("device_id", in: $0) } }
     public var appNameClaim: String? { identityToken.flatMap { Self.jwtStringClaim("app_name", in: $0) } }
 

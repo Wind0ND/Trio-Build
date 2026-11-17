@@ -144,7 +144,13 @@ public extension SyaiEnvelopedClient {
             throw LoginError.malformedResponseBody("no refreshToken in response")
         }
         let gsk = dataObj["glucoseSecretKey"] as? String
-        let creds = SyaiCredentials(refreshToken: refresh, accessToken: access)
+        let accountId = (dataObj["userId"] as? Int).map(String.init)
+            ?? (dataObj["userId"] as? String)
+        let creds = SyaiCredentials(
+            refreshToken: refresh,
+            accessToken: access,
+            sessionUserId: accountId
+        )
         backend = backend.withCredentials(creds)
         if let gsk, !gsk.isEmpty { backend.glucoseSecretKey = gsk }
         return LoginResult(credentials: creds, glucoseSecretKey: (gsk?.isEmpty == false) ? gsk : nil)
@@ -253,7 +259,13 @@ public extension SyaiEnvelopedClient {
             ?? (dataObj["refreshToken"] as? String)
             ?? ""
         let gsk = dataObj["glucoseSecretKey"] as? String
-        let creds = SyaiCredentials(refreshToken: refresh, accessToken: access)
+        let accountId = (dataObj["userId"] as? Int).map(String.init)
+            ?? (dataObj["userId"] as? String)
+        let creds = SyaiCredentials(
+            refreshToken: refresh,
+            accessToken: access,
+            sessionUserId: accountId
+        )
         backend = backend.withCredentials(creds)
         if let gsk, !gsk.isEmpty { backend.glucoseSecretKey = gsk }
         return OttaiLoginResult(credentials: creds, glucoseSecretKey: (gsk?.isEmpty == false) ? gsk : nil)

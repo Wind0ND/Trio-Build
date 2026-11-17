@@ -44,7 +44,7 @@ public struct SyaiAccountSession: Codable, Sendable, Equatable {
     }
 
     public var credentials: SyaiCredentials {
-        SyaiCredentials(refreshToken: refreshToken, accessToken: accessToken)
+        SyaiCredentials(refreshToken: refreshToken, accessToken: accessToken, sessionUserId: userId)
     }
 
     public func backend(template: SyaiBackend = .syaiTemplate) -> SyaiBackend {
