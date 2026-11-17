@@ -19,9 +19,16 @@ extension Home.StateModel {
 
     @MainActor func updateGlucoseFromController() {
         guard let objects = glucoseController.fetchedObjects else { return }
-        glucoseFromPersistence = objects
-        latestTwoGlucoseValues = Array(objects.suffix(2))
-        updateGlucoseChartYAxis(glucoseValues: objects)
+        // A mis-decoded sensor frame can be dated days ahead of the clock. The home screen
+        // treats the last entry as the newest reading, so a single such row freezes the big
+        // number at whatever that frame decoded to (5.6 for hours on 2026-11-18). Hide
+        // anything dated ahead of the clock here as well, so the screen recovers even when
+        // the storage-level purge has not run yet.
+        let horizon = Date().addingTimeInterval(60)
+        let usable = objects.filter { ($0.date ?? .distantPast) <= horizon }
+        glucoseFromPersistence = usable
+        latestTwoGlucoseValues = Array(usable.suffix(2))
+        updateGlucoseChartYAxis(glucoseValues: usable)
         refreshExtendedStatsPanel()
     }
 

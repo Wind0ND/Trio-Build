@@ -57,6 +57,12 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
     init(resolver: Resolver, contextProvider: (() -> NSManagedObjectContext)? = nil) {
         makeContext = contextProvider ?? { CoreDataStack.shared.newTaskContext() }
         injectServices(resolver)
+        // One-off cleanup: a future-dated row saved by an older build must go even if no
+        // CGM write happens after this launch. An empty array still runs the purge.
+        Task { [weak self] in
+            guard let self else { return }
+            try? await self.storeGlucose([])
+        }
     }
 
     /// Backfills glucose values and stores in CoreData
@@ -483,7 +489,13 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: GlucoseStored.self,
             onContext: context,
-            predicate: NSPredicate(format: "date >= %@", cutoff as NSDate),
+            // Upper bound as well as lower: a future-dated row would otherwise be the
+            // newest thing the algorithm sees and the loop would act on it.
+            predicate: NSPredicate(
+                format: "date >= %@ AND date <= %@",
+                cutoff as NSDate,
+                Date().addingTimeInterval(300) as NSDate
+            ),
             key: "date",
             ascending: false,
             batchSize: 48
