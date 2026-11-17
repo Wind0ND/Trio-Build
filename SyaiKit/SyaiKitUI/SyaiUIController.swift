@@ -46,13 +46,17 @@ final class SyaiUIController: UINavigationController, CGMManagerOnboarding, Comp
     private let isInitialSetup: Bool
     private var screenStack = [SyaiScreen]()
 
-    /// The Ottai catalogue entry shares this controller but needs its own
-    /// artwork and wording; the manager's concrete type is what tells them apart.
-    private var isOttai: Bool { cgmManager.pluginIdentifier == OttaiCGMManager.pluginIdentifier }
+    /// The Ottai catalogue entry shares this controller but needs its own artwork
+    /// and wording. It arrives as a value from the catalogue entry that built this
+    /// controller: asking the manager what class it is cannot work here, because a
+    /// subclass is indistinguishable from its parent once the call comes through the
+    /// parent's own protocol witness.
+    private let ottaiMode: Bool
 
     init(
         cgmManager: SyaiCGMManager? = nil,
         makeManager: @escaping () -> SyaiCGMManager = { SyaiCGMManager() },
+        ottaiMode: Bool = false,
         colorPalette: LoopUIColorPalette,
         displayGlucosePreference: DisplayGlucosePreference,
         allowDebugFeatures: Bool
@@ -62,6 +66,7 @@ final class SyaiUIController: UINavigationController, CGMManagerOnboarding, Comp
         // manager so the Ottai entry signs in with a phone number while
         // Syai Ultra keeps email + password.
         self.cgmManager = cgmManager ?? makeManager()
+        self.ottaiMode = ottaiMode || self.cgmManager.pluginIdentifier == OttaiCGMManager.pluginIdentifier
         self.colorPalette = colorPalette
         self.displayGlucosePreference = displayGlucosePreference
         self.allowDebugFeatures = allowDebugFeatures
@@ -120,8 +125,8 @@ final class SyaiUIController: UINavigationController, CGMManagerOnboarding, Comp
             let view = SyaiOnboardingView(
                 onContinue: { [weak self] in self?.proceedToPairingOrLogin() },
                 onShowPlacement: { [weak self] in self?.navigateTo(.placementGuide) },
-                imageName: isOttai ? "ottaiSensor" : "sensor",
-                accountName: isOttai ? "Ottai" : "Syai"
+                imageName: ottaiMode ? "ottaiSensor" : "sensor",
+                accountName: ottaiMode ? "Ottai" : "Syai"
             )
             return hostingController(rootView: view, title: String(localized: "Welcome!", comment: "welcome"))
 
@@ -134,6 +139,7 @@ final class SyaiUIController: UINavigationController, CGMManagerOnboarding, Comp
         case .login:
             let viewModel = SyaiLoginViewModel(
                 cgmManager: cgmManager,
+                ottaiMode: ottaiMode,
                 allowDebugFeatures: allowDebugFeatures,
                 onLoggedIn: { [weak self] in
                     guard let self else { return }

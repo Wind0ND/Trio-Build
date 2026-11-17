@@ -208,6 +208,11 @@ extension DeviceCatalogEntry {
 
 // MARK: - CGM entries
 
+/// Builds a manager's onboarding controller. Carried as data on the catalogue entry so the
+/// dispatch in `CGMSetupView` never has to ask "which class is this" at runtime.
+typealias CGMManagerOnboardingFactory =
+    (DisplayGlucosePreference, LoopUIColorPalette, Bool) -> SetupUIResult<CGMManagerViewController, CGMManagerUI>
+
 struct CGMCatalogEntry: DeviceCatalogEntry {
     /// Trio drives CGMs two ways: LoopKit manager types, and its own non-LoopKit glucose sources.
     enum Source: Hashable {
@@ -216,12 +221,16 @@ struct CGMCatalogEntry: DeviceCatalogEntry {
         /// Backed by a statically linked `CGMManagerUI`; persisted as `CGMType.plugin`.
         /// `id` is the manager's `pluginIdentifier`, which LoopKit only exposes per instance.
         case managed(CGMManagerUI.Type, id: String)
+        /// Same as `managed`, plus a ready-made onboarding builder for managers whose setup
+        /// screen must not be reached through the `CGMManagerUI` protocol witness (a subclass
+        /// then cannot tell itself apart from its parent inside `setupViewController`).
+        case managedFactory(makeVC: CGMManagerOnboardingFactory, managerType: CGMManagerUI.Type, id: String)
 
         /// The value persisted to `TrioSettings.cgm`.
         var cgmType: CGMType {
             switch self {
             case let .native(type): return type
-            case .managed: return .plugin
+            case .managed, .managedFactory: return .plugin
             }
         }
 
@@ -230,12 +239,21 @@ struct CGMCatalogEntry: DeviceCatalogEntry {
             switch self {
             case let .native(type): return type.rawValue
             case let .managed(_, id): return id
+            case let .managedFactory(_, _, id): return id
             }
         }
 
         var managerType: CGMManagerUI.Type? {
-            guard case let .managed(manager, _) = self else { return nil }
-            return manager
+            switch self {
+            case let .managed(manager, _): return manager
+            case let .managedFactory(_, manager, _): return manager
+            case .native: return nil
+            }
+        }
+
+        var onboardingFactory: CGMManagerOnboardingFactory? {
+            guard case let .managedFactory(makeVC, _, _) = self else { return nil }
+            return makeVC
         }
 
         static func == (lhs: Source, rhs: Source) -> Bool { lhs.id == rhs.id }
@@ -251,6 +269,7 @@ struct CGMCatalogEntry: DeviceCatalogEntry {
     var id: String { source.id }
     var cgmType: CGMType { source.cgmType }
     var managerType: CGMManagerUI.Type? { source.managerType }
+    var onboardingFactory: CGMManagerOnboardingFactory? { source.onboardingFactory }
 
     /// Localized names must be computed, not stored: a `String(localized:)` baked into a `static let` resolves
     /// once per process and would not follow an in-session language change.
@@ -407,7 +426,11 @@ extension DeviceCatalog {
         ),
 
         CGMCatalogEntry(
-            .managed(OttaiCGMManager.self, id: "OttaiCGMManager"),
+            .managedFactory(
+                makeVC: makeOttaiOnboardingController(displayGlucosePreference:colorPalette:allowDebugFeatures:),
+                managerType: OttaiCGMManager.self,
+                id: "OttaiCGMManager"
+            ),
             manufacturer: .ottai,
             name: "Ottai",
             supportedModels: ["M8"],

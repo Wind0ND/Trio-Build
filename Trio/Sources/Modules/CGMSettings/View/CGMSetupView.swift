@@ -30,25 +30,24 @@ extension CGMSettings {
 
             switch CGMType.type {
             case .plugin:
-                let resolvedType = pluginCGMManager.getCGMManagerTypeByIdentifier(CGMType.id)
-                debug(.cgm, "CGM setup: id=\(CGMType.id) resolved=\(String(describing: resolvedType))")
-                if CGMType.id == OttaiCGMManager.pluginIdentifier {
-                    // Keyed off the catalogue identifier, not a metatype cast:
-                    // protocol-witness `Self` is always SyaiCGMManager, and a
-                    // metatype downcast is not something to rely on here.
-                    setupViewController = makeOttaiOnboardingController(
+                let entry = DeviceCatalog.cgmEntry(id: CGMType.id)
+                debug(
+                    .cgm,
+                    "CGM setup: entry=\(entry?.id ?? "nil") factory=\(entry?.onboardingFactory != nil)"
+                )
+                if let makeVC = entry?.onboardingFactory {
+                    // The catalogue carries the builder itself. Nothing here asks what class the
+                    // entry is: a subclass of a manager cannot be recognised from inside that
+                    // manager's own protocol witness, so the choice has to arrive as data.
+                    setupViewController = makeVC(displayGlucosePreference, .default, false)
+                } else if let cgmManagerUIType = pluginCGMManager.getCGMManagerTypeByIdentifier(CGMType.id) {
+                    setupViewController = cgmManagerUIType.setupViewController(
+                        bluetoothProvider: bluetoothManager,
                         displayGlucosePreference: displayGlucosePreference,
                         colorPalette: .default,
-                        allowDebugFeatures: false
+                        allowDebugFeatures: false,
+                        prefersToSkipUserInteraction: false
                     )
-                } else if let cgmManagerUIType = resolvedType {
-                        setupViewController = cgmManagerUIType.setupViewController(
-                            bluetoothProvider: bluetoothManager,
-                            displayGlucosePreference: displayGlucosePreference,
-                            colorPalette: .default,
-                            allowDebugFeatures: false,
-                            prefersToSkipUserInteraction: false
-                        )
                 } else {
                     break
                 }

@@ -18,6 +18,15 @@ struct SyaiOnboardingView: View {
     var imageName: String = "sensor"
     var accountName: String = "Syai"
 
+    /// Printed on the first screen so a build under test can be identified without
+    /// guessing which binary the phone is running.
+    static var buildStamp: String {
+        let info = Bundle.main.infoDictionary
+        let short = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        return "Trio \(short) (\(build))"
+    }
+
     var body: some View {
         VStack(alignment: .leading) {
             List {
@@ -32,6 +41,9 @@ struct SyaiOnboardingView: View {
                                 .padding(.bottom, 10)
                             Spacer()
                         }
+                        Text(Self.buildStamp)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                         Text("Before you begin", comment: "onboarding header")
                             .font(.title3).bold()
                         Text(

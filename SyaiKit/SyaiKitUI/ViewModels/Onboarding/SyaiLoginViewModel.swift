@@ -34,10 +34,15 @@ import SyaiKit
     private let logger = SyaiLogger(category: "LoginViewModel")
     private var task: Task<Void, Never>?
 
-    init(cgmManager: SyaiCGMManager, allowDebugFeatures _: Bool = false, onLoggedIn: @escaping () -> Void) {
+    init(
+        cgmManager: SyaiCGMManager,
+        ottaiMode: Bool = false,
+        allowDebugFeatures _: Bool = false,
+        onLoggedIn: @escaping () -> Void
+    ) {
         self.cgmManager = cgmManager
         self.onLoggedIn = onLoggedIn
-        mode = cgmManager is OttaiCGMManager ? .phone : .email
+        mode = (ottaiMode || cgmManager is OttaiCGMManager) ? .phone : .email
         email = cgmManager.account?.email ?? ""
     }
 

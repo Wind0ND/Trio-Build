@@ -148,6 +148,7 @@ public extension OttaiCGMManager {
     ) -> SetupUIResult<CGMManagerViewController, CGMManagerUI> {
         let vc = SyaiUIController(
             makeManager: { OttaiCGMManager() },
+            ottaiMode: true,
             colorPalette: colorPalette,
             displayGlucosePreference: displayGlucosePreference,
             allowDebugFeatures: allowDebugFeatures
@@ -168,6 +169,7 @@ public func makeOttaiOnboardingController(
 ) -> SetupUIResult<CGMManagerViewController, CGMManagerUI> {
     let vc = SyaiUIController(
         makeManager: { OttaiCGMManager() },
+        ottaiMode: true,
         colorPalette: colorPalette,
         displayGlucosePreference: displayGlucosePreference,
         allowDebugFeatures: allowDebugFeatures
