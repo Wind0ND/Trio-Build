@@ -81,6 +81,10 @@ public struct SyaiBoundSensorLookup: Sendable {
     public func boundSensor() async throws -> SyaiBoundSensor? {
         guard backend.isConfigured else { throw LookupError.notConfigured }
         return try await sessionRetrying.run(client: client, backend: backend) { client, backend in
+            // The CN server scopes this lookup to the customerId header; an empty
+            // value silently returns {"code":"OK","data":null}.
+            let customer = backend.userId ?? "<nil>"
+            logger.info("getBindDevice customerId=\(customer.count) chars, base=\(backend.baseURL.host ?? "?")")
             let bindData = try await client.getBindDevice()
             logger.info("getBindDevice response: \(String(data: bindData, encoding: .utf8) ?? "<\(bindData.count) bytes>")")
             guard var body = try Self.boundDeviceBody(bindData),
