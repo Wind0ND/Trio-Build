@@ -34,7 +34,7 @@ extension SyaiCGMManager {
         let provider = SyaiLoginCredentialProvider(
             email: email,
             password: password,
-            template: Self.backendTemplate
+            template: type(of: self).backendTemplate
         )
         let backend = try await provider.backend()
         let session = SyaiAccountSession(
@@ -46,7 +46,7 @@ extension SyaiCGMManager {
     }
 
     @MainActor func installSession(_ session: SyaiAccountSession) {
-        SyaiKeychain.saveAccount(session, namespace: Self.pluginIdentifier)
+        SyaiKeychain.saveAccount(session, namespace: type(of: self).pluginIdentifier)
         account = session
         calibrationProvider = makeServerCalibrationProvider()
         telemetryService = makeTelemetryService()
@@ -62,7 +62,7 @@ extension SyaiCGMManager {
         let email = account.email
         // Read outside the sendable closure: `backendTemplate` is a class var, and a
         // subclass answers with a different host.
-        let template = Self.backendTemplate
+        let template = type(of: self).backendTemplate
         return await sessionRecovery.run {
             do {
                 let provider = SyaiLoginCredentialProvider(
@@ -83,7 +83,7 @@ extension SyaiCGMManager {
     }
 
     public func logOut() {
-        SyaiKeychain.deleteAccount(namespace: Self.pluginIdentifier)
+        SyaiKeychain.deleteAccount(namespace: type(of: self).pluginIdentifier)
         account = nil
         if calibrationProvider is SyaiServerCalibrationProvider {
             calibrationProvider = nil
@@ -104,7 +104,7 @@ extension SyaiCGMManager {
                 guard let current = self.account else { return }
                 let updated = current.withRotatedCredentials(rotated, glucoseSecretKey: gsk)
                 guard updated != current else { return }
-                SyaiKeychain.saveAccount(updated, namespace: Self.pluginIdentifier)
+                SyaiKeychain.saveAccount(updated, namespace: type(of: self).pluginIdentifier)
                 self.account = updated
             }
         }
@@ -122,7 +122,7 @@ extension SyaiCGMManager {
                     // survives CGM deletion and reinstall. Leaving it would restore
                     // a dead login on the next add. The in-memory account stays for
                     // display until the user re-authenticates.
-                    SyaiKeychain.deleteAccount(namespace: Self.pluginIdentifier)
+                    SyaiKeychain.deleteAccount(namespace: type(of: self).pluginIdentifier)
                 }
             }
         }
@@ -138,7 +138,7 @@ extension SyaiCGMManager {
     private func makeServerCalibrationProvider() -> SyaiServerCalibrationProvider? {
         guard let account else { return nil }
         return SyaiServerCalibrationProvider(
-            backend: account.backend(template: Self.backendTemplate),
+            backend: account.backend(template: type(of: self).backendTemplate),
             onSessionRotated: makeSessionRotationHandler(),
             recoverSession: makeSessionRecoveryHandler(),
             onAccountLockoutChanged: makeAccountLockoutHandler()
@@ -148,7 +148,7 @@ extension SyaiCGMManager {
     func makeServerDeviceBinder() -> SyaiServerDeviceBinder? {
         guard let account else { return nil }
         return SyaiServerDeviceBinder(
-            backend: account.backend(template: Self.backendTemplate),
+            backend: account.backend(template: type(of: self).backendTemplate),
             onSessionRotated: makeSessionRotationHandler(),
             recoverSession: makeSessionRecoveryHandler(),
             onAccountLockoutChanged: makeAccountLockoutHandler()
@@ -158,7 +158,7 @@ extension SyaiCGMManager {
     private func makeTelemetryService() -> SyaiTelemetryService? {
         guard let account else { return nil }
         return SyaiTelemetryService(
-            client: SyaiEnvelopedClient(backend: account.backend(template: Self.backendTemplate)),
+            client: SyaiEnvelopedClient(backend: account.backend(template: type(of: self).backendTemplate)),
             restoredQueue: state.telemetryQueue,
             tier: { [weak self] in self?.state.telemetryTier ?? .minimal },
             persistQueue: { [weak self] records in
@@ -182,7 +182,7 @@ extension SyaiCGMManager {
 
             accountContext: { [weak self] in
                 guard let self, let account = self.account else { return nil }
-                let backend = account.backend(template: Self.backendTemplate)
+                let backend = account.backend(template: type(of: self).backendTemplate)
                 guard let userId = account.userId ?? backend.userId else { return nil }
                 return SyaiTelemetryService.AccountContext(userId: userId, appName: backend.appName)
             },

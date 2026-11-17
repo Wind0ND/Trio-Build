@@ -26,8 +26,8 @@ open class SyaiCGMManager: CGMManager, @unchecked Sendable {
     /// to point the same account machinery at another host and identity.
     open class var backendTemplate: SyaiBackend { .syaiTemplate }
 
-    public var localizedTitle: String { Self.localizedTitle }
-    public var pluginIdentifier: String { Self.pluginIdentifier }
+    public var localizedTitle: String { type(of: self).localizedTitle }
+    public var pluginIdentifier: String { type(of: self).pluginIdentifier }
     public func markAsDepedency(_: Bool) {}
 
     public weak var cgmManagerDelegate: CGMManagerDelegate?

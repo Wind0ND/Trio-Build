@@ -20,10 +20,10 @@ extension SyaiCGMManager {
             let delegate = self.cgmManagerDelegate
             Task {
                 for condition in issuing {
-                    await delegate?.issueAlert(condition.alert(managerIdentifier: Self.pluginIdentifier))
+                    await delegate?.issueAlert(condition.alert(managerIdentifier: type(of: self).pluginIdentifier))
                 }
                 for condition in retracting {
-                    await delegate?.retractAlert(identifier: condition.identifier(managerIdentifier: Self.pluginIdentifier))
+                    await delegate?.retractAlert(identifier: condition.identifier(managerIdentifier: type(of: self).pluginIdentifier))
                 }
             }
         }

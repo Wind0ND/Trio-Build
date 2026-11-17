@@ -64,7 +64,7 @@ public extension SyaiCGMManager {
     func makeBoundSensorLookup() -> SyaiBoundSensorLookup? {
         guard let account else { return nil }
         return SyaiBoundSensorLookup(
-            backend: account.backend(template: Self.backendTemplate),
+            backend: account.backend(template: type(of: self).backendTemplate),
             onSessionRotated: makeSessionRotationHandler(),
             recoverSession: makeSessionRecoveryHandler(),
             onAccountLockoutChanged: makeAccountLockoutHandler()
