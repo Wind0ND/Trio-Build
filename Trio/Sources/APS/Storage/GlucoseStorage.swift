@@ -241,10 +241,20 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
     }
 
     private func storeGlucoseInCoreData(_ glucose: [BloodGlucose], context: NSManagedObjectContext) throws {
-        if glucose.count > 1 {
-            try storeGlucoseBatch(glucose, context: context)
+        // The single choke point every stored reading passes through (calibrations,
+        // live CGM, backfill, Nightscout import all reach here). Enforcing the clock
+        // invariant here means no caller can put a future-dated row in the database,
+        // and every reader below inherits the guarantee without its own filter.
+        let horizon = Date().addingTimeInterval(120)
+        let plausible = glucose.filter { $0.dateString <= horizon }
+        if plausible.count != glucose.count {
+            debug(.cgm, "Refused \(glucose.count - plausible.count) future-dated glucose reading(s) at the store choke point")
+        }
+        guard !plausible.isEmpty else { return }
+        if plausible.count > 1 {
+            try storeGlucoseBatch(plausible, context: context)
         } else {
-            try storeGlucoseRegular(glucose, context: context)
+            try storeGlucoseRegular(plausible, context: context)
         }
     }
 
