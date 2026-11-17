@@ -207,6 +207,10 @@ struct SyaiPairingView: View {
                     }
                     .buttonStyle(ActionButtonStyle())
                     .disabled(viewModel.selectedMAC == nil)
+                    Button(action: viewModel.wakeWithNFC) {
+                        Text("NFC 唤醒传感器", comment: "nfc wake button")
+                    }
+                    .buttonStyle(ActionButtonStyle(.secondary))
                     Button(action: viewModel.scan) {
                         Text("Scan Again", comment: "rescan button")
                     }

@@ -7,6 +7,7 @@
 //
 
 import Combine
+@preconcurrency import CoreNFC
 import SwiftUI
 import SyaiKit
 
@@ -215,6 +216,82 @@ import SyaiKit
         case .resolvingCalibration: return String(localized: "Loading calibration", comment: "stage calibration")
         case .binding: return String(localized: "Registering sensor", comment: "stage binding")
         case .activating: return String(localized: "Activating sensor", comment: "stage activating")
+        }
+    }
+}
+
+// MARK: - CN / Syai NFC wake
+
+/// Ottai CN and Syai sensors stay asleep until a reader's RF field wakes them.
+/// While asleep they neither advertise nor accept a connection, so BLE
+/// discovery finds nothing however long it scans. This reader only opens the
+/// field: it never connects to the tag and never reads or writes tag data.
+final class SyaiNFCWaker: NSObject, NFCTagReaderSessionDelegate {
+    static let shared = SyaiNFCWaker()
+
+    private var session: NFCTagReaderSession?
+    private var completion: ((Bool) -> Void)?
+
+    static var isAvailable: Bool { NFCTagReaderSession.readingAvailable }
+
+    func begin(completion: @escaping (Bool) -> Void) {
+        guard Self.isAvailable else {
+            completion(false)
+            return
+        }
+        self.completion = completion
+        let session = NFCTagReaderSession(pollingOption: [.iso14443], delegate: self, queue: nil)
+        session?.alertMessage = String(
+            localized: "Hold the top of this iPhone against the sensor for a second.",
+            comment: "nfc wake prompt"
+        )
+        self.session = session
+        session?.begin()
+    }
+
+    private func finish(_ woke: Bool) {
+        completion?(woke)
+        completion = nil
+        session = nil
+    }
+
+    func tagReaderSessionDidBecomeActive(_ session: NFCTagReaderSession) {}
+
+    func tagReaderSession(_ session: NFCTagReaderSession, didDetect tags: [NFCTag]) {
+        // The field is the whole point; the tag identity is not verified here.
+        session.alertMessage = String(localized: "Sensor woken.", comment: "nfc wake done")
+        session.invalidate()
+        finish(true)
+    }
+
+    func tagReaderSession(_ session: NFCTagReaderSession, didInvalidateWithError error: Error) {
+        if completion != nil { finish(false) }
+    }
+}
+
+extension SyaiPairingViewModel {
+    /// Wakes a sleeping CN/Syai sensor with an NFC RF field, then rescans.
+    func wakeWithNFC() {
+        guard SyaiNFCWaker.isAvailable else {
+            errorMessage = String(
+                localized: "This iPhone can't read NFC tags.",
+                comment: "nfc unavailable"
+            )
+            return
+        }
+        statusText = String(localized: "Waiting for the sensor…", comment: "nfc wake status")
+        SyaiNFCWaker.shared.begin { [weak self] woke in
+            Task { @MainActor in
+                guard let self else { return }
+                if woke {
+                    self.scan()
+                } else {
+                    self.statusText = String(
+                        localized: "No tag detected. Hold the iPhone against the sensor and try again.",
+                        comment: "nfc wake failed"
+                    )
+                }
+            }
         }
     }
 }
