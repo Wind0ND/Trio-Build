@@ -30,6 +30,11 @@ enum SyaiSettingsAlert: Identifiable {
     var sensorModel: String {
         cgmManager.pluginIdentifier == OttaiCGMManager.pluginIdentifier ? "M8" : "X1"
     }
+
+    /// Artwork asset matching the configured sensor.
+    var sensorArtworkName: String {
+        cgmManager.pluginIdentifier == OttaiCGMManager.pluginIdentifier ? "ottaiSensor" : "sensor"
+    }
     @Published var recentSamples: [GlucoseSample] = []
     @Published var sensorStartedAt = ""
     @Published var sensorEndsAt = ""

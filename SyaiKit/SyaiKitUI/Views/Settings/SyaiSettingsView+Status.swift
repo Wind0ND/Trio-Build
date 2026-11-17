@@ -15,7 +15,7 @@ extension SyaiSettingsView {
             VStack(spacing: 0) {
                 HStack {
                     Spacer()
-                    Image(imageName: "sensor")
+                    Image(imageName: viewModel.sensorArtworkName)
                         .resizable()
                         .scaledToFit()
                         .frame(height: 150)

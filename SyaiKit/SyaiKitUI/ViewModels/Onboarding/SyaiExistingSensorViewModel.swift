@@ -25,6 +25,11 @@ import SyaiKit
     @Published var phase: Phase = .checking
 
     private let cgmManager: SyaiCGMManager
+
+    /// Artwork asset matching the configured sensor.
+    var sensorArtworkName: String {
+        cgmManager.pluginIdentifier == OttaiCGMManager.pluginIdentifier ? "ottaiSensor" : "sensor"
+    }
     private let onNoneBound: () -> Void
     private let onAdopted: () -> Void
     private let onNeedsLogin: () -> Void

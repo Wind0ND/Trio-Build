@@ -17,6 +17,8 @@ import SwiftUI
 
     // MARK: - Constants
 
+    /// Local build switch: false removes the every-launch dev-branch notice.
+    private static let warningEnabled = false
     private static let releaseBranchName = "main"
     private static let developmentBranchName = "dev"
 
@@ -40,6 +42,9 @@ import SwiftUI
         #if DEV_BRANCH_WARNING_DISABLED
             return
         #else
+            // Local build: the dev-branch notice fires on every launch and only
+            // interrupts the loop. Keep the machinery, never raise it.
+            guard Self.warningEnabled else { return }
             guard !hasBeenAcknowledgedThisLaunch else {
                 return
             }

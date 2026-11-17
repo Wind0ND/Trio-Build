@@ -3,6 +3,7 @@ import LoopKit
 enum PatchPrimingStatus: Equatable {
     case connecting
     case notConnected
+    case connectionFailed(message: String)
     case patchNotFilled
     case readyToPrime
     case priming
@@ -14,6 +15,8 @@ enum PatchPrimingStatus: Equatable {
             return String(localized: "Connecting to the pump base...", comment: "Priming status while connecting")
         case .notConnected:
             return String(localized: "No connection to the pump base", comment: "Priming status without a connection")
+        case .connectionFailed:
+            return String(localized: "Could not connect to the pump base", comment: "Priming status after the pump base refused the session")
         case .patchNotFilled:
             return String(localized: "Patch is not filled yet", comment: "Priming status while the patch is not filled")
         case .readyToPrime:
@@ -26,23 +29,32 @@ enum PatchPrimingStatus: Equatable {
     }
 
     var detail: String? {
-        guard case let .failed(message) = self else {
+        switch self {
+        case let .failed(message), let .connectionFailed(message):
+            return message
+        default:
             return nil
         }
-
-        return message
     }
 
     var isFailure: Bool {
-        if case .failed = self {
+        switch self {
+        case .failed, .connectionFailed:
             return true
+        default:
+            break
         }
 
         return false
     }
 
     var showsRetry: Bool {
-        self == .notConnected
+        switch self {
+        case .notConnected, .connectionFailed:
+            return true
+        default:
+            return false
+        }
     }
 }
 
@@ -57,6 +69,8 @@ class PatchPrimingViewModel: ObservableObject {
     @Published var isConnected = false
     @Published var isConnecting = false
     @Published var patchState: PatchState = .none
+    /// Last failure of the connect/auth sequence, already mapped to user guidance.
+    @Published var connectFailureDetail = ""
 
     @Published var reservoirLevel: Double?
 
@@ -89,7 +103,7 @@ class PatchPrimingViewModel: ObservableObject {
             }
 
             if !isConnected {
-                return .notConnected
+                return connectFailureDetail.isEmpty ? .notConnected : .connectionFailed(message: connectFailureDetail)
             }
 
             return patchState == .filled ? .readyToPrime : .patchNotFilled
@@ -143,6 +157,7 @@ class PatchPrimingViewModel: ObservableObject {
             }
 
             isConnecting = true
+            connectFailureDetail = ""
             pumpManager.bluetooth.ensureConnected { [weak self] error in
                 DispatchQueue.main.async {
                     guard let self = self else {
@@ -152,8 +167,10 @@ class PatchPrimingViewModel: ObservableObject {
                     self.isConnecting = false
 
                     if let error = error {
-                        self.logger.warning("Failed to connect to pump base: \(error.errorDescription ?? "EMPTY")")
+                        let raw = error.errorDescription ?? "EMPTY"
+                        self.logger.warning("Failed to connect to pump base: \(raw)")
                         self.isConnected = false
+                        self.connectFailureDetail = Self.guidance(for: raw)
                         return
                     }
 
@@ -252,3 +269,24 @@ extension PatchPrimingViewModel: PumpManagerStatusObserver {
         #endif
     }
 }
+
+extension PatchPrimingViewModel {
+    /// Turns the raw transport error into something actionable: codes 7 and 32 come from the
+    /// pump base itself and mean it still holds a session from another app.
+    static func guidance(for raw: String) -> String {
+        if raw.contains("response code: 7") || raw.contains("responseCode: 7") {
+            return "底座拒绝了这次认证（错误码 7）：它还记得上一个 App 的会话。断开底座电源 10 秒后重试。"
+        }
+
+        if raw.contains("response code: 32") {
+            return "底座拒绝了备用令牌（错误码 32）。同样需要给底座断电复位后再试。"
+        }
+
+        if raw.contains("timeout") || raw.contains("MedtrumWriteError错误0") {
+            return "与底座通信超时。把底座放到手机旁边，然后点重试。"
+        }
+
+        return raw
+    }
+}
+

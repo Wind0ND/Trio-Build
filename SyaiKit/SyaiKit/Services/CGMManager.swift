@@ -138,7 +138,9 @@ open class SyaiCGMManager: CGMManager, @unchecked Sendable {
         guard let activatedAt = state.activatedAt, let activeDuration = state.activeDuration else {
             return nil
         }
-        return activatedAt.addingTimeInterval(activeDuration)
+        // Report the window we actually enforce: the cloud duration plus the
+        // user's extra days, so "Ends at" and the lifecycle agree.
+        return activatedAt.addingTimeInterval(SyaiWearExtension.extendedWear(activeDuration))
     }
 
     public var sensorWarmupEndDate: Date? {

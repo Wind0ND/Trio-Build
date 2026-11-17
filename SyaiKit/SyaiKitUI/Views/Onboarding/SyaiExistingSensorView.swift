@@ -73,7 +73,7 @@ struct SyaiExistingSensorView: View {
         Section {
             HStack {
                 Spacer()
-                Image(imageName: "sensor")
+                Image(imageName: viewModel.sensorArtworkName)
                     .resizable()
                     .scaledToFit()
                     .frame(height: 120)

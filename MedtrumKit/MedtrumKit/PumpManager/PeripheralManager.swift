@@ -152,8 +152,12 @@ extension PeripheralManager {
         switch authData {
         case let .failure(error):
             if !useBackupToken {
+                // A pump base that already holds another app's session answers 7 and locks
+                // up harder when the next request lands immediately; give it a beat.
                 log.warning("Failed to complete authorization flow, falling back to backup token")
-                doAuthorize(useBackupToken: true)
+                DispatchQueue.global().asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                    self?.doAuthorize(useBackupToken: true)
+                }
                 return
             }
 

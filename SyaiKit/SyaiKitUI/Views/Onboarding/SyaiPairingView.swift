@@ -25,7 +25,7 @@ struct SyaiPairingView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             Spacer()
-                            Image(imageName: "sensor")
+                            Image(imageName: viewModel.sensorArtworkName)
                                 .resizable()
                                 .scaledToFit()
                                 .frame(height: 150)

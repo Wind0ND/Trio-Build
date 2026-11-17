@@ -53,9 +53,24 @@ public enum SyaiSensorLifecycle: Equatable {
         sensorAge: (elapsed: TimeInterval, at: Date)?,
         now: Date = Date()
     ) -> TimeInterval? {
-        if let sensorAge { return sensorAge.elapsed + now.timeIntervalSince(sensorAge.at) }
-        return activatedAt.map { now.timeIntervalSince($0) }
+        let wallAge = activatedAt.map { now.timeIntervalSince($0) }
+        if let sensorAge {
+            let fromSensor = sensorAge.elapsed + now.timeIntervalSince(sensorAge.at)
+            // The sensor's elapsed field is the more accurate clock, but a
+            // reconnect can hand back a counter from a different base: a
+            // firmware restart, or a history batch stamped before activation.
+            // Trust it only while it agrees with the activation record from the
+            // cloud; a counter that is hours off is garbage and must never turn
+            // a live sensor into an expired one.
+            guard let wallAge else { return fromSensor }
+            return abs(fromSensor - wallAge) <= Self.sensorClockTolerance ? fromSensor : wallAge
+        }
+        return wallAge
     }
+
+    /// How far the sensor's own elapsed field may drift from the activation
+    /// record before we stop trusting it.
+    static let sensorClockTolerance: TimeInterval = 6 * 3600
 
     /// Faults take precedence: the sensor's cmd-characteristic state reports
     /// failed/unactivated, and the client-side plausibility guard is equally
@@ -139,7 +154,56 @@ public enum SyaiSensorLifecycle: Equatable {
     }
 }
 
+/// Chinese copy for the strings this target owns. The app catalogue in Trio
+/// only covers the UI target; texts SyaiKit resolves through its own bundle
+/// (lifecycle states, alerts, adoption errors) never pass through it.
+enum SyaiLocalization {
+    static var prefersChinese: Bool {
+        Locale.preferredLanguages.first?.hasPrefix("zh") == true
+    }
+
+    static let chinese: [String: String] = [
+        "Activating sensor": "正在激活传感器",
+        "Active": "使用中",
+        "Authenticating": "正在认证",
+        "Connecting": "正在连接",
+        "Expired": "已过期",
+        "Found sensor %@": "已找到传感器 %@",
+        "Loading calibration": "正在加载校准",
+        "Log in to Syai first.": "请先登录欧态账号。",
+        "No sensor": "无传感器",
+        "OK": "正常",
+        "Registering sensor": "正在注册传感器",
+        "Searching for nearby sensors…": "正在搜索附近的传感器…",
+        "Searching for sensor": "正在搜索传感器",
+        "Sensor Expired": "传感器已过期",
+        "Sensor Malfunction": "传感器故障",
+        "Sensor Not Activated": "传感器未激活",
+        "Sensor data looks wrong, readings paused — if this persists, replace the sensor": "传感器数据异常，已暂停读数——若持续如此请更换传感器",
+        "Sensor expired, replace sensor": "传感器已过期，请更换",
+        "Sensor expired. Replace your sensor now.": "传感器已过期，请立即更换。",
+        "Sensor failed": "传感器失效",
+        "Sensor malfunction": "传感器故障",
+        "Sensor malfunction, replace sensor": "传感器故障，请更换",
+        "Sensor malfunction. Replace your sensor now.": "传感器故障，请立即更换。",
+        "Sensor readings implausible, consider replacing sensor": "传感器读数不可信，建议更换",
+        "Sensor reports as not activated. If this continues, remove and re-pair it.": "传感器报告未激活。若持续如此，请移除并重新配对。",
+        "Sensor uninitialized": "传感器未初始化",
+        "Sensor uninitialized, is it activated?": "传感器未初始化，是否已激活？",
+        "Signal Loss": "信号丢失",
+        "Signal loss": "信号丢失",
+        "Signal lost. Check that your sensor is nearby and Bluetooth is on.": "信号丢失。请确认传感器在附近并已打开蓝牙。",
+        "This sensor was already ended in %1$@ and can't be used again.": "该传感器已于 %1$@ 结束，无法再次使用。",
+        "This sensor's firmware (%1$@) isn't supported yet. Keep using it with the official Syai app.": "该传感器固件（%1$@）尚不支持，请继续用官方 App。",
+        "This sensor's wear period has ended.": "该传感器的佩戴期已结束。",
+        "Warming up": "预热中",
+    ]
+}
+
 func LocalizedString(_ key: String, tableName: String? = nil, value: String? = nil, comment: String) -> String {
+    if SyaiLocalization.prefersChinese, let zh = SyaiLocalization.chinese[key] {
+        return zh
+    }
     let bundle = Bundle(for: SyaiCGMManager.self)
     if let value = value {
         return NSLocalizedString(key, tableName: tableName, bundle: bundle, value: value, comment: comment)
