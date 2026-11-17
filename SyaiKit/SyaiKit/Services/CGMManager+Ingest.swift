@@ -11,6 +11,19 @@ import Foundation
 
 extension SyaiCGMManager {
     @MainActor func ingest(_ sample: GlucoseSample) {
+        // A live reading is proof the sensor is running. A fault latched from a
+        // pre-stream cmd-state readout must not outlive it, or the sensor stays
+        // "uninitialized" forever and every later reading is dropped on the
+        // doorstep.
+        if state.sensorNeedsReplacement, sample.source == .realtime,
+           case .deviceStateUnactivated? = state.sensorFault, state.activatedAt != nil
+        {
+            logger.info("clearing a stale unactivated fault: the sensor is streaming")
+            var healed = state
+            healed.sensorFault = nil
+            setState(healed)
+        }
+
         if state.sensorNeedsReplacement {
             logger.debug("sensor marked for replacement; dropping seq=\(sample.sequence) (\(Int(sample.valueMgDL)) mg/dL)")
             return
@@ -51,7 +64,21 @@ extension SyaiCGMManager {
             elapsedSeconds: sample.elapsedSeconds,
             preheatDuration: state.preheatDuration
         )
-        let isExpiredReading = Self.isPastWear(
+        // Two clocks must agree before a reading is thrown away as past wear.
+        // The sensor's own elapsed counter dates a reading, but a reconnect can
+        // hand back a counter from a different base, and a counter that is months
+        // ahead would silently drop every live reading while painting the sensor
+        // as expired. Wall-clock age against the activation record is the second
+        // opinion.
+        let wallPastWear: Bool
+        if let activatedAt = state.activatedAt,
+           let wear = state.activeDuration.map(SyaiWearExtension.extendedWear)
+        {
+            wallPastWear = Date().timeIntervalSince(activatedAt) >= wear
+        } else {
+            wallPastWear = false
+        }
+        let isExpiredReading = wallPastWear && Self.isPastWear(
             elapsedSeconds: sample.elapsedSeconds,
             activeDuration: state.activeDuration
         )

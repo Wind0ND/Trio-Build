@@ -45,6 +45,10 @@ public enum SyaiSensorLifecycle: Equatable {
 
     static let signalLostThreshold: TimeInterval = 6 * 60
 
+    /// How recently a reading must have arrived before we treat the sensor as
+    /// demonstrably still running.
+    static let liveReadingWindow: TimeInterval = 15 * 60
+
     /// Seconds since activation. Comes from the sensor's own elapsed-seconds
     /// field wherever it is available, with the phone clock spanning only the
     /// silence since that record arrived.
@@ -112,7 +116,13 @@ public enum SyaiSensorLifecycle: Equatable {
             return .noSensor
         }
         let age = Self.age(activatedAt: activatedAt, sensorAge: sensorAge, now: now) ?? 0
-        if age >= wear { return .expired }
+        // Expiry is a wall-clock claim, and a sensor that is still handing over
+        // readings is by definition not finished. A drifted clock or a wear
+        // window that disagrees with the cloud must never paint a live sensor as
+        // expired, because that stops dosing and tells the user to rip it off.
+        let liveReading = latestReadingAt.map { now.timeIntervalSince($0) <= Self.liveReadingWindow } ?? false
+        if age >= wear, !liveReading { return .expired }
+        if age >= wear, liveReading { return .active(remaining: 0, total: wear) }
         if age < warmup {
             return .warmup(progress: age / warmup, remaining: warmup - age)
         }

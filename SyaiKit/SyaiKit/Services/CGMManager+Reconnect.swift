@@ -37,7 +37,12 @@ extension SyaiCGMManager {
                     raw: Data([UInt8(clamping: reported)]),
                     receivedAt: Date()
                 ))
-            } else if reported < SyaiBLE.healthyCmdState, state.activatedAt != nil {
+            } else if reported < SyaiBLE.healthyCmdState, state.activatedAt != nil,
+                      state.latestReadingTimestamp == nil
+            {
+                // Only before the sensor has ever spoken: a pre-stream readout
+                // saying "not activated" is normal, but latching that fault onto
+                // a sensor that has already delivered readings kills it for good.
                 markSensorFailed(SyaiSensorFault(
                     kind: .deviceStateUnactivated(state: reported),
                     raw: Data([UInt8(clamping: reported)]),
