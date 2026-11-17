@@ -103,7 +103,12 @@ import SyaiKit
     }
 
     private func logInCn() {
-        guard let requestId else { return }
+        guard let requestId else {
+            // Without a requestId the sign-in cannot even start; say so instead of
+            // silently doing nothing (the button used to look dead).
+            errorMessage = "No verification code was requested. Tap \"Send code\" first."
+            return
+        }
         isBusy = true
         errorMessage = nil
         task?.cancel()
@@ -112,7 +117,9 @@ import SyaiKit
             let number = self.phone.trimmingCharacters(in: .whitespaces)
             let code = self.smsCode.trimmingCharacters(in: .whitespaces)
             do {
+                self.logger.info("sms login start phone=\(number) requestId=\(requestId)")
                 try await self.cgmManager.loginCn(phone: number, requestId: requestId, code: code)
+                self.logger.info("sms login ok")
                 self.isBusy = false
                 self.smsCode = ""
                 self.onLoggedIn()

@@ -90,7 +90,7 @@ public actor SyaiEnvelopedClient {
         _ request: URLRequest,
         plaintext: Data
     ) {
-        guard Self.wireLoggingEnabled else { return }
+        guard Self.wireLoggingEnabled || backend.isOttaiCn else { return }
         wireLog.info("> \(method) \(path) | headers=\(Self.redactedHeaders(request)) | plaintext=\(Self.redactedJSON(plaintext))")
     }
 
@@ -98,7 +98,7 @@ public actor SyaiEnvelopedClient {
     /// `code` is always logged, since that is what a bug report needs.
     private func wireLogResponse(_ path: String, _ response: URLResponse, body: Data) {
         let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-        if Self.wireLoggingEnabled {
+        if Self.wireLoggingEnabled || backend.isOttaiCn {
             wireLog.info("< \(status) \(path) | body=\(Self.redactedJSON(body))")
         } else if let code = Self.responseCode(body), !Self.isOKCode(code) {
             wireLog.warning("< \(status) \(path) | code=\(code)")

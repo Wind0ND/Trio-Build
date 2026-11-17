@@ -248,7 +248,7 @@ open class SyaiCGMManager: CGMManager, @unchecked Sendable {
         // A CN session stored before the userId fix carries no userId, so every
         // encrypted call would send an empty customerId and the server would keep
         // answering "no such sensor". Force one fresh sign-in instead of looping.
-        if Self.backendTemplate.isOttaiCn, let staleAccount = account, staleAccount.userId == nil {
+        if type(of: self).backendTemplate.isOttaiCn, let staleAccount = account, staleAccount.userId == nil {
             SyaiKeychain.deleteAccount(namespace: type(of: self).pluginIdentifier)
             account = nil
         }
