@@ -13,6 +13,10 @@ import UIKit
 struct SyaiSensorPlacementView: View {
     var onDone: (() -> Void)?
 
+    /// The Ottai sensor is a self-contained disc with no applicator, so the
+    /// Syai applicator walkthrough would be misleading. Same steps, own art.
+    var ottai = false
+
     @State private var step = 0
     private let stepCount = 5
 
@@ -34,10 +38,14 @@ struct SyaiSensorPlacementView: View {
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
     }
 
+    private func art(_ ottaiArt: [String], _ syaiArt: [String]) -> [String] {
+        ottai ? ottaiArt : syaiArt
+    }
+
     @ViewBuilder private func stepView(_ index: Int) -> some View {
         switch index {
         case 0:
-            stepCard(1, Text("Step 1", comment: "placement step 1 label"), images: ["placement_step1"]) {
+            stepCard(1, Text("Step 1", comment: "placement step 1 label"), images: art(["ottai_step1"], ["placement_step1"])) {
                 Text(
                     "Choose the back of your upper arm as the application site. Avoid areas with scars, moles, stretch marks, or lumps.",
                     comment: "placement step 1 body"
@@ -66,7 +74,7 @@ struct SyaiSensorPlacementView: View {
             }
 
         case 1:
-            stepCard(2, Text("Step 2", comment: "placement step 2 label"), images: ["placement_step2"]) {
+            stepCard(2, Text("Step 2", comment: "placement step 2 label"), images: art(["ottai_step2"], ["placement_step2"])) {
                 Text(
                     "Clean the application site and wait for the skin to dry before proceeding.",
                     comment: "placement step 2 body"
@@ -84,7 +92,7 @@ struct SyaiSensorPlacementView: View {
             }
 
         case 2:
-            stepCard(3, Text("Step 3", comment: "placement step 3 label"), images: ["placement_step3"]) {
+            stepCard(3, Text("Step 3", comment: "placement step 3 label"), images: art(["ottai_step3"], ["placement_step3"])) {
                 Text(
                     "Rotate to open the bottom cover of the Applicator.",
                     comment: "placement step 3 body"
@@ -107,7 +115,7 @@ struct SyaiSensorPlacementView: View {
             }
 
         case 3:
-            stepCard(4, Text("Step 4", comment: "placement step 4 label"), images: ["placement_step5", "placement_step6"]) {
+            stepCard(4, Text("Step 4", comment: "placement step 4 label"), images: art(["ottai_step4", "ottai_step5"], ["placement_step5", "placement_step6"])) {
                 Text(
                     "Place the Applicator over your arm, press the launch button on the top, and gently pull away the Applicator. The Monitor should now be attached to the skin.",
                     comment: "placement step 4 body"
@@ -138,7 +146,7 @@ struct SyaiSensorPlacementView: View {
             }
 
         default:
-            stepCard(5, Text("Step 5", comment: "placement step 5 label"), images: ["placement_step7"]) {
+            stepCard(5, Text("Step 5", comment: "placement step 5 label"), images: art(["ottai_step6", "ottai_step7"], ["placement_step7"])) {
                 Text(
                     "Gently press the tape around the edge of the Monitor to attach it firmly to the skin.",
                     comment: "placement step 5 body"

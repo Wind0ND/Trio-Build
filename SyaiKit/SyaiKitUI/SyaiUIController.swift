@@ -132,7 +132,7 @@ final class SyaiUIController: UINavigationController, CGMManagerOnboarding, Comp
 
         case .placementGuide:
             return hostingController(
-                rootView: SyaiSensorPlacementView(onDone: { [weak self] in self?.popScreen() }),
+                rootView: SyaiSensorPlacementView(ottai: ottaiMode, onDone: { [weak self] in self?.popScreen() }),
                 title: String(localized: "Placement Guide", comment: "placement guide")
             )
 
