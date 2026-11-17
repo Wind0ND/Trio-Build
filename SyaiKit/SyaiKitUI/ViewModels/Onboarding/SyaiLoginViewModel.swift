@@ -64,6 +64,7 @@ import SyaiKit
     }
 
     func submit() {
+        SyaiWireTrace.shared.append("> submit mode=\(mode) canSubmit=\(canSubmit) requestId=\(requestId == nil ? "nil" : "set") code=\(smsCode.count) busy=\(isBusy)")
         guard canSubmit else { return }
         errorMessage = nil
         #if targetEnvironment(simulator)
@@ -91,12 +92,14 @@ import SyaiKit
             do {
                 let number = self.phone.trimmingCharacters(in: .whitespaces)
                 let id = try await OttaiCnLoginProvider.requestCode(phone: number)
+                SyaiWireTrace.shared.append("< requestId=\(id)")
                 self.requestId = id
                 self.codeSent = true
                 self.isBusy = false
             } catch {
                 self.isBusy = false
                 self.logger.error("sms code request failed: \(error)")
+                SyaiWireTrace.shared.append("!! smsCode \(error)")
                 self.errorMessage = String(describing: error)
             }
         }
@@ -118,14 +121,17 @@ import SyaiKit
             let code = self.smsCode.trimmingCharacters(in: .whitespaces)
             do {
                 self.logger.info("sms login start phone=\(number) requestId=\(requestId)")
+                SyaiWireTrace.shared.append("> smsLogin phone=\(number) code=\(code.count)ch")
                 try await self.cgmManager.loginCn(phone: number, requestId: requestId, code: code)
                 self.logger.info("sms login ok")
+                SyaiWireTrace.shared.append("< smsLogin ok account=\(number)")
                 self.isBusy = false
                 self.smsCode = ""
                 self.onLoggedIn()
             } catch {
                 self.isBusy = false
                 self.logger.error("sms login failed: \(error)")
+                SyaiWireTrace.shared.append("!! smsLogin \(error)")
                 self.errorMessage = String(describing: error)
             }
         }

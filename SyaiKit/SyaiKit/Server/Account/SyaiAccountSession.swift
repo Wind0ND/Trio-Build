@@ -15,6 +15,12 @@ public struct SyaiAccountSession: Codable, Sendable, Equatable {
     public var glucoseSecretKey: String?
     public var userId: String?
     public var password: String?
+    /// Which regional service this session belongs to. Left `nil` on sessions
+    /// saved before the mainland driver existed. When it is `true` every later
+    /// request is pinned to the mainland host, even if a call site forgets to
+    /// pass the template - a static-dispatch slip must not silently send a CN
+    /// account id to the global server.
+    public var isOttaiCn: Bool?
 
     public init(
         email: String,
@@ -22,7 +28,8 @@ public struct SyaiAccountSession: Codable, Sendable, Equatable {
         accessToken: String? = nil,
         glucoseSecretKey: String? = nil,
         userId: String? = nil,
-        password: String? = nil
+        password: String? = nil,
+        isOttaiCn: Bool? = nil
     ) {
         self.email = email
         self.refreshToken = refreshToken
@@ -30,6 +37,7 @@ public struct SyaiAccountSession: Codable, Sendable, Equatable {
         self.glucoseSecretKey = glucoseSecretKey
         self.userId = userId
         self.password = password
+        self.isOttaiCn = isOttaiCn
     }
 
     public init(email: String, backend: SyaiBackend, password: String? = nil) {
@@ -39,7 +47,8 @@ public struct SyaiAccountSession: Codable, Sendable, Equatable {
             accessToken: backend.credentials.accessToken,
             glucoseSecretKey: backend.glucoseSecretKey,
             userId: backend.userId,
-            password: password
+            password: password,
+            isOttaiCn: backend.isOttaiCn
         )
     }
 
@@ -48,7 +57,10 @@ public struct SyaiAccountSession: Codable, Sendable, Equatable {
     }
 
     public func backend(template: SyaiBackend = .syaiTemplate) -> SyaiBackend {
-        var b = template.withCredentials(credentials)
+        // The session, not the caller, decides the region: a mainland session
+        // must always reach api.ottai.com.
+        let resolved = isOttaiCn == true ? .ottaiCnTemplate : template
+        var b = resolved.withCredentials(credentials)
         b.glucoseSecretKey = glucoseSecretKey
         return b
     }
@@ -63,7 +75,8 @@ public struct SyaiAccountSession: Codable, Sendable, Equatable {
             accessToken: c.accessToken ?? accessToken,
             glucoseSecretKey: gsk ?? glucoseSecretKey,
             userId: userId ?? c.userId,
-            password: password
+            password: password,
+            isOttaiCn: isOttaiCn
         )
     }
 }

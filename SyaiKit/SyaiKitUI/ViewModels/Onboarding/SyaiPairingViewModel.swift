@@ -201,7 +201,9 @@ import SyaiKit
                 self.statusText = ""
                 return
             }
-            let text = await lookup.cnAccountDiagnostics(mac: self.selectedMAC)
+            let raw = await lookup.cnAccountDiagnostics(mac: self.selectedMAC)
+            let managerLine = "manager=\(type(of: self.cgmManager)) id=\(self.cgmManager.pluginIdentifier) templateIsCn=\(type(of: self.cgmManager).backendTemplate.isOttaiCn) sessionIsCn=\(self.cgmManager.account?.isOttaiCn.map { $0 ? "true" : "false" } ?? "nil")"
+            let text = managerLine + "\n" + raw
             self.diagnostics = text
             UIPasteboard.general.string = text
             self.statusText = String(
