@@ -57,6 +57,9 @@ extension SyaiCGMManager {
         if sample.source == .realtime, let elapsedSeconds = sample.elapsedSeconds, let activatedAt {
             let wallAge = Date().timeIntervalSince(activatedAt)
             let projected = activatedAt.addingTimeInterval(elapsedSeconds)
+            // A live frame describes "now", so anything dated ahead of the clock is garbage
+            // outright; the six-hour slack only guards the (harmless) case of a counter that
+            // runs slightly ahead of the wall clock.
             if elapsedSeconds > wallAge + 6 * 3600 || projected > Date().addingTimeInterval(120) {
                 logger.info(
                     "dropping a mis-decoded live frame: seq=\(sample.sequence) elapsed=\(Int(elapsedSeconds))s wall=\(Int(wallAge))s value=\(Int(sample.valueMgDL)) mg/dL"
@@ -65,13 +68,23 @@ extension SyaiCGMManager {
             }
         }
 
-        if let elapsedSeconds = sample.elapsedSeconds, let activatedAt {
-            let trueDate = activatedAt.addingTimeInterval(elapsedSeconds)
+        if var elapsedSeconds = sample.elapsedSeconds, let activatedAt {
+            var trueDate = activatedAt.addingTimeInterval(elapsedSeconds)
+            if sample.source == .realtime, trueDate < Date().addingTimeInterval(-30 * 60) {
+                // The counter restarted (firmware reboot after a reconnect) or the frame was
+                // sliced wrong. A live frame describes "now", so date it by receipt time
+                // rather than trusting a counter that disagrees with the wall clock.
+                logger.info(
+                    "re-dated a live frame with a stale counter: seq=\(sample.sequence) elapsed=\(Int(elapsedSeconds))s"
+                )
+                trueDate = sample.date
+                elapsedSeconds = 0
+            }
             sample = GlucoseSample(
                 date: trueDate, valueMgDL: sample.valueMgDL, trend: sample.trend,
                 rateOfChangeMgDLPerMinute: sample.rateOfChangeMgDLPerMinute,
                 sequence: sample.sequence, rawBaseMgDL: sample.rawBaseMgDL,
-                rawCurrent: sample.rawCurrent, elapsedSeconds: sample.elapsedSeconds,
+                rawCurrent: sample.rawCurrent, elapsedSeconds: elapsedSeconds,
                 condition: sample.condition, hasBlockingIssue: sample.hasBlockingIssue,
                 source: sample.source
             )
