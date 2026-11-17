@@ -30,17 +30,18 @@ extension CGMSettings {
 
             switch CGMType.type {
             case .plugin:
-                if let cgmManagerUIType = pluginCGMManager.getCGMManagerTypeByIdentifier(CGMType.id) {
-                    if let ottaiType = cgmManagerUIType as? OttaiCGMManager.Type {
-                        // SyaiKitUI's protocol-level setupViewController cannot see the
-                        // concrete type (Self resolves to SyaiCGMManager), so the Ottai
-                        // entry asks for its own onboarding controller explicitly.
-                        setupViewController = ottaiType.makeOttaiSetupViewController(
-                            displayGlucosePreference: displayGlucosePreference,
-                            colorPalette: .default,
-                            allowDebugFeatures: false
-                        )
-                    } else {
+                let resolvedType = pluginCGMManager.getCGMManagerTypeByIdentifier(CGMType.id)
+                debug(.cgm, "CGM setup: id=\(CGMType.id) resolved=\(String(describing: resolvedType))")
+                if CGMType.id == OttaiCGMManager.pluginIdentifier {
+                    // Keyed off the catalogue identifier, not a metatype cast:
+                    // protocol-witness `Self` is always SyaiCGMManager, and a
+                    // metatype downcast is not something to rely on here.
+                    setupViewController = makeOttaiOnboardingController(
+                        displayGlucosePreference: displayGlucosePreference,
+                        colorPalette: .default,
+                        allowDebugFeatures: false
+                    )
+                } else if let cgmManagerUIType = resolvedType {
                         setupViewController = cgmManagerUIType.setupViewController(
                             bluetoothProvider: bluetoothManager,
                             displayGlucosePreference: displayGlucosePreference,
@@ -48,7 +49,6 @@ extension CGMSettings {
                             allowDebugFeatures: false,
                             prefersToSkipUserInteraction: false
                         )
-                    }
                 } else {
                     break
                 }

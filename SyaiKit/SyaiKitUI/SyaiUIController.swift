@@ -48,7 +48,7 @@ final class SyaiUIController: UINavigationController, CGMManagerOnboarding, Comp
 
     /// The Ottai catalogue entry shares this controller but needs its own
     /// artwork and wording; the manager's concrete type is what tells them apart.
-    private var isOttai: Bool { cgmManager is OttaiCGMManager }
+    private var isOttai: Bool { cgmManager.pluginIdentifier == OttaiCGMManager.pluginIdentifier }
 
     init(
         cgmManager: SyaiCGMManager? = nil,

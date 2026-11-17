@@ -156,6 +156,25 @@ public extension OttaiCGMManager {
     }
 }
 
+/// Module-level Ottai onboarding factory.
+///
+/// `CGMSetupView` keys off the catalogue identifier string rather than a
+/// metatype cast, so nothing here depends on how Swift resolves `Self`
+/// inside the `CGMManagerUI` protocol witness.
+public func makeOttaiOnboardingController(
+    displayGlucosePreference: DisplayGlucosePreference,
+    colorPalette: LoopUIColorPalette,
+    allowDebugFeatures: Bool
+) -> SetupUIResult<CGMManagerViewController, CGMManagerUI> {
+    let vc = SyaiUIController(
+        makeManager: { OttaiCGMManager() },
+        colorPalette: colorPalette,
+        displayGlucosePreference: displayGlucosePreference,
+        allowDebugFeatures: allowDebugFeatures
+    )
+    return .userInteractionRequired(vc)
+}
+
 private struct SyaiDeviceStatusBadge: DeviceStatusBadge {
     var image: UIImage? = UIImage(systemName: "exclamationmark.triangle")
     var state: DeviceStatusBadgeState = .critical
