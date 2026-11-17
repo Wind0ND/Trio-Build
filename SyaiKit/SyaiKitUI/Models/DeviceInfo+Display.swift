@@ -9,7 +9,15 @@
 import SyaiKit
 
 extension DeviceInfo {
-    var productName: String {
-        deviceType == "X1" ? "Syai Ultra" : "Syai Tag"
+    /// `X1`/`Syai Tag` are the global products. A mainland Ottai sensor
+    /// reports `M8`, so a brand-aware caller names it instead of pretending it
+    /// is a Syai device.
+    func productName(ottai: Bool) -> String {
+        if ottai {
+            return deviceType.isEmpty ? "Ottai" : "Ottai \(deviceType)"
+        }
+        return deviceType == "X1" ? "Syai Ultra" : "Syai Tag"
     }
+
+    var productName: String { productName(ottai: false) }
 }

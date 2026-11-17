@@ -26,7 +26,10 @@ enum SyaiSettingsAlert: Identifiable {
     @Published var cgmState: SyaiCGMState = .warmingUp
     @Published var connected = false
     @Published var mac = ""
-    var sensorModel: String { "X1" }
+    /// Was a hardcoded `X1`; a mainland sensor is an Ottai M8.
+    var sensorModel: String {
+        cgmManager.pluginIdentifier == OttaiCGMManager.pluginIdentifier ? "M8" : "X1"
+    }
     @Published var recentSamples: [GlucoseSample] = []
     @Published var sensorStartedAt = ""
     @Published var sensorEndsAt = ""

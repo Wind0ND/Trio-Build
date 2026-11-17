@@ -223,7 +223,7 @@ final class SyaiUIController: UINavigationController, CGMManagerOnboarding, Comp
             )
             return hostingController(
                 rootView: SyaiSettingsView(viewModel: viewModel),
-                title: String(localized: "Syai Ultra", comment: "settings screen title"),
+                title: cgmManager.localizedTitle,
                 largeTitleDisplayMode: .never
             )
 
@@ -265,7 +265,7 @@ final class SyaiUIController: UINavigationController, CGMManagerOnboarding, Comp
             let view = SyaiFactoryCalibrationsView(activeSensor: deviceInfo)
             return hostingController(
                 rootView: view,
-                title: deviceInfo.productName
+                title: deviceInfo.productName(ottai: ottaiMode)
             )
 
         case let .sampleDetail(sample):
