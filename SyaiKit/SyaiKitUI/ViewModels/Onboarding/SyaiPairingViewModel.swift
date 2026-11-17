@@ -187,6 +187,15 @@ import SyaiKit
         }
     }
 
+    /// The Keychain session outlives CGM deletion and a reinstall, so onboarding
+    /// needs its own way to drop it and sign in again.
+    func signOut() {
+        task?.cancel()
+        errorMessage = nil
+        cgmManager.logOut()
+        onNeedsLogin()
+    }
+
     func retry() { pair() }
 
     func showAllSensors() {

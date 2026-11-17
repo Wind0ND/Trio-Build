@@ -161,6 +161,10 @@ struct SyaiPairingView: View {
                         Text("Search Nearby", comment: "search nearby sensors button")
                     }
                     .buttonStyle(ActionButtonStyle(.secondary))
+                    Button(action: viewModel.signOut) {
+                        Text("重新登录欧态账号", comment: "sign out and sign in again")
+                    }
+                    .buttonStyle(ActionButtonStyle(.secondary))
                 }
                 .padding(.horizontal)
                 .padding(.bottom)

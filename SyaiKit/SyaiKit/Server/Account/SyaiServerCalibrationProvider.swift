@@ -277,17 +277,38 @@ public extension SyaiEnvelopedClient {
         // Pairing has no offline fallback; always try fresh.
         try await ensureAccessToken(bypassKnownLockout: true)
         let ts = SyaiBackend.timestampMillis()
+        let log = SyaiLogger(category: "Calibration")
+        if backend.isOttaiCn {
+            // The official app reads the sensor record with V2 before it starts
+            // one. Logging both answers separates "the server has no such sensor"
+            // from "we asked as the wrong identity".
+            do {
+                let v2 = try await envelopedGET(
+                    path: "device/validateDeviceByMacV2",
+                    body: ["mac": mac, "signature": backend.signPlain(timestamp: ts, [mac])],
+                    extraHeaders: ["timestamp": ts],
+                    includeProductModel: true
+                )
+                log.info("validateV2 \(String(data: v2, encoding: .utf8) ?? "<\(v2.count) bytes>")")
+            } catch {
+                log.info("validateV2 failed \(String(describing: error))")
+            }
+        }
         // CN service signs over the bare argument list; Syai over the same
         // fields in a different order. Both end in the same md5 key.
         let signature = backend.plainTextTransport
             ? backend.signPlain(timestamp: ts, [mac])
             : backend.signValidateMac(mac: mac, timestamp: ts)
-        return try await envelopedPOST(
+        let answer = try await envelopedPOST(
             path: "device/validateDeviceByMacV3",
             body: ["mac": mac, "signature": signature],
             extraHeaders: ["timestamp": ts],
             includeProductModel: true
         )
+        if backend.isOttaiCn {
+            log.info("validateV3 \(String(data: answer, encoding: .utf8) ?? "<\(answer.count) bytes>")")
+        }
+        return answer
     }
 
     /// POST `cgmAuth/verify`: hands the sensor's auth challenge (`authDev` and
