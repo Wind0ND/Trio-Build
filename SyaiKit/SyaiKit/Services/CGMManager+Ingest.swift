@@ -48,6 +48,23 @@ extension SyaiCGMManager {
             activatedAt = sample.date.addingTimeInterval(-elapsedSeconds)
         }
 
+        // A mis-decoded frame carries its sequence and its elapsed counter from
+        // unrelated bytes: the 2026-11-18 logs show frames claiming seq=17935 and
+        // seq=53982 with counters months ahead, which dated a reading 2026-11-23 —
+        // five days into the future. Trio keeps the newest reading by date, so one
+        // such row froze the home screen on itself for hours. A live frame can
+        // never run ahead of the wall clock since activation.
+        if sample.source == .realtime, let elapsedSeconds = sample.elapsedSeconds, let activatedAt {
+            let wallAge = Date().timeIntervalSince(activatedAt)
+            let projected = activatedAt.addingTimeInterval(elapsedSeconds)
+            if elapsedSeconds > wallAge + 6 * 3600 || projected > Date().addingTimeInterval(120) {
+                logger.info(
+                    "dropping a mis-decoded live frame: seq=\(sample.sequence) elapsed=\(Int(elapsedSeconds))s wall=\(Int(wallAge))s value=\(Int(sample.valueMgDL)) mg/dL"
+                )
+                return
+            }
+        }
+
         if let elapsedSeconds = sample.elapsedSeconds, let activatedAt {
             let trueDate = activatedAt.addingTimeInterval(elapsedSeconds)
             sample = GlucoseSample(
@@ -210,7 +227,7 @@ extension SyaiCGMManager {
             recordForwardingOutcome(
                 forSequence: sample.sequence,
                 wasForwarded: false,
-                skipReason: "Off the 5-min grid"
+                skipReason: "不在 5 分钟网格上"
             )
             return
         }

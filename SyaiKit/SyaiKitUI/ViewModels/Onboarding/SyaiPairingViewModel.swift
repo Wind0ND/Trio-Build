@@ -52,9 +52,7 @@ import SyaiKit
     private let cgmManager: SyaiCGMManager
 
     /// Artwork asset matching the configured sensor.
-    var sensorArtworkName: String {
-        cgmManager.pluginIdentifier == OttaiCGMManager.pluginIdentifier ? "ottaiSensor" : "sensor"
-    }
+    var sensorArtworkName: String { cgmManager.brandArtwork }
     private let onCreated: () -> Void
     private let onNeedsLogin: () -> Void
     private var task: Task<Void, Never>?

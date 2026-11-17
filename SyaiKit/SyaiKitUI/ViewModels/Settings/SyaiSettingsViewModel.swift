@@ -27,14 +27,10 @@ enum SyaiSettingsAlert: Identifiable {
     @Published var connected = false
     @Published var mac = ""
     /// Was a hardcoded `X1`; a mainland sensor is an Ottai M8.
-    var sensorModel: String {
-        cgmManager.pluginIdentifier == OttaiCGMManager.pluginIdentifier ? "M8" : "X1"
-    }
+    var sensorModel: String { cgmManager.brandModel }
 
     /// Artwork asset matching the configured sensor.
-    var sensorArtworkName: String {
-        cgmManager.pluginIdentifier == OttaiCGMManager.pluginIdentifier ? "ottaiSensor" : "sensor"
-    }
+    var sensorArtworkName: String { cgmManager.brandArtwork }
     @Published var recentSamples: [GlucoseSample] = []
     @Published var sensorStartedAt = ""
     @Published var sensorEndsAt = ""

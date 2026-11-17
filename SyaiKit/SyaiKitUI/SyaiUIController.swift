@@ -66,7 +66,9 @@ final class SyaiUIController: UINavigationController, CGMManagerOnboarding, Comp
         // manager so the Ottai entry signs in with a phone number while
         // Syai Ultra keeps email + password.
         self.cgmManager = cgmManager ?? makeManager()
-        self.ottaiMode = ottaiMode || self.cgmManager.pluginIdentifier == OttaiCGMManager.pluginIdentifier
+        self.ottaiMode = ottaiMode
+            || self.cgmManager.pluginIdentifier == OttaiCGMManager.pluginIdentifier
+            || self.cgmManager.usesCnService
         self.colorPalette = colorPalette
         self.displayGlucosePreference = displayGlucosePreference
         self.allowDebugFeatures = allowDebugFeatures
@@ -223,7 +225,7 @@ final class SyaiUIController: UINavigationController, CGMManagerOnboarding, Comp
             )
             return hostingController(
                 rootView: SyaiSettingsView(viewModel: viewModel),
-                title: cgmManager.localizedTitle,
+                title: cgmManager.brandTitle,
                 largeTitleDisplayMode: .never
             )
 

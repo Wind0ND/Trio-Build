@@ -1,6 +1,106 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Only what pairing a sensor requires." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅上传配对传感器所必需的信息。"
+          }
+        }
+      }
+    },
+    "Also tells Syai when your sensor connects, disconnects, or reports a problem." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "另外告知 Syai 传感器何时连接、断开或报告异常。"
+          }
+        }
+      }
+    },
+    "Also uploads your glucose readings, exactly as the official app does. Allows your doctor/caregivers to keep following your treatment." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还与官方 App 一样上传你的血糖读数，让医生或家人可以持续关注你的治疗。"
+          }
+        }
+      }
+    },
+    "Your sensor reports itself as not activated. Check that your sensor is nearby, or re-pair if this continues." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器报告自己尚未激活。请确认它在手机附近；若持续出现，请重新配对。"
+          }
+        }
+      }
+    },
+    "This could be due to compression or connection loss. Wait for it to resolve, or replace the sensor if it persists." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可能是压迫或连接中断所致。请等待它自行恢复；若持续存在，请更换传感器。"
+          }
+        }
+      }
+    },
+    "Readings have been unavailable for a while. This could be compression or connection loss, and it usually resolves on its own. Replace the sensor only if it persists." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已有一段时间没有读数。这通常是压迫或连接中断，一般会自行恢复；仅在持续不恢复时更换传感器。"
+          }
+        }
+      }
+    },
+    "Scan the QR code on the sensor applicator, or search for sensors nearby." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "扫描敷贴器上的二维码，或搜索附近的传感器。"
+          }
+        }
+      }
+    },
+    "Keep your phone near the sensor. This can take up to a minute." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请把手机靠近传感器，最多需要一分钟。"
+          }
+        }
+      }
+    },
+    "No sensors heard. The sensor advertises in bursts. Try scanning again." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有搜索到传感器。传感器是间歇广播的，请再扫描一次。"
+          }
+        }
+      }
+    },
+    "Allow camera access in Settings to scan the applicator, or search for sensors nearby instead." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请在设置中允许相机权限以扫描敷贴器，或改用搜索附近传感器。"
+          }
+        }
+      }
+    },
     "%@U" : {
       "localizations" : {
         "zh-Hans" : {

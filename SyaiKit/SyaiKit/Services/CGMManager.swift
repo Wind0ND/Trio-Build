@@ -28,6 +28,24 @@ open class SyaiCGMManager: CGMManager, @unchecked Sendable {
 
     public var localizedTitle: String { type(of: self).localizedTitle }
     public var pluginIdentifier: String { type(of: self).pluginIdentifier }
+
+    /// Which service this account points at decides the product name, not which
+    /// class Trio instantiated. Trio rebuilds the manager from persisted state, so
+    /// the runtime class can be this parent even when the sensor is an Ottai M8
+    /// on the mainland service; the session already knows the difference.
+    public var usesCnService: Bool {
+        account?.isOttaiCn ?? type(of: self).backendTemplate.isOttaiCn
+    }
+
+    public var brandTitle: String { usesCnService ? "Ottai M8" : localizedTitle }
+
+    /// Model as the cloud reports it, falling back to the shipped name while
+    /// `getBindDevice` has not answered yet.
+    public var brandModel: String {
+        usesCnService ? (state.sensors.current()?.deviceInfo.deviceType ?? "M8") : "X1"
+    }
+
+    public var brandArtwork: String { usesCnService ? "ottaiSensor" : "sensor" }
     public func markAsDepedency(_: Bool) {}
 
     public weak var cgmManagerDelegate: CGMManagerDelegate?

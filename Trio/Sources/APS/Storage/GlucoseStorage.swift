@@ -113,9 +113,26 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
     func storeGlucose(_ glucose: [BloodGlucose]) async throws {
         let context = makeContext()
         context.name = "storeGlucose"
-        let clamped = clampToMinimum(glucose)
+        // A mis-decoded sensor frame dated a reading 2026-11-23 while the clock
+        // said 2026-11-18, and that future row then counted as the newest
+        // reading for hours: every honest reading looked stale beside it and the
+        // home screen froze. Nothing legitimate is dated ahead of the phone, so
+        // drop such rows on the way in and purge whatever an older build saved.
+        let sanityLimit = Date().addingTimeInterval(300)
+        let futureDated = glucose.filter { $0.dateString > sanityLimit }
+        if !futureDated.isEmpty {
+            debug(.cgm, "Dropping \(futureDated.count) future-dated glucose reading(s)")
+        }
+        let clamped = clampToMinimum(glucose.filter { $0.dateString <= sanityLimit })
 
         try await context.perform {
+            let futureRequest = GlucoseStored.fetchRequest()
+            futureRequest.predicate = NSPredicate(format: "date > %@", sanityLimit as NSDate)
+            if let stale = try? context.fetch(futureRequest), !stale.isEmpty {
+                stale.forEach { context.delete($0) }
+                try? context.save()
+                debug(.cgm, "Deleted \(stale.count) future-dated glucose reading(s)")
+            }
             // Get new glucose values that don't exist yet
             let newGlucose = self.filterGlucoseValues(
                 clamped,
