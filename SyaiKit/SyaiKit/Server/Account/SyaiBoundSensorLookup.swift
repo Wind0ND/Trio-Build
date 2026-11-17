@@ -111,7 +111,7 @@ public struct SyaiBoundSensorLookup: Sendable {
     /// Raw answers of every account-device endpoint the CN service exposes, in
     /// one text block for onboarding. Read-only: nothing is bound, unbound,
     /// activated or connected, and nothing is stored.
-    func cnAccountDiagnostics(mac: String?) async -> String {
+    public func cnAccountDiagnostics(mac: String?) async -> String {
         var lines: [String] = []
         let customer = backend.userId ?? "<nil>"
         lines.append("host=\(backend.baseURL.host ?? "?") userId=\(customer) (\(customer.count) chars)")
