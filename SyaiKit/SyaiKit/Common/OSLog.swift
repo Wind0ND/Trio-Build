@@ -146,3 +146,34 @@ private extension Data {
 private extension String {
     var file: String { components(separatedBy: "/").last ?? "" }
 }
+
+/// Ring buffer of the most recent CN wire exchanges, rendered on screen so a failing
+/// sign-in can be diagnosed without exporting `syai_log.txt`.
+public final class SyaiWireTrace: @unchecked Sendable {
+    public static let shared = SyaiWireTrace()
+    private let lock = NSLock()
+    private var lines: [String] = []
+    private let limit = 80
+
+    public func append(_ text: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        lines.append(text)
+        if lines.count > limit {
+            lines.removeFirst(lines.count - limit)
+        }
+    }
+
+    public var snapshot: [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        return lines
+    }
+
+    public func clear() {
+        lock.lock()
+        lines.removeAll()
+        lock.unlock()
+    }
+}
+

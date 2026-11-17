@@ -92,6 +92,7 @@ public actor SyaiEnvelopedClient {
     ) {
         guard Self.wireLoggingEnabled || backend.isOttaiCn else { return }
         wireLog.info("> \(method) \(path) | headers=\(Self.redactedHeaders(request)) | plaintext=\(Self.redactedJSON(plaintext))")
+        SyaiWireTrace.shared.append("> \(method) \(path) \(Self.redactedJSON(plaintext).prefix(220))")
     }
 
     /// Bodies only on opt-in; a response the server answered with a non-OK
@@ -100,8 +101,10 @@ public actor SyaiEnvelopedClient {
         let status = (response as? HTTPURLResponse)?.statusCode ?? -1
         if Self.wireLoggingEnabled || backend.isOttaiCn {
             wireLog.info("< \(status) \(path) | body=\(Self.redactedJSON(body))")
+            SyaiWireTrace.shared.append("< \(status) \(path) \(Self.redactedJSON(body).prefix(260))")
         } else if let code = Self.responseCode(body), !Self.isOKCode(code) {
             wireLog.warning("< \(status) \(path) | code=\(code)")
+            SyaiWireTrace.shared.append("< \(status) \(path) code=\(code)")
         }
     }
 
@@ -110,6 +113,7 @@ public actor SyaiEnvelopedClient {
             wireLog.error("< ERROR \(path) | HTTP \(status) body=\(Self.redactedJSON(Data(body.utf8)))")
         } else {
             wireLog.error("< ERROR \(path) | \(String(describing: error))")
+            SyaiWireTrace.shared.append("< ERROR \(path) \(String(describing: error).prefix(200))")
         }
     }
 
