@@ -54,3 +54,7 @@
 	path = LibreLoop
 	url = https://github.com/loopandlearn/LibreLoop.git
 	branch = trio-next-dev
+[submodule "SyaiKit"]
+	path = SyaiKit
+	url = https://github.com/nightscout/SyaiKit
+	branch = trio-next-dev

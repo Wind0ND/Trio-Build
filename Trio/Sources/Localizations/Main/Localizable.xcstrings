@@ -1,6 +1,36 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Export Diagnostics" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出诊断信息"
+          }
+        }
+      }
+    },
+    "Diagnostic Events" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "诊断事件"
+          }
+        }
+      }
+    },
+    "Feature events only: pairing stages and outcomes. No glucose, treatments, identifiers, serial numbers or raw logs." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅包含功能事件：配对阶段与结果。不含血糖、治疗、身份标识、序列号或原始日志。"
+          }
+        }
+      }
+    },
     "Only what pairing a sensor requires." : {
       "localizations" : {
         "zh-Hans" : {

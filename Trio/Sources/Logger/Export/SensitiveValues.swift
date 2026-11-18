@@ -4,6 +4,7 @@ import Foundation
 import G7SensorKit
 import LibreTransmitter
 import LoopKit
+import OttaiKit
 import SyaiKit
 import TidepoolServiceKit
 
@@ -61,6 +62,10 @@ struct SensitiveValues {
             (["peripheralIdentifier"], .device),
             (["sharedKey"], .secret),
             (["shareUsername"], .account)
+        ],
+        "OttaiCGMManager": [
+            (["sensors", "activeMAC"], .device),
+            (["sensors", "pendingBind", "mac"], .device)
         ],
         "SyaiCGMManager": [
             (["sensors", "activeMAC"], .device),
@@ -190,6 +195,15 @@ struct SensitiveValues {
             add(credentials.dropFirst().first ?? nil, .secret)
         case let manager as G7CGMManager:
             add(manager.state.transmitterVersion?.serialNumberString, .cgmSerial)
+        case let manager as OttaiKit.OttaiCGMManager:
+            // The account lives in the kit's own keychain item, not in rawState.
+            // Ottai persists under its own namespace inside the shared service.
+            guard let account = OttaiKeychain.loadAccount(namespace: manager.pluginIdentifier) else { return }
+            add(account.email, .email)
+            add(account.userId, .account)
+            for secret in [account.password, account.refreshToken, account.accessToken, account.glucoseSecretKey] {
+                add(secret, .secret)
+            }
         case is SyaiCGMManager:
             // The account lives in the kit's own keychain item, not in rawState
             guard let account = SyaiKeychain.loadAccount() else { return }

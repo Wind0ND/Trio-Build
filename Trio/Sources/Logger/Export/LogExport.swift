@@ -11,6 +11,8 @@ final class LogExport: Injectable {
         case all
         case pump
         case cgm
+        /// Allowlisted feature events only. Never contains health logs.
+        case diagnostics
     }
 
     @Injected() private var deviceLogStore: DeviceLogStore!
@@ -38,6 +40,7 @@ final class LogExport: Injectable {
     private let coreDataStack: CoreDataStack?
     private let storedValues: SensitiveValues
     private let requestWatchLogs: (() async -> Void)?
+    private let diagnosticEvents: (DateInterval) -> [DiagnosticEvent]
 
     init(resolver: Resolver) {
         appLog = { TrioLogger.sink }
@@ -46,6 +49,7 @@ final class LogExport: Injectable {
         coreDataStack = CoreDataStack.shared
         storedValues = SensitiveValues()
         requestWatchLogs = { await WatchLogIngest.shared.requestLatest() }
+        diagnosticEvents = { DiagnosticEventStore.shared.events(in: $0) }
         injectServices(resolver)
     }
 
@@ -56,7 +60,8 @@ final class LogExport: Injectable {
         cgm: DeviceManager?,
         storedValues: SensitiveValues = SensitiveValues(),
         coreDataStack: CoreDataStack? = nil,
-        requestWatchLogs: (() async -> Void)? = nil
+        requestWatchLogs: (() async -> Void)? = nil,
+        diagnosticEvents: @escaping (DateInterval) -> [DiagnosticEvent] = { _ in [] }
     ) {
         self.appLog = { appLog }
         managers = { (pump, cgm) }
@@ -64,6 +69,7 @@ final class LogExport: Injectable {
         self.coreDataStack = coreDataStack
         self.storedValues = storedValues
         self.requestWatchLogs = requestWatchLogs
+        self.diagnosticEvents = diagnosticEvents
         self.deviceLogStore = deviceLogStore
     }
 
@@ -118,6 +124,11 @@ final class LogExport: Injectable {
     func writeLog(_ kind: Kind, days: Int, into directory: URL) async throws -> URL {
         let now = Date()
         let window = DateInterval(start: now.addingTimeInterval(-Double(max(days, 1)) * 24 * 60 * 60), end: now)
+        // Early branch: diagnostics must not touch the app/device/algorithm
+        // stores, which is what keeps health logs out of this ZIP by default.
+        if kind == .diagnostics {
+            return try await writeDiagnosticLog(window: window, now: now, into: directory)
+        }
         let (pump, cgm) = await deviceSnapshots()
 
         var header = LogFileHeader(kind: kind, days: days, created: now, pump: pump, cgm: cgm)
@@ -173,6 +184,64 @@ final class LogExport: Injectable {
             return lines
         }
         return url
+    }
+
+    /// Diagnostic-only export. It deliberately reads no log store, no device
+    /// snapshot and no algorithm data; the only content is the allowlisted
+    /// event stream plus schema/version/window metadata.
+    private func writeDiagnosticLog(window: DateInterval, now: Date, into directory: URL) async throws -> URL {
+        let events = diagnosticEvents(window).filter(\.isValid)
+        let header = try Self.diagnosticHeader(window: window, eventCount: events.count, exportedAt: now)
+        let redactor = Redactor(exactValues: storedValues.values)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent("Trio Diagnostic Events \(Self.fileStamp(now)).txt")
+        try await LogFileWriter.write(
+            header: header,
+            window: window,
+            to: url,
+            redactor: redactor,
+            sectionTitle: "Diagnostic Events"
+        ) { _ in
+            events.map { event in
+                LogLine(date: event.timestamp, source: "event", text: event.jsonLine())
+            }
+        }
+        return url
+    }
+
+    private struct DiagnosticExportHeader: Encodable {
+        let schema: String
+        let schemaVersion: Int
+        let eventSchemaVersion: Int
+        let appVersion: String
+        let appBuild: String
+        let iosVersion: String
+        let exportedAt: Date
+        let windowStart: Date
+        let windowEnd: Date
+        let eventCount: Int
+        let featureAllowlist: [String]
+    }
+
+    private static func diagnosticHeader(window: DateInterval, eventCount: Int, exportedAt: Date) throws -> String {
+        let info = Bundle.main.infoDictionary
+        let header = DiagnosticExportHeader(
+            schema: DiagnosticEventContract.exportSchema,
+            schemaVersion: DiagnosticEventContract.exportSchemaVersion,
+            eventSchemaVersion: DiagnosticEventContract.schemaVersion,
+            appVersion: info?["CFBundleShortVersionString"] as? String ?? "unknown",
+            appBuild: info?["CFBundleVersion"] as? String ?? "unknown",
+            iosVersion: ProcessInfo.processInfo.operatingSystemVersionString,
+            exportedAt: exportedAt,
+            windowStart: window.start,
+            windowEnd: window.end,
+            eventCount: eventCount,
+            featureAllowlist: DiagnosticEventContract.allowedFeatures
+        )
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        return String(decoding: try encoder.encode(header), as: UTF8.self)
     }
 
     @MainActor private func currentManagers() -> (pump: DeviceManager?, cgm: DeviceManager?) {

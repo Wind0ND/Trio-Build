@@ -50,3 +50,16 @@ Trio's spoken alert sounds were generated with
 - Licence: **Public domain.** Credited here as a courtesy; no attribution is
   required.
 - Changes made by Trio: looped to a minimum duration of five seconds, as above.
+
+## Ottai CGM driver
+
+`OttaiKit` and `OttaiKitUI` are a self-contained fork of the MIT-licensed
+`SyaiKit` driver in this repository, adapted for the mainland-China Ottai M8
+service.
+
+- Original copyright: **Copyright (c) 2026 Nightscout Foundation**
+- Licence: **MIT** — see `OttaiKit/LICENSE`
+- Source: the vendored `SyaiKit` tree in this repository at commit `cedcd4163`
+- Changes: Ottai-specific product naming and module isolation, an isolated
+  `Documents/ottai/` log/history location, and an NFC-first activation flow.
+  The BLE protocol, backend routes and signing preimages are unchanged.

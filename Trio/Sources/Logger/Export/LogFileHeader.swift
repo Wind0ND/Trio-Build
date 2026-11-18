@@ -22,6 +22,7 @@ struct LogFileHeader {
         case .all: return "Trio Logs"
         case .pump: return "Trio Pump Logs"
         case .cgm: return "Trio CGM Logs"
+        case .diagnostics: return "Trio Diagnostic Events"
         }
     }
 

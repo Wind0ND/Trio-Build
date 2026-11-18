@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "ottai_step1.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

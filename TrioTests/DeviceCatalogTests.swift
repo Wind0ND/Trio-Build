@@ -20,7 +20,8 @@ import UIKit
         "G7CGMManager": "G7CGMManager",
         "AccuChekCgmManager": "AccuChek",
         "EversenseCGMManager": "EversenseKit",
-        "SyaiCGMManager": "SyaiCGMManager"
+        "SyaiCGMManager": "SyaiCGMManager",
+        "OttaiCGMManager": "OttaiCGMManager"
     ]
 
     // MARK: - Integrity

@@ -8,6 +8,7 @@ import LibreLoop
 import LibreTransmitter
 import LoopKit
 import LoopKitUI
+import OttaiKit
 import SyaiKit
 
 final class PluginSource: GlucoseSource {
@@ -293,7 +294,11 @@ extension PluginSource: CGMManagerDelegate {
                 sensorActivatedAt = cgmTransmitterManager.state.activatedAt
                 sensorStartDate = cgmTransmitterManager.state.activatedAt
                 sensorTransmitterID = cgmTransmitterManager.state.bleNameString
-            } else if let cgmTransmitterManager = cgmManager as? SyaiCGMManager {
+            } else if let cgmTransmitterManager = cgmManager as? OttaiKit.OttaiCGMManager {
+                sensorActivatedAt = cgmTransmitterManager.state.activatedAt
+                sensorStartDate = cgmTransmitterManager.state.activatedAt
+                sensorTransmitterID = cgmTransmitterManager.state.mac
+            } else if let cgmTransmitterManager = cgmManager as? SyaiKit.SyaiCGMManager {
                 sensorActivatedAt = cgmTransmitterManager.state.activatedAt
                 sensorStartDate = cgmTransmitterManager.state.activatedAt
                 sensorTransmitterID = cgmTransmitterManager.state.mac

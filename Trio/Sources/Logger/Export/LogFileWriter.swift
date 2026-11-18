@@ -33,6 +33,7 @@ enum LogFileWriter {
         window: DateInterval,
         to url: URL,
         redactor: Redactor,
+        sectionTitle: String = "Log",
         lines: (DateInterval) async -> [LogLine]
     ) async throws {
         guard FileManager.default.createFile(atPath: url.path, contents: nil) else {
@@ -42,7 +43,7 @@ enum LogFileWriter {
         defer { try? handle.close() }
         let formatter = timestampFormatter()
 
-        var buffer = header + "\n== Log ==\n"
+        var buffer = header + "\n== \(sectionTitle) ==\n"
         func flush() throws {
             guard !buffer.isEmpty else { return }
             // Redact in bulk; per-line regex passes are too slow for 7 days of debug lines

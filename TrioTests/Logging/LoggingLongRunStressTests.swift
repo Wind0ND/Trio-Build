@@ -844,6 +844,7 @@ import Testing
                 case .all: ["Trio", "Watch", "Pump", "CGM", "Algorithm"]
                 case .pump: ["Pump"]
                 case .cgm: ["CGM"]
+                case .diagnostics: []
                 }
                 let before = Date()
                 let upper = Dictionary(uniqueKeysWithValues: sources.map {

@@ -327,4 +327,91 @@ import Testing
         #expect(algorithm.map { String($0.dropFirst(30)) } == [enacted, suggested])
         #expect(pump.isEmpty)
     }
+
+    @Test("Diagnostic export carries schema/version/window and excludes health logs") func diagnosticExport() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DeviceLogStore(
+            storageURL: directory.appendingPathComponent("logs/DeviceLog.sqlite"),
+            isProtectedDataAvailable: { true }
+        )
+        await Self.log(store, manager: "com.example.pump", device: "SYN-PUMP-0042", message: "connected to SYN-PUMP-0042")
+        await Self.log(store, manager: "com.example.cgm", device: nil, message: "glucose 123")
+        let watchRequests = OSAllocatedUnfairLock(initialState: 0)
+        let now = Date()
+        let events = [
+            DiagnosticEvent(
+                timestamp: now.addingTimeInterval(-60),
+                feature: "ottai",
+                stage: "nfc",
+                outcome: "started",
+                attempt: 1,
+                count: nil
+            ),
+            DiagnosticEvent(
+                timestamp: now.addingTimeInterval(-30),
+                feature: "ottai",
+                stage: "ble_match",
+                outcome: "matched",
+                attempt: nil,
+                count: 2
+            )
+        ]
+        let export = LogExport(
+            appLog: InMemoryLogSink(),
+            deviceLogStore: store,
+            pump: StubManager(),
+            cgm: StubCGMManager(),
+            requestWatchLogs: { watchRequests.withLock { $0 += 1 } },
+            diagnosticEvents: { _ in events }
+        )
+
+        let url = try await export.writeLog(.diagnostics, days: 1, into: directory.appendingPathComponent("diag"))
+        let text = try String(contentsOf: url, encoding: .utf8)
+
+        #expect(url.lastPathComponent.hasPrefix("Trio Diagnostic Events "))
+        #expect(text.contains("\"schema\""))
+        #expect(text.contains("trio.export.diagnostics"))
+        #expect(text.contains("\"schemaVersion\""))
+        #expect(text.contains("\"eventSchemaVersion\""))
+        #expect(text.contains("\"iosVersion\""))
+        #expect(text.contains("\"windowStart\""))
+        #expect(text.contains("\"windowEnd\""))
+        #expect(text.contains("\"featureAllowlist\""))
+        #expect(text.contains("== Diagnostic Events =="))
+        #expect(text.contains("\"feature\":\"ottai\""))
+        #expect(text.contains("\"stage\":\"nfc\""))
+        #expect(text.contains("\"stage\":\"ble_match\""))
+
+        // Nothing from the app log, device log, algorithm store or health data.
+        #expect(!text.contains("SYN-PUMP-0042"))
+        #expect(!text.contains("glucose 123"))
+        #expect(!text.contains("== App =="))
+        #expect(!text.contains("== Pump =="))
+        #expect(!text.contains("== CGM =="))
+        #expect(!text.contains("== Algorithm =="))
+        #expect(watchRequests.withLock { $0 } == 0)
+    }
+
+    @Test("Diagnostic sharing uses the same ZIP workflow with its own name") func diagnosticZip() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DeviceLogStore(
+            storageURL: directory.appendingPathComponent("logs/DeviceLog.sqlite"),
+            isProtectedDataAvailable: { true }
+        )
+        let export = LogExport(
+            appLog: InMemoryLogSink(),
+            deviceLogStore: store,
+            pump: nil,
+            cgm: nil,
+            diagnosticEvents: { _ in [] }
+        )
+        let url = try await export.makeFile(.diagnostics, days: 7)
+        defer { LogExport.discard(url) }
+        #expect(url.lastPathComponent.hasPrefix("Trio Diagnostic Events "))
+        #expect(url.pathExtension == "zip")
+        let data = try Data(contentsOf: url)
+        #expect(Array(data.prefix(4)) == [0x50, 0x4B, 0x03, 0x04])
+    }
 }

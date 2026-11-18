@@ -1,0 +1,311 @@
+//
+//  OttaiSensorStore.swift
+//  OttaiKit
+//
+//  Copyright (c) 2026 Nightscout Foundation.
+//  Licensed under the MIT License. See LICENSE in the project root.
+//
+
+import Foundation
+
+/// One persisted per-sensor record. `deviceInfo` is the single source of truth
+/// for identity and calibration; `keyGroup` holds the 6 per-sensor BLE keys.
+public struct OttaiSensorRecord: Equatable, Sendable, Identifiable, RawRepresentable {
+    public var deviceInfo: DeviceInfo
+    public var keyGroup: OttaiKeyGroup
+    public var activatedAt: Date?
+    public var retiredAt: Date?
+    public var peripheralID: UUID?
+    /// The server's numeric device `id` for this sensor (from `device/authInfo`),
+    /// used as the glucose-upload body's `deviceId`. nil until the first authInfo
+    /// fetch; never fabricated.
+    public var serverDeviceId: Int?
+    /// Encrypted adjust-program blob from the bind response's `method` field,
+    /// persisted verbatim (decrypt/compare is deliberately not ported).
+    public var methodBlob: String?
+
+    public var id: String { deviceInfo.mac }
+    public var mac: String { deviceInfo.mac }
+
+    /// True if activation happened and the wear window hasn't ended yet.
+    /// Used to decide whether a re-added CGM manager should silently resume
+    /// this sensor as active rather than treat it as merely historical.
+    public var isWithinWearWindow: Bool {
+        guard let activatedAt else { return false }
+        return activatedAt.addingTimeInterval(OttaiWearExtension.extendedWear(deviceInfo.activeDuration)) > Date()
+    }
+
+    public init(
+        deviceInfo: DeviceInfo,
+        keyGroup: OttaiKeyGroup,
+        activatedAt: Date? = nil,
+        retiredAt: Date? = nil,
+        peripheralID: UUID? = nil,
+        serverDeviceId: Int? = nil,
+        methodBlob: String? = nil
+    ) {
+        self.deviceInfo = deviceInfo
+        self.keyGroup = keyGroup
+        self.activatedAt = activatedAt
+        self.retiredAt = retiredAt
+        self.peripheralID = peripheralID
+        self.serverDeviceId = serverDeviceId
+        self.methodBlob = methodBlob
+    }
+
+    public typealias RawValue = [String: Any]
+
+    public init?(rawValue: RawValue) {
+        guard let deviceRaw = rawValue["deviceInfo"] as? [String: Any],
+              let deviceInfo = DeviceInfo(rawValue: deviceRaw),
+              let keyB64 = rawValue["keyGroup"] as? String,
+              let keyGroup = OttaiKeyGroup(rawValue: keyB64) else { return nil }
+        self.deviceInfo = deviceInfo
+        self.keyGroup = keyGroup
+        activatedAt = rawValue["activatedAt"] as? Date
+        retiredAt = rawValue["retiredAt"] as? Date
+        peripheralID = (rawValue["peripheralID"] as? String).flatMap(UUID.init(uuidString:))
+        serverDeviceId = rawValue["serverDeviceId"] as? Int // additive: absent key means nil
+        methodBlob = rawValue["methodBlob"] as? String // additive: absent key means nil
+    }
+
+    public var rawValue: RawValue {
+        var raw: RawValue = [
+            "deviceInfo": deviceInfo.rawValue,
+            "keyGroup": keyGroup.rawValue
+        ]
+        raw["activatedAt"] = activatedAt
+        raw["retiredAt"] = retiredAt
+        raw["peripheralID"] = peripheralID?.uuidString
+        raw["serverDeviceId"] = serverDeviceId
+        raw["methodBlob"] = methodBlob
+        return raw
+    }
+}
+
+/// Persisted store for activated sensors: the active record plus a capped
+/// history of retired ones. Records are kept newest-first.
+public struct OttaiSensorStore: Equatable, Sendable, RawRepresentable {
+    /// Newest-first. The active record (matching `activeMAC`) sits at index 0
+    /// after every `adopt`.
+    public private(set) var records: [OttaiSensorRecord]
+    public var activeMAC: String?
+
+    /// Crash/interrupt insurance for the window between activation and bind:
+    /// the sensor's keys only arrive with the bind, so a sensor activated but
+    /// not yet bound can't be read. Set as soon as the activate command lands;
+    /// the next pairing attempt for that MAC resumes at the bind instead of
+    /// activating again. Cleared once the sensor is adopted.
+    public private(set) var pendingBind: OttaiPendingBind?
+
+    /// How many retired sensors to keep for diagnostics before trimming the
+    /// oldest. The active record never counts against being dropped.
+    public static let historyCap = 20
+
+    public init(
+        records: [OttaiSensorRecord] = [],
+        activeMAC: String? = nil,
+        pendingBind: OttaiPendingBind? = nil
+    ) {
+        self.records = records
+        self.activeMAC = activeMAC
+        self.pendingBind = pendingBind
+    }
+
+    public func current() -> OttaiSensorRecord? {
+        guard let activeMAC else { return nil }
+        return records.first { $0.mac == activeMAC }
+    }
+
+    public func history() -> [OttaiSensorRecord] { records }
+
+    public mutating func setPendingBind(_ pending: OttaiPendingBind) {
+        pendingBind = pending
+    }
+
+    public func pendingBind(forMAC mac: String) -> OttaiPendingBind? {
+        pendingBind?.mac == mac ? pendingBind : nil
+    }
+
+    /// Adopt `deviceInfo` as the active sensor, retiring whatever was active.
+    public mutating func adopt(
+        _ deviceInfo: DeviceInfo,
+        keyGroup: OttaiKeyGroup,
+        peripheralID: UUID?,
+        activatedAt: Date?
+    ) {
+        let now = Date()
+        if let activeMAC, activeMAC != deviceInfo.mac,
+           let idx = records.firstIndex(where: { $0.mac == activeMAC })
+        {
+            records[idx].retiredAt = now
+        }
+        // Drop any prior record for this MAC: we re-insert a fresh one,
+        // carrying over the lazily-fetched server device id (it's keyed by
+        // MAC/account, so a same-MAC re-pair keeps it).
+        let priorServerDeviceId = records.first { $0.mac == deviceInfo.mac }?.serverDeviceId
+        records.removeAll { $0.mac == deviceInfo.mac }
+        let record = OttaiSensorRecord(
+            deviceInfo: deviceInfo, keyGroup: keyGroup,
+            activatedAt: activatedAt, retiredAt: nil, peripheralID: peripheralID,
+            serverDeviceId: priorServerDeviceId
+        )
+        records.insert(record, at: 0)
+        activeMAC = deviceInfo.mac
+        if pendingBind?.mac == deviceInfo.mac { pendingBind = nil }
+        trim()
+    }
+
+    public mutating func setActivatedAt(_ date: Date?) {
+        guard let activeMAC, let idx = records.firstIndex(where: { $0.mac == activeMAC }) else { return }
+        records[idx].activatedAt = date
+    }
+
+    /// Persist the server's numeric device `id` on the active record,
+    /// used as the glucose-upload body's `deviceId`.
+    public mutating func setServerDeviceId(_ id: Int) {
+        guard let activeMAC, let idx = records.firstIndex(where: { $0.mac == activeMAC }) else { return }
+        records[idx].serverDeviceId = id
+    }
+
+    /// Persist the bind response's encrypted `method` blob on the active record.
+    public mutating func setMethodBlob(_ blob: String) {
+        guard let activeMAC, let idx = records.firstIndex(where: { $0.mac == activeMAC }) else { return }
+        records[idx].methodBlob = blob
+    }
+
+    /// Persist the live CoreBluetooth peripheral ID for the active record.
+    public mutating func setPeripheralID(_ id: UUID?) {
+        guard let activeMAC, let idx = records.firstIndex(where: { $0.mac == activeMAC }) else { return }
+        records[idx].peripheralID = id
+    }
+
+    public mutating func updateActiveCalibration(_ calibration: Calibration) {
+        guard let activeMAC, let idx = records.firstIndex(where: { $0.mac == activeMAC }) else { return }
+        let old = records[idx].deviceInfo
+        records[idx].deviceInfo = DeviceInfo(
+            mac: old.mac, serialNo: old.serialNo, batchNo: old.batchNo,
+            deviceType: old.deviceType, deviceVersion: old.deviceVersion,
+            coefficients: calibration.coefficients, k: calibration.k, b: calibration.b,
+            produceTime: old.produceTime, expireTime: old.expireTime,
+            activeDuration: old.activeDuration, preheatDuration: old.preheatDuration
+        )
+    }
+
+    public mutating func updateActiveDeviceInfo(_ deviceInfo: DeviceInfo) {
+        guard let activeMAC, activeMAC == deviceInfo.mac,
+              let idx = records.firstIndex(where: { $0.mac == activeMAC }) else { return }
+        records[idx].deviceInfo = deviceInfo
+    }
+
+    /// Union `records` with an externally-persisted list (by mac), preferring
+    /// the in-memory record on collision since it's the live one. Called on
+    /// every manager construction with `OttaiSensorHistoryStore`'s file
+    /// contents as `external`, so history survives a CGM manager being
+    /// deleted and re-added.
+    public mutating func mergeHistory(_ external: [OttaiSensorRecord]) {
+        guard !external.isEmpty else { return }
+        var byMAC = Dictionary(uniqueKeysWithValues: records.map { ($0.mac, $0) })
+        for record in external where byMAC[record.mac] == nil {
+            byMAC[record.mac] = record
+        }
+        records = byMAC.values.sorted { lhs, rhs in
+            let lhsDate = max(lhs.activatedAt ?? .distantPast, lhs.retiredAt ?? .distantPast)
+            let rhsDate = max(rhs.activatedAt ?? .distantPast, rhs.retiredAt ?? .distantPast)
+            return lhsDate > rhsDate
+        }
+        trim()
+
+        // Retire records whose wear window has ended. An un-retired record only
+        // means "was active when its manager was deleted", and past the window
+        // it's a dead sensor: it must never be resumed, and it must not look
+        // pairable (pairing excludes retired MACs; the server refuses them).
+        // The currently active record is exempt: its retirement stays with the
+        // explicit End Sensor flow.
+        for idx in records.indices
+            where records[idx].retiredAt == nil && records[idx].mac != activeMAC
+                && !records[idx].isWithinWearWindow
+        {
+            if let activatedAt = records[idx].activatedAt {
+                records[idx].retiredAt = activatedAt
+                    .addingTimeInterval(OttaiWearExtension.extendedWear(records[idx].deviceInfo.activeDuration))
+            }
+        }
+
+        // A record that was never explicitly retired (End Sensor / discardActive)
+        // was still the active sensor when its old CGM manager was deleted -
+        // deletion itself never retires anything. If this manager doesn't have
+        // an active sensor of its own yet and that one hasn't expired, resume
+        // it automatically: re-pairing would fail anyway, since the account
+        // already activated it and the server refuses to re-answer for it.
+        if activeMAC == nil,
+           let resumable = records.first(where: { $0.retiredAt == nil && $0.isWithinWearWindow })
+        {
+            activeMAC = resumable.mac
+        }
+    }
+
+    public mutating func discardActive() {
+        if let activeMAC, let idx = records.firstIndex(where: { $0.mac == activeMAC }) {
+            records[idx].retiredAt = records[idx].retiredAt ?? Date()
+        }
+        activeMAC = nil
+    }
+
+    private mutating func trim() {
+        guard records.count > Self.historyCap else { return }
+        records.removeLast(records.count - Self.historyCap)
+    }
+
+    public typealias RawValue = [String: Any]
+
+    public init?(rawValue: RawValue) {
+        // records live only in `OttaiSensorHistoryStore`'s file now; hydrated
+        // separately via `mergeHistory` on manager construction.
+        records = []
+        activeMAC = rawValue["activeMAC"] as? String
+        // additive: absent key means nil (state persisted before the slot existed)
+        pendingBind = (rawValue["pendingBind"] as? [String: Any])
+            .flatMap(OttaiPendingBind.init(rawValue:))
+    }
+
+    public var rawValue: RawValue {
+        // `records` is deliberately not written here: it lives only in
+        // `OttaiSensorHistoryStore`'s file now (see `mergeHistory`), so
+        // rawState carries just the index - `activeMAC` - plus the in-flight
+        // pending-bind marker. Avoids storing the same coefficients/BLE
+        // keys in two plists.
+        var raw: RawValue = [:]
+        raw["activeMAC"] = activeMAC
+        raw["pendingBind"] = pendingBind?.rawValue
+        return raw
+    }
+}
+
+/// A sensor this app activated whose bind hasn't completed yet.
+public struct OttaiPendingBind: Equatable, Sendable, RawRepresentable {
+    public let mac: String
+    public let deviceVersion: String
+    public let activatedAt: Date
+
+    public init(mac: String, deviceVersion: String, activatedAt: Date) {
+        self.mac = mac
+        self.deviceVersion = deviceVersion
+        self.activatedAt = activatedAt
+    }
+
+    public typealias RawValue = [String: Any]
+
+    public init?(rawValue: RawValue) {
+        guard let mac = rawValue["mac"] as? String,
+              let activatedAt = rawValue["activatedAt"] as? Date
+        else { return nil }
+        self.mac = mac
+        deviceVersion = rawValue["deviceVersion"] as? String ?? ""
+        self.activatedAt = activatedAt
+    }
+
+    public var rawValue: RawValue {
+        ["mac": mac, "deviceVersion": deviceVersion, "activatedAt": activatedAt]
+    }
+}

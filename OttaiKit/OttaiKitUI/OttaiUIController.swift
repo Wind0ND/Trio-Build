@@ -1,0 +1,364 @@
+//
+//  OttaiUIController.swift
+//  OttaiKitUI
+//
+//  Copyright (c) 2026 Nightscout Foundation.
+//  Licensed under the MIT License. See LICENSE in the project root.
+//
+
+import LoopKit
+import LoopKitUI
+import SwiftUI
+import OttaiKit
+
+private enum OttaiScreen {
+    case onboarding
+    case placementGuide
+    case login
+    /// One-time data-sharing choice, shown before pairing (and before anything can be sent).
+    /// `onContinue` runs after the user picks a tier; the choice itself is persisted separately.
+    case telemetryDisclosure(onContinue: () -> Void)
+    /// Offers a sensor already bound to the account before pairing a new one.
+    case existingSensor
+    case pairing
+    case settings
+    case account
+    case sensorHistory
+    case sensorDetail(DeviceInfo)
+    case sampleDetail(GlucoseSample)
+    case recentReadings
+}
+
+final class OttaiUIController: UINavigationController, CGMManagerOnboarding, CompletionNotifying, UINavigationControllerDelegate {
+    var cgmManagerOnboardingDelegate: CGMManagerOnboardingDelegate?
+    var completionDelegate: CompletionDelegate?
+
+    private var cgmManager: OttaiCGMManager
+    private let displayGlucosePreference: DisplayGlucosePreference
+    private let colorPalette: LoopUIColorPalette
+    private let allowDebugFeatures: Bool
+    /// True only for the first-time "Add CGM" flow (`setupViewController`,
+    /// no existing manager passed in). `settingsViewController` always passes
+    /// an existing manager and must land on `.settings` regardless of
+    /// whether a sensor happens to be paired right now - a manager Trio
+    /// already lists is never re-onboarded, even right after "End Sensor"
+    /// clears its MAC.
+    private let isInitialSetup: Bool
+    private var screenStack = [OttaiScreen]()
+
+    /// The Ottai catalogue entry shares this controller but needs its own artwork
+    /// and wording. It arrives as a value from the catalogue entry that built this
+    /// controller: asking the manager what class it is cannot work here, because a
+    /// subclass is indistinguishable from its parent once the call comes through the
+    /// parent's own protocol witness.
+    private let ottaiMode: Bool
+
+    init(
+        cgmManager: OttaiCGMManager? = nil,
+        makeManager: @escaping () -> OttaiCGMManager = { OttaiCGMManager() },
+        ottaiMode: Bool = false,
+        colorPalette: LoopUIColorPalette,
+        displayGlucosePreference: DisplayGlucosePreference,
+        allowDebugFeatures: Bool
+    ) {
+        isInitialSetup = cgmManager == nil
+        // The picker knows which catalogue entry was tapped; build that exact
+        // manager so the Ottai entry signs in with a phone number while
+        // Ottai Ultra keeps email + password.
+        self.cgmManager = cgmManager ?? makeManager()
+        self.ottaiMode = ottaiMode
+            || self.cgmManager.pluginIdentifier == OttaiCGMManager.pluginIdentifier
+            || self.cgmManager.usesCnService
+        self.colorPalette = colorPalette
+        self.displayGlucosePreference = displayGlucosePreference
+        self.allowDebugFeatures = allowDebugFeatures
+        super.init(navigationBarClass: UINavigationBar.self, toolbarClass: UIToolbar.self)
+    }
+
+    @available(*, unavailable) required init?(coder _: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        delegate = self
+        navigationBar.prefersLargeTitles = true
+        if screenStack.isEmpty {
+            // A brand-new "Add CGM" manager that resumed a still-alive sensor
+            // from the file-backed history mirror (e.g. re-adding after a
+            // swap) already has something to manage - skip the "Welcome"
+            // onboarding screen, same as an existing manager would.
+            let needsOnboarding = isInitialSetup && cgmManager.state.mac == nil
+            if isInitialSetup, !needsOnboarding {
+                cgmManagerOnboardingDelegate?.cgmManagerOnboarding(didCreateCGMManager: cgmManager)
+                cgmManagerOnboardingDelegate?.cgmManagerOnboarding(didOnboardCGMManager: cgmManager)
+            }
+            var screens: [OttaiScreen] = [needsOnboarding ? .onboarding : .settings]
+            // A returning user (paired sensor, account restored) whose flag predates
+            // telemetry gets the one-time consent choice on top of settings; picking
+            // either option pops back to settings.
+            if cgmManager.state.mac != nil, !cgmManager.state.telemetryDisclosureShown {
+                screens.append(.telemetryDisclosure(onContinue: { [weak self] in
+                    self?.popScreen()
+                }))
+            }
+            screenStack = screens
+            setViewControllers(screens.map { viewControllerForScreen($0) }, animated: false)
+        }
+    }
+
+    private func hostingController(
+        rootView: some View,
+        title: String? = nil,
+        largeTitleDisplayMode: UINavigationItem.LargeTitleDisplayMode = .automatic
+    ) -> DismissibleHostingController<some View> {
+        let host = DismissibleHostingController(
+            content: rootView.environmentObject(displayGlucosePreference),
+            colorPalette: colorPalette
+        )
+        host.navigationItem.title = title
+        host.navigationItem.largeTitleDisplayMode = largeTitleDisplayMode
+        return host
+    }
+
+    private func viewControllerForScreen(_ screen: OttaiScreen) -> UIViewController {
+        switch screen {
+        case .onboarding:
+            let view = OttaiOnboardingView(
+                onContinue: { [weak self] in self?.proceedToPairingOrLogin() },
+                onShowPlacement: { [weak self] in self?.navigateTo(.placementGuide) },
+                imageName: ottaiMode ? "ottaiSensor" : "sensor",
+                accountName: ottaiMode ? "Ottai" : "Ottai"
+            )
+            return hostingController(rootView: view, title: String(localized: "Welcome!", comment: "welcome"))
+
+        case .placementGuide:
+            return hostingController(
+                rootView: OttaiSensorPlacementView(onDone: { [weak self] in self?.popScreen() }, ottai: ottaiMode),
+                title: String(localized: "Placement Guide", comment: "placement guide")
+            )
+
+        case .login:
+            let viewModel = OttaiLoginViewModel(
+                cgmManager: cgmManager,
+                ottaiMode: ottaiMode,
+                allowDebugFeatures: allowDebugFeatures,
+                onLoggedIn: { [weak self] in
+                    guard let self else { return }
+                    self.configureRealSensorKitIfNeeded()
+                    if self.cgmManager.state.mac != nil {
+                        // Reached from Settings' "Login" row with a sensor
+                        // already paired (e.g. after an explicit Log Out):
+                        // just return to Settings, there's nothing to pair.
+                        self.popScreen()
+                    } else {
+                        self.navigateToPairingWithDisclosure()
+                    }
+                }
+            )
+            return hostingController(
+                rootView: OttaiLoginView(viewModel: viewModel),
+                title: String(localized: "Sign in", comment: "login title")
+            )
+
+        case let .telemetryDisclosure(onContinue):
+            let view = OttaiTelemetryConsentView(onChoice: { [weak self] tier in
+                Task { @MainActor in
+                    guard let self else { return }
+                    self.cgmManager.setTelemetryTier(tier)
+                    self.cgmManager.markTelemetryDisclosureShown()
+                    onContinue()
+                }
+            })
+            return hostingController(
+                rootView: view,
+                title: String(localized: "Data Sharing", comment: "telemetry disclosure title")
+            )
+
+        case .existingSensor:
+            let viewModel = OttaiExistingSensorViewModel(
+                cgmManager: cgmManager,
+                onNoneBound: { [weak self] in self?.replaceTopScreen(with: .pairing) },
+                onAdopted: { [weak self] in self?.finishOnboarding() },
+                onNeedsLogin: { [weak self] in self?.replaceTopScreen(with: .login) }
+            )
+            return hostingController(
+                rootView: OttaiExistingSensorView(viewModel: viewModel),
+                title: String(localized: "Your Sensor", comment: "existing sensor title")
+            )
+
+        case .pairing:
+            let viewModel = OttaiPairingViewModel(
+                cgmManager: cgmManager,
+                onCreated: { [weak self] in self?.finishOnboarding() },
+                onNeedsLogin: { [weak self] in self?.replaceTopScreen(with: .login) }
+            )
+            return hostingController(
+                rootView: OttaiPairingView(viewModel: viewModel),
+                title: String(localized: "Pairing with sensor", comment: "pairing title")
+            )
+
+        case .settings:
+            let viewModel = OttaiSettingsViewModel(
+                cgmManager,
+                deleteCGM: { [weak self] in
+                    guard let self else { return }
+                    // Leaves the account session alone - only an explicit Log Out
+                    // clears it - so re-adding a CGM under the same account needs
+                    // no fresh sign-in. Uses delete(), not cgmManagerWantsDeletion:
+                    // the latter only notifies the host, and Trio's
+                    // deleteGlucoseSource just drops the manager without tearing
+                    // down the BLE link. delete() does both the teardown and the
+                    // notification.
+                    Task { @MainActor [weak self] in
+                        guard let self else { return }
+                        await self.cgmManager.delete()
+                        self.completionDelegate?.completionNotifyingDidComplete(self)
+                    }
+                },
+                showSensorHistory: { [weak self] in self?.navigateTo(.sensorHistory) },
+                showAccount: { [weak self] in self?.navigateTo(.account) },
+                showLogin: { [weak self] in self?.navigateTo(.login) },
+                showSampleDetail: { [weak self] sample in self?.navigateTo(.sampleDetail(sample)) },
+                showAllReadings: { [weak self] in self?.navigateTo(.recentReadings) },
+                pairNewSensor: { [weak self] in self?.proceedToPairingOrLogin() }
+            )
+            return hostingController(
+                rootView: OttaiSettingsView(viewModel: viewModel),
+                title: cgmManager.brandTitle,
+                largeTitleDisplayMode: .never
+            )
+
+        case .account:
+            let account = cgmManager.account
+            let view = OttaiAccountView(
+                email: account?.email ?? "",
+                sessionValid: account?.hasValidSession ?? false,
+                refreshExpiry: account?.refreshTokenExpiry,
+                accountLockedOutElsewhere: cgmManager.state.accountLockedOutElsewhere,
+                telemetryTier: cgmManager.telemetryTier,
+                onSetTelemetryTier: { [weak self] tier in
+                    Task { @MainActor in self?.cgmManager.setTelemetryTier(tier) }
+                },
+                onLogOut: { [weak self] in
+                    guard let self else { return }
+                    self.cgmManager.logOut()
+                    self.popScreen()
+                },
+                onLoginAgain: { [weak self] in self?.navigateTo(.login) }
+            )
+            return hostingController(
+                rootView: view,
+                title: String(localized: "Account", comment: "account title")
+            )
+
+        case .sensorHistory:
+            let view = OttaiSensorHistoryView(
+                records: cgmManager.state.sensors.history(),
+                activeMAC: cgmManager.state.sensors.activeMAC,
+                onSelect: { [weak self] deviceInfo in self?.navigateTo(.sensorDetail(deviceInfo)) }
+            )
+            return hostingController(
+                rootView: view,
+                title: String(localized: "Sensor History", comment: "sensor history title")
+            )
+
+        case let .sensorDetail(deviceInfo):
+            let view = OttaiFactoryCalibrationsView(activeSensor: deviceInfo)
+            return hostingController(
+                rootView: view,
+                title: deviceInfo.productName(ottai: ottaiMode)
+            )
+
+        case let .sampleDetail(sample):
+            return hostingController(rootView: OttaiSampleDetailView(sample: sample))
+
+        case .recentReadings:
+            let view = OttaiRecentReadingsView(
+                samples: cgmManager.recentSamples,
+                onSelect: { [weak self] sample in self?.navigateTo(.sampleDetail(sample)) }
+            )
+            return hostingController(
+                rootView: view,
+                title: String(localized: "Recent Readings", comment: "recent readings screen title")
+            )
+        }
+    }
+
+    private func navigateTo(_ screen: OttaiScreen) {
+        screenStack.append(screen)
+        pushViewController(viewControllerForScreen(screen), animated: true)
+    }
+
+    /// Swaps the top screen so Back skips the one being replaced.
+    private func replaceTopScreen(with screen: OttaiScreen) {
+        if !screenStack.isEmpty { screenStack.removeLast() }
+        screenStack.append(screen)
+        var controllers = viewControllers
+        if !controllers.isEmpty { controllers.removeLast() }
+        controllers.append(viewControllerForScreen(screen))
+        setViewControllers(controllers, animated: true)
+    }
+
+    private func finishOnboarding() {
+        cgmManagerOnboardingDelegate?.cgmManagerOnboarding(didCreateCGMManager: cgmManager)
+        cgmManagerOnboardingDelegate?.cgmManagerOnboarding(didOnboardCGMManager: cgmManager)
+        completionDelegate?.completionNotifyingDidComplete(self)
+    }
+
+    private func popScreen() {
+        if !screenStack.isEmpty { screenStack.removeLast() }
+        popViewController(animated: true)
+    }
+
+    /// Requires a live account session before pairing, routing to `.login` when
+    /// absent. An expired/evicted session with a stored password ("keep me logged
+    /// in") gets one silent re-login attempt first; only on failure does the user
+    /// see the login screen.
+    private func proceedToPairingOrLogin() {
+        // A session evicted by a login elsewhere looks locally valid (unexpired
+        // refresh token) but is dead server-side; only a manual re-login fixes it.
+        if cgmManager.state.accountLockedOutElsewhere {
+            navigateTo(.login)
+            return
+        }
+        if cgmManager.account?.hasValidSession == true {
+            configureRealSensorKitIfNeeded()
+            navigateToPairingWithDisclosure()
+        } else if cgmManager.account?.password != nil {
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if await self.cgmManager.attemptSilentRelogin() != nil {
+                    self.configureRealSensorKitIfNeeded()
+                    self.navigateToPairingWithDisclosure()
+                } else {
+                    self.navigateTo(.login)
+                }
+            }
+        } else {
+            navigateTo(.login)
+        }
+    }
+
+    /// Pairing (and with it the first live upload) routes through the one-time
+    /// telemetry disclosure until it's been acknowledged.
+    private func navigateToPairingWithDisclosure() {
+        if cgmManager.state.telemetryDisclosureShown {
+            navigateTo(.existingSensor)
+        } else {
+            navigateTo(.telemetryDisclosure(onContinue: { [weak self] in
+                self?.navigateTo(.existingSensor)
+            }))
+        }
+    }
+
+    /// Wire real BLE kit unconditionally; the simulator has no BLE hardware,
+    /// so discovery simply never resolves there.
+    private func configureRealSensorKitIfNeeded() {
+        do {
+            try cgmManager.configureForAccount(sensorKit: OttaiBLE())
+        } catch {
+            // Not logged in yet; the login screen routes back through here.
+        }
+    }
+}

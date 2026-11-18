@@ -126,6 +126,7 @@ private extension LogExport.Kind {
         case .all: return "All Logs"
         case .pump: return "Pump Logs"
         case .cgm: return "CGM Logs"
+        case .diagnostics: return "Diagnostic Events"
         }
     }
 }

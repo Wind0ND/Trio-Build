@@ -22,6 +22,8 @@ import MockKit
 import MockKitUI
 import ObjectiveC
 import OmnipodKit
+import OttaiKit
+import OttaiKitUI
 import SyaiKit
 import SyaiKitUI
 import UIKit
@@ -419,7 +421,7 @@ extension DeviceCatalog {
         ),
 
         CGMCatalogEntry(
-            .managed(SyaiCGMManager.self, id: "SyaiCGMManager"),
+            .managed(SyaiKit.SyaiCGMManager.self, id: "SyaiCGMManager"),
             manufacturer: .syai,
             name: "Syai Ultra",
             icon: .uiBundle(identifier: "org.loopkit.SyaiKitUI", asset: "sensor")
@@ -427,14 +429,16 @@ extension DeviceCatalog {
 
         CGMCatalogEntry(
             .managedFactory(
-                makeVC: makeOttaiOnboardingController(displayGlucosePreference:colorPalette:allowDebugFeatures:),
-                managerType: OttaiCGMManager.self,
+                makeVC: OttaiKitUI.makeOttaiOnboardingController(
+                    displayGlucosePreference:colorPalette:allowDebugFeatures:
+                ),
+                managerType: OttaiKit.OttaiCGMManager.self,
                 id: "OttaiCGMManager"
             ),
             manufacturer: .ottai,
             name: "Ottai",
             supportedModels: ["M8"],
-            icon: .uiBundle(identifier: "org.loopkit.SyaiKitUI", asset: "ottaiSensor")
+            icon: .uiBundle(identifier: "org.loopkit.OttaiKitUI", asset: "ottaiSensor")
         ),
 
         CGMCatalogEntry(.native(.nightscout), manufacturer: .otherSources, icon: .trio(asset: "owl")),

@@ -454,6 +454,7 @@ import Testing
                 case .all: expected = ["Trio", "Pump", "CGM"]
                 case .pump: expected = ["Pump"]
                 case .cgm: expected = ["CGM"]
+                case .diagnostics: expected = []
                 }
                 func rows(_ source: String, since date: Date) -> Int {
                     switch source {

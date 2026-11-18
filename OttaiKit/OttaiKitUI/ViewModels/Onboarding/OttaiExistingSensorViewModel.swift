@@ -1,0 +1,93 @@
+//
+//  OttaiExistingSensorViewModel.swift
+//  OttaiKitUI
+//
+//  Copyright (c) 2026 Nightscout Foundation.
+//  Licensed under the MIT License. See LICENSE in the project root.
+//
+
+import Combine
+import SwiftUI
+import OttaiKit
+
+/// Checks the account for a sensor that is already activated and bound (for
+/// instance by the official app) before offering to pair a new one.
+@MainActor final class OttaiExistingSensorViewModel: ObservableObject {
+    enum Phase: Equatable {
+        case checking
+        case found(OttaiBoundSensor)
+        /// Bound, but not usable (ended before, past its wear, or unsupported firmware).
+        case unusable(OttaiBoundSensor, reason: String)
+        case adopting(OttaiBoundSensor)
+        case failed(String)
+    }
+
+    @Published var phase: Phase = .checking
+
+    private let cgmManager: OttaiCGMManager
+
+    /// Artwork asset matching the configured sensor.
+    var sensorArtworkName: String { cgmManager.brandArtwork }
+    private let onNoneBound: () -> Void
+    private let onAdopted: () -> Void
+    private let onNeedsLogin: () -> Void
+    private var task: Task<Void, Never>?
+
+    init(
+        cgmManager: OttaiCGMManager,
+        onNoneBound: @escaping () -> Void,
+        onAdopted: @escaping () -> Void,
+        onNeedsLogin: @escaping () -> Void = {}
+    ) {
+        self.cgmManager = cgmManager
+        self.onNoneBound = onNoneBound
+        self.onAdopted = onAdopted
+        self.onNeedsLogin = onNeedsLogin
+        check()
+    }
+
+    func check() {
+        phase = .checking
+        task?.cancel()
+        task = Task { [weak self] in
+            guard let self else { return }
+            do {
+                guard let sensor = try await self.cgmManager.lookUpBoundSensor() else {
+                    guard !Task.isCancelled else { return }
+                    self.onNoneBound()
+                    return
+                }
+                guard !Task.isCancelled else { return }
+                if let blocker = self.cgmManager.adoptionBlocker(for: sensor) {
+                    self.phase = .unusable(sensor, reason: blocker.description)
+                } else {
+                    self.phase = .found(sensor)
+                }
+            } catch {
+                guard !Task.isCancelled else { return }
+                // A dead account session can't be fixed from here; go sign in again.
+                if let transport = error as? OttaiEnvelopedClient.TransportError, transport.isAccountLoggedInElsewhere {
+                    self.onNeedsLogin()
+                    return
+                }
+                self.phase = .failed(error.localizedDescription)
+            }
+        }
+    }
+
+    func useSensor() {
+        guard case let .found(sensor) = phase else { return }
+        phase = .adopting(sensor)
+        do {
+            try cgmManager.adoptBoundSensor(sensor)
+            onAdopted()
+        } catch {
+            phase = .failed(error.localizedDescription)
+        }
+    }
+
+    func pairNewSensor() {
+        task?.cancel()
+        onNoneBound()
+    }
+}

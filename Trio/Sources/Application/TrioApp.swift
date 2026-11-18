@@ -130,6 +130,9 @@ extension Notification.Name {
     }
 
     init() {
+        // Before any service or device manager exists: pairing diagnostics must
+        // survive a relaunch even when registration never completes.
+        DiagnosticEventStore.shared.startObserving()
         TrioLogger.install(AppLogStore.shared)
         FileProtectionFixer.fixFlagFileProtectionForPropertyPersistentFlags() // TODO: ‼️ REMOVE ME BEFORE PUBLIC BETA / RELEASE
 

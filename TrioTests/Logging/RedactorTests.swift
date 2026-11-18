@@ -108,6 +108,12 @@ import Testing
                 "activeMAC: <device-1> pendingBind: <device-2>"
             ),
             (
+                "OttaiCGMManager",
+                ["sensors": ["activeMAC": "AABBCCDDEE04", "pendingBind": ["mac": "AABBCCDDEE05"]]],
+                "activeMAC: AABBCCDDEE04 pendingBind: AABBCCDDEE05",
+                "activeMAC: <device-1> pendingBind: <device-2>"
+            ),
+            (
                 "EversenseKit",
                 ["bleNameString": "SYN-EVR-01", "accessToken": "synthetic-access-token"],
                 "Connecting to: SYN-EVR-01 with synthetic-access-token",

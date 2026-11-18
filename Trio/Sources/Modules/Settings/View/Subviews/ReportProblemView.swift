@@ -33,6 +33,13 @@ struct ReportProblemView: View {
                     kinds: state.logKinds,
                     logExport: state.logExport
                 )
+
+                LogShareRow(
+                    title: "Export Diagnostics",
+                    footnote: "Feature events only: pairing stages and outcomes. No glucose, treatments, identifiers, serial numbers or raw logs.",
+                    kinds: [.diagnostics],
+                    logExport: state.logExport
+                )
             }
             .listRowBackground(Color.chart)
 

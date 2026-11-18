@@ -1,0 +1,225 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NFC only wakes the sensor. Pairing still checks its Bluetooth address.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NFC 仅用于唤醒传感器；配对时仍会校验其蓝牙地址。"
+          }
+        }
+      }
+    },
+    "Only previously used sensors were heard. Replace the sensor or scan its applicator.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只搜索到曾使用过的传感器。请更换传感器或扫描其敷贴器。"
+          }
+        }
+      }
+    },
+    "Try NFC Again": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重试 NFC"
+          }
+        }
+      }
+    },
+    "Wake with NFC": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 NFC 唤醒"
+          }
+        }
+      }
+    },
+    "NFC signal sent. Looking for the sensor's Bluetooth signal…": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已发送 NFC 信号，正在寻找传感器的蓝牙信号…"
+          }
+        }
+      }
+    },
+    "NFC was cancelled. You can try again.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NFC 已取消，可以重试。"
+          }
+        }
+      }
+    },
+    "NFC couldn't wake the sensor. Try again.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NFC 未能唤醒传感器，请重试。"
+          }
+        }
+      }
+    },
+    "NFC signal sent. Keep the iPhone near the sensor.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已发送 NFC 信号，请将 iPhone 靠近传感器。"
+          }
+        }
+      }
+    },
+    "Looking for the sensor's Bluetooth signal…": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在寻找传感器的蓝牙信号…"
+          }
+        }
+      }
+    },
+    "The scanned sensor is awake. Confirm it is yours.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "扫描到的传感器已唤醒，请确认这是您的传感器。"
+          }
+        }
+      }
+    },
+    "Sensor is awake. Confirm it is yours.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "传感器已唤醒，请确认这是您的传感器。"
+          }
+        }
+      }
+    },
+    "Bluetooth sensors found. Choose the sensor you just applied.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已发现蓝牙传感器。请选择您刚佩戴的传感器。"
+          }
+        }
+      }
+    },
+    "This iPhone can't read NFC tags.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此 iPhone 无法读取 NFC 标签。"
+          }
+        }
+      }
+    },
+    "Hold the top of this iPhone against the sensor for a second.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将 iPhone 顶部贴近传感器并保持一秒。"
+          }
+        }
+      }
+    },
+    "Search Again": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新搜索"
+          }
+        }
+      }
+    },
+    "If the sensor is asleep, wake it with NFC first.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如果传感器处于休眠状态，请先用 NFC 唤醒。"
+          }
+        }
+      }
+    },
+    "Sign Out of Ottai": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "退出欧态账号"
+          }
+        }
+      }
+    },
+    "Account Diagnostics (copied to clipboard)": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "账号诊断（复制到剪贴板）"
+          }
+        }
+      }
+    },
+    "Checking sensor with Ottai…": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在向欧态核验传感器…"
+          }
+        }
+      }
+    },
+    "Diagnostics copied to the clipboard.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "诊断信息已复制到剪贴板。"
+          }
+        }
+      }
+    },
+    "NFC is already waiting. Cancel it and try again.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NFC 正在等待中，请先取消后再试。"
+          }
+        }
+      }
+    },
+    "That sensor hasn't advertised yet. Keep it near the iPhone and tap Try NFC Again.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未发现该传感器的蓝牙信号。请将其靠近 iPhone，然后点按“重试 NFC”。"
+          }
+        }
+      }
+    }
+  }
+}

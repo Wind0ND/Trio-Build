@@ -1,0 +1,194 @@
+//
+//  OttaiCGMManager+UI.swift
+//  OttaiKitUI
+//
+//  Copyright (c) 2026 Nightscout Foundation.
+//  Licensed under the MIT License. See LICENSE in the project root.
+//
+
+import Foundation
+import HealthKit
+import LoopKit
+import LoopKitUI
+import SwiftUI
+import OttaiKit
+
+extension OttaiCGMManager: @retroactive CGMManagerUI {
+    public static func setupViewController(
+        bluetoothProvider _: BluetoothProvider,
+        displayGlucosePreference: DisplayGlucosePreference,
+        colorPalette: LoopUIColorPalette,
+        allowDebugFeatures: Bool,
+        prefersToSkipUserInteraction _: Bool = false
+    ) -> SetupUIResult<CGMManagerViewController, CGMManagerUI> {
+        let vc = OttaiUIController(
+            makeManager: { OttaiCGMManager() },
+            colorPalette: colorPalette,
+            displayGlucosePreference: displayGlucosePreference,
+            allowDebugFeatures: allowDebugFeatures
+        )
+        return .userInteractionRequired(vc)
+    }
+
+    public func settingsViewController(
+        bluetoothProvider _: BluetoothProvider,
+        displayGlucosePreference: DisplayGlucosePreference,
+        colorPalette: LoopUIColorPalette,
+        allowDebugFeatures: Bool
+    ) -> CGMManagerViewController {
+        OttaiUIController(
+            cgmManager: self,
+            colorPalette: colorPalette,
+            displayGlucosePreference: displayGlucosePreference,
+            allowDebugFeatures: allowDebugFeatures
+        )
+    }
+
+    public static var onboardingImage: UIImage? {
+        let name = "ottaiSensor"
+        return UIImage(named: name, in: Bundle(for: OttaiUIController.self), compatibleWith: nil)
+    }
+
+    public var smallImage: UIImage? {
+        let name = "ottaiSensor"
+        return UIImage(named: name, in: Bundle(for: OttaiUIController.self), compatibleWith: nil)
+    }
+
+    public var cgmStatusHighlight: DeviceStatusHighlight? {
+        if needsOfficialAppClosed {
+            return OttaiDeviceStatusHighlight(
+                localizedMessage: String(
+                    localized: "Close\nOttai App",
+                    comment: "CGM status highlight: the official app still holds the sensor's connection"
+                ),
+                imageName: "exclamationmark.circle.fill",
+                state: .warning
+            )
+        }
+        switch sensorLifecycle {
+        case .warmup:
+            return OttaiDeviceStatusHighlight(
+                localizedMessage: String(localized: "Sensor\nWarmup", comment: "CGM status highlight: sensor warming up"),
+                imageName: "clock",
+                state: .normalCGM
+            )
+        case .expired:
+            return OttaiDeviceStatusHighlight(
+                localizedMessage: String(localized: "Sensor\nExpired", comment: "CGM status highlight: sensor expired"),
+                imageName: "clock",
+                state: .normalCGM
+            )
+        case .signalLost:
+            return OttaiDeviceStatusHighlight(
+                localizedMessage: String(localized: "Signal\nLoss", comment: "CGM status highlight: signal loss"),
+                imageName: "exclamationmark.circle.fill",
+                state: .warning
+            )
+        case .failed:
+            return OttaiDeviceStatusHighlight(
+                localizedMessage: String(
+                    localized: "Replace\nSensor",
+                    comment: "CGM status highlight: sensor failed, replace it"
+                ),
+                imageName: "exclamationmark.circle.fill",
+                state: .critical
+            )
+        case .unactivated:
+            return OttaiDeviceStatusHighlight(
+                localizedMessage: String(
+                    localized: "Sensor\nNot Activated",
+                    comment: "CGM status highlight: sensor reports itself not activated"
+                ),
+                imageName: "exclamationmark.circle.fill",
+                state: .critical
+            )
+        case .active,
+             .noSensor:
+            return nil
+        }
+    }
+
+    public var cgmStatusBadge: DeviceStatusBadge? {
+        switch sensorLifecycle {
+        case let .active(remaining, _) where remaining < TimeInterval(2 * 3600):
+            return OttaiDeviceStatusBadge(image: UIImage(systemName: "clock"), state: .critical)
+        case .expired:
+            return OttaiDeviceStatusBadge(image: UIImage(systemName: "exclamationmark.triangle.fill"), state: .critical)
+        default:
+            return nil
+        }
+    }
+
+    public var cgmLifecycleProgress: DeviceLifecycleProgress? {
+        switch sensorLifecycle {
+        case let .warmup(progress, _):
+            return OttaiLifecycleProgress(percentComplete: progress, progressState: .warning)
+        case let .active(remaining, total):
+            guard remaining < TimeInterval(24 * 3600) else { return nil }
+            let percent = 1 - (remaining / total)
+            let state: DeviceLifecycleProgressState = remaining < TimeInterval(2 * 3600) ? .critical : .warning
+            return OttaiLifecycleProgress(percentComplete: percent, progressState: state)
+        case .expired:
+            return OttaiLifecycleProgress(percentComplete: 1, progressState: .critical)
+        default:
+            return nil
+        }
+    }
+}
+
+public extension OttaiCGMManager {
+    /// Non-protocol factory. `setupViewController` is a static protocol
+    /// requirement, so `Self` inside it resolves to `OttaiCGMManager` no matter
+    /// which catalogue entry was tapped. The host calls this directly when the
+    /// tapped type is Ottai, which is a plain compile-time static call.
+    static func makeOttaiSetupViewController(
+        displayGlucosePreference: DisplayGlucosePreference,
+        colorPalette: LoopUIColorPalette,
+        allowDebugFeatures: Bool
+    ) -> SetupUIResult<CGMManagerViewController, CGMManagerUI> {
+        let vc = OttaiUIController(
+            makeManager: { OttaiCGMManager() },
+            ottaiMode: true,
+            colorPalette: colorPalette,
+            displayGlucosePreference: displayGlucosePreference,
+            allowDebugFeatures: allowDebugFeatures
+        )
+        return .userInteractionRequired(vc)
+    }
+}
+
+/// Module-level Ottai onboarding factory.
+///
+/// `CGMSetupView` keys off the catalogue identifier string rather than a
+/// metatype cast, so nothing here depends on how Swift resolves `Self`
+/// inside the `CGMManagerUI` protocol witness.
+public func makeOttaiOnboardingController(
+    displayGlucosePreference: DisplayGlucosePreference,
+    colorPalette: LoopUIColorPalette,
+    allowDebugFeatures: Bool
+) -> SetupUIResult<CGMManagerViewController, CGMManagerUI> {
+    let vc = OttaiUIController(
+        makeManager: { OttaiCGMManager() },
+        ottaiMode: true,
+        colorPalette: colorPalette,
+        displayGlucosePreference: displayGlucosePreference,
+        allowDebugFeatures: allowDebugFeatures
+    )
+    return .userInteractionRequired(vc)
+}
+
+private struct OttaiDeviceStatusBadge: DeviceStatusBadge {
+    var image: UIImage? = UIImage(systemName: "exclamationmark.triangle")
+    var state: DeviceStatusBadgeState = .critical
+}
+
+private struct OttaiLifecycleProgress: DeviceLifecycleProgress {
+    fileprivate var percentComplete: Double
+    fileprivate var progressState: DeviceLifecycleProgressState
+}
+
+private struct OttaiDeviceStatusHighlight: DeviceStatusHighlight {
+    fileprivate var localizedMessage: String
+    var imageName: String
+    var state: DeviceStatusHighlightState
+}

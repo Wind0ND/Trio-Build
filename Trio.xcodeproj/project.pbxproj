@@ -16,6 +16,11 @@
 		03B15F4D3077CD5400DFEBE4 /* SyaiKitUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 03B15F4C3077CD5400DFEBE4 /* SyaiKitUI.framework */; };
 		03B15F4E3077CD6100DFEBE4 /* SyaiKitUI.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 03B15F4C3077CD5400DFEBE4 /* SyaiKitUI.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		03B15F4F3077CD6100DFEBE4 /* SyaiKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 03B15F4A3077CD4B00DFEBE4 /* SyaiKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		0A0C0A0C0A0C0A0C0A0C0003 /* OttaiKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A0C0A0C0A0C0A0C0A0C0001 /* OttaiKit.framework */; };
+		0A0C0A0C0A0C0A0C0A0C0004 /* OttaiKitUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A0C0A0C0A0C0A0C0A0C0002 /* OttaiKitUI.framework */; };
+		0A0C0A0C0A0C0A0C0A0C0006 /* OttaiKitUI.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 0A0C0A0C0A0C0A0C0A0C0002 /* OttaiKitUI.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		0A0C0A0C0A0C0A0C0A0C0005 /* OttaiKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 0A0C0A0C0A0C0A0C0A0C0001 /* OttaiKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		0A0C0A0C0A0C0A0C0A0C0007 /* OttaiKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A0C0A0C0A0C0A0C0A0C0001 /* OttaiKit.framework */; };
 		03DE042795C2AFA00C2CCE9E /* WatchLogRingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA5E2B256AC7F8447B1F1C3 /* WatchLogRingTests.swift */; };
 		041D1E995A6AE92E9289DC49 /* TreatmentsDataFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D1A7CA8C10C4403D4BBFA7 /* TreatmentsDataFlow.swift */; };
 		0D9A5E34A899219C5C4CDFAF /* HistoryStateModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9455FA2D92E77A6C4AFED8A3 /* HistoryStateModel.swift */; };
@@ -152,6 +157,8 @@
 		38AEE75225F022080013F05B /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38AEE75125F022080013F05B /* SettingsManager.swift */; };
 		38AEE75725F0F18E0013F05B /* CarbsStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38AEE75625F0F18E0013F05B /* CarbsStorage.swift */; };
 		38B4E1780D264CEBEB5DBCB3 /* LogExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAF80D3953C10DCDF5D80C27 /* LogExportTests.swift */; };
+		0D1A6E570000000000000012 /* DiagnosticEventTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D1A6E570000000000000011 /* DiagnosticEventTests.swift */; };
+		0D1A6E570000000000000014 /* OttaiKitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D1A6E570000000000000013 /* OttaiKitTests.swift */; };
 		3F30764ED6567CB6B1DF68C1 /* LoggingStressFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 510C461CD60549BDF7E57BE9 /* LoggingStressFixtures.swift */; };
 		4ABD323927D718C0177C26B5 /* OSLogCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46913F3B81BE2E45F4DC632D /* OSLogCapture.swift */; };
 		4C0A9E5D31B7F26E8D1A0C42 /* LoggingLongRunStressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E3B19D06A4C85F2E91D3B57 /* LoggingLongRunStressTests.swift */; };
@@ -168,6 +175,7 @@
 		92DE66B4776804F0DD8A2925 /* WatchLogRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75C18518C0B49FB16C05F355 /* WatchLogRing.swift */; };
 		931AD2C542093B9D1A342065 /* InMemoryLogSink.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9C171A8FC35B730F1FFF25F /* InMemoryLogSink.swift */; };
 		96310848E7A3468607C340E9 /* LogExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DB8B37A782E6D75420DB2FC /* LogExport.swift */; };
+		0D1A6E570000000000000002 /* DiagnosticEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D1A6E570000000000000001 /* DiagnosticEvents.swift */; };
 		99506C3B9CC23E2F925009D3 /* ReportProblemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C3B7105DC451594DF96299 /* ReportProblemTests.swift */; };
 		A8354E8A31A4F482D0B649F1 /* Redactor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B0396B90CF23D28D2FDCD78 /* Redactor.swift */; };
 		AC05A906087DD32A509439F2 /* SendReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48B73CCA5C0FB59D8472AAFD /* SendReportView.swift */; };
@@ -1198,6 +1206,8 @@
 			files = (
 				03B15F4E3077CD6100DFEBE4 /* SyaiKitUI.framework in Embed Frameworks */,
 				03B15F4F3077CD6100DFEBE4 /* SyaiKit.framework in Embed Frameworks */,
+				0A0C0A0C0A0C0A0C0A0C0006 /* OttaiKitUI.framework in Embed Frameworks */,
+				0A0C0A0C0A0C0A0C0A0C0005 /* OttaiKit.framework in Embed Frameworks */,
 				3B4BA78F2D8DC0EC0069D5B8 /* TidepoolServiceKit.framework in Embed Frameworks */,
 				3B4BA7732D8DBD690069D5B8 /* G7SensorKitUI.framework in Embed Frameworks */,
 				3B4BA76D2D8DBD690069D5B8 /* CGMBLEKitUI.framework in Embed Frameworks */,
@@ -1273,6 +1283,8 @@
 		5CD86951C1C2313AD6D03EAD /* PumpStatusStored+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PumpStatusStored+CoreDataClass.swift"; sourceTree = "<group>"; };
 		03B15F4A3077CD4B00DFEBE4 /* SyaiKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SyaiKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		03B15F4C3077CD5400DFEBE4 /* SyaiKitUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SyaiKitUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		0A0C0A0C0A0C0A0C0A0C0001 /* OttaiKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = OttaiKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		0A0C0A0C0A0C0A0C0A0C0002 /* OttaiKitUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = OttaiKitUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		0A1E8522E7684C6AA742F6E4 /* HomeStateModel+QuickPickTreatments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeStateModel+QuickPickTreatments.swift"; sourceTree = "<group>"; };
 		0CCB6F0602E069F5B4F83EDC /* SensitiveValues.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensitiveValues.swift; sourceTree = "<group>"; };
 		0F0205BEC3117B5D00022C30 /* LogRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogRecord.swift; sourceTree = "<group>"; };
@@ -1663,6 +1675,7 @@
 		7373EC0CC3C059178CB967B4 /* ReportProblemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportProblemView.swift; sourceTree = "<group>"; };
 		75C18518C0B49FB16C05F355 /* WatchLogRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLogRing.swift; sourceTree = "<group>"; };
 		7DB8B37A782E6D75420DB2FC /* LogExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogExport.swift; sourceTree = "<group>"; };
+		0D1A6E570000000000000001 /* DiagnosticEvents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticEvents.swift; sourceTree = "<group>"; };
 		7E2CF3BABA4BF1C48CC96FD7 /* LiveActivityGlucoseStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityGlucoseStyle.swift; sourceTree = "<group>"; };
 		7E3B19D06A4C85F2E91D3B57 /* LoggingLongRunStressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggingLongRunStressTests.swift; sourceTree = "<group>"; };
 		7FBFFB8EF42D847AFFDA6C05 /* LogFileHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogFileHeader.swift; sourceTree = "<group>"; };
@@ -1673,6 +1686,8 @@
 		C7BC1040D2F0BD84E0718784 /* TrioLoggerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrioLoggerTests.swift; sourceTree = "<group>"; };
 		C7CD10D0FB58F483687CC48D /* ReportSubmitter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportSubmitter.swift; sourceTree = "<group>"; };
 		CAF80D3953C10DCDF5D80C27 /* LogExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogExportTests.swift; sourceTree = "<group>"; };
+		0D1A6E570000000000000011 /* DiagnosticEventTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticEventTests.swift; sourceTree = "<group>"; };
+		0D1A6E570000000000000013 /* OttaiKitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OttaiKitTests.swift; sourceTree = "<group>"; };
 		CD6672C97F2AB74125F46DD5 /* LiveActivitySimpleWidgetConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivitySimpleWidgetConfiguration.swift; sourceTree = "<group>"; };
 		71D44AAA2CA5F5EA0036EE9E /* AlertPermissionsChecker.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AlertPermissionsChecker.swift; sourceTree = "<group>"; };
 		79BDA519C9B890FD9A5DFCF3 /* ISFEditorDataFlow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ISFEditorDataFlow.swift; sourceTree = "<group>"; };
@@ -2400,6 +2415,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				03B15F4D3077CD5400DFEBE4 /* SyaiKitUI.framework in Frameworks */,
+				0A0C0A0C0A0C0A0C0A0C0004 /* OttaiKitUI.framework in Frameworks */,
+				0A0C0A0C0A0C0A0C0A0C0003 /* OttaiKit.framework in Frameworks */,
 				03B15F4B3077CD4B00DFEBE4 /* SyaiKit.framework in Frameworks */,
 				CE95BF632BA771BE00DC3DE3 /* LoopTestingKit.framework in Frameworks */,
 				3B4BA7722D8DBD690069D5B8 /* G7SensorKitUI.framework in Frameworks */,
@@ -2449,6 +2466,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0A0C0A0C0A0C0A0C0A0C0007 /* OttaiKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3136,6 +3154,8 @@
 			isa = PBXGroup;
 			children = (
 				03B15F4C3077CD5400DFEBE4 /* SyaiKitUI.framework */,
+				0A0C0A0C0A0C0A0C0A0C0002 /* OttaiKitUI.framework */,
+				0A0C0A0C0A0C0A0C0A0C0001 /* OttaiKit.framework */,
 				03B15F4A3077CD4B00DFEBE4 /* SyaiKit.framework */,
 				3E5308A43002BC970075629E /* AccuChekKit.framework */,
 				B6E925122EB3932A0076D719 /* OmnipodKit.framework */,
@@ -3612,6 +3632,7 @@
 				3B997DCE2DC00A3A006B6BB2 /* JSONImporterTests.swift */,
 				CE1F6DD82BADF4620064EB8D /* PluginManagerTests.swift */,
 				DC01A00D2E9F100000000004 /* DeviceCatalogTests.swift */,
+				0D1A6E570000000000000013 /* OttaiKitTests.swift */,
 				98546920BB7247B0AC73449A /* ContainerResolutionTests.swift */,
 				7AF74BBFE9F7B8CA9187C4DB /* RemoteMealMutationPayloadTests.swift */,
 				3B5CD2C72D4AECD500CE213C /* OpenAPSSwiftTests */,
@@ -3995,6 +4016,7 @@
 			children = (
 				46913F3B81BE2E45F4DC632D /* OSLogCapture.swift */,
 				7DB8B37A782E6D75420DB2FC /* LogExport.swift */,
+				0D1A6E570000000000000001 /* DiagnosticEvents.swift */,
 				366F24AC292DBC7BC55CF196 /* LogFileWriter.swift */,
 				7FBFFB8EF42D847AFFDA6C05 /* LogFileHeader.swift */,
 				3B0396B90CF23D28D2FDCD78 /* Redactor.swift */,
@@ -4033,6 +4055,7 @@
 				5516A8F6B694AF44C243B882 /* WatchLogIngestTests.swift */,
 				704720C410E0C4F7D10B184B /* RedactorTests.swift */,
 				CAF80D3953C10DCDF5D80C27 /* LogExportTests.swift */,
+				0D1A6E570000000000000011 /* DiagnosticEventTests.swift */,
 				510C461CD60549BDF7E57BE9 /* LoggingStressFixtures.swift */,
 				5A4F4087B27F7D5819A37272 /* LoggingVolumeStressTests.swift */,
 				258BD00B3EAADF1A62EFC884 /* LoggingRobustnessStressTests.swift */,
@@ -6565,6 +6588,7 @@
 				B0D5791570373A23CD562E97 /* LogFileHeader.swift in Sources */,
 				BF0FA8AAE98B4080B961F69F /* LogFileWriter.swift in Sources */,
 				96310848E7A3468607C340E9 /* LogExport.swift in Sources */,
+				0D1A6E570000000000000002 /* DiagnosticEvents.swift in Sources */,
 				F6854A961CB1CF1105757936 /* LogShareRow.swift in Sources */,
 				536B4DB89FCFE9188F4DFE5D /* SensitiveValues.swift in Sources */,
 				659C83549641F3FCC56F30AB /* ReportProblemView.swift in Sources */,
@@ -6703,6 +6727,8 @@
 				FC83BDFB7C330BFD6A4DECFC /* WatchLogIngestTests.swift in Sources */,
 				2C9535979A6E92EE0EC83255 /* RedactorTests.swift in Sources */,
 				38B4E1780D264CEBEB5DBCB3 /* LogExportTests.swift in Sources */,
+				0D1A6E570000000000000012 /* DiagnosticEventTests.swift in Sources */,
+				0D1A6E570000000000000014 /* OttaiKitTests.swift in Sources */,
 				3F30764ED6567CB6B1DF68C1 /* LoggingStressFixtures.swift in Sources */,
 				EAE1104EF2313F9A0041C746 /* LoggingVolumeStressTests.swift in Sources */,
 				F07C663CC423264E609D706C /* LoggingRobustnessStressTests.swift in Sources */,

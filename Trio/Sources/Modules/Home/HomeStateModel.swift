@@ -11,6 +11,7 @@ import LibreTransmitter
 import LoopKit
 import LoopKitUI
 import Observation
+import OttaiKit
 import SwiftDate
 import SwiftUI
 import SyaiKit
@@ -944,7 +945,10 @@ extension Home {
             case let accuChek as AccuChekCgmManager:
                 return accuChek.state.cgmEndTime
 
-            case let syai as SyaiCGMManager:
+            case let ottai as OttaiKit.OttaiCGMManager:
+                return ottai.sensorExpirationDate
+
+            case let syai as SyaiKit.SyaiCGMManager:
                 return syai.sensorExpirationDate
 
             default:
@@ -992,7 +996,10 @@ extension Home {
                 }
                 return nil
 
-            case let syai as SyaiCGMManager:
+            case let ottai as OttaiKit.OttaiCGMManager:
+                return ottai.sensorWarmupEndDate
+
+            case let syai as SyaiKit.SyaiCGMManager:
                 return syai.sensorWarmupEndDate
 
             default:
