@@ -143,7 +143,7 @@ final class DiagnosticEventStore: @unchecked Sendable {
     private let lock = NSLock()
     private let observerLock = NSLock()
     private let defaults: UserDefaults
-    private let notificationCenter: NotificationCenter
+    private let notificationCenter: Foundation.NotificationCenter
     private let now: () -> Date
     private var events: [DiagnosticEvent]
     private var observer: NSObjectProtocol?
@@ -151,7 +151,7 @@ final class DiagnosticEventStore: @unchecked Sendable {
     init(
         defaults: UserDefaults = .standard,
         now: @escaping () -> Date = Date.init,
-        notificationCenter: NotificationCenter = .default
+        notificationCenter: Foundation.NotificationCenter = .default
     ) {
         self.defaults = defaults
         self.notificationCenter = notificationCenter

@@ -112,7 +112,7 @@ import Testing
 
     @Test("The notification contract is validated before persistence") func notificationContract() {
         // Isolated center: the app's shared store must not see test events.
-        let center = NotificationCenter()
+        let center = Foundation.NotificationCenter()
         let store = DiagnosticEventStore(
             defaults: Self.defaults(),
             now: { Self.start },
