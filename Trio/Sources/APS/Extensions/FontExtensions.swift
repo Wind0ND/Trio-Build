@@ -3,15 +3,15 @@ import SwiftUI
 extension Font.Weight {
     var displayName: String {
         switch self {
-        case .ultraLight: return "Ultra Light"
-        case .light: return "Light"
-        case .regular: return "Regular"
-        case .medium: return "Medium"
-        case .semibold: return "Semibold"
-        case .bold: return "Bold"
-        case .heavy: return "Heavy"
-        case .black: return "Black"
-        default: return "Unknown"
+        case .ultraLight: return String(localized: "font.label.ultra-light", defaultValue: "Ultra Light")
+        case .light: return String(localized: "font.label.light", defaultValue: "Light")
+        case .regular: return String(localized: "font.label.regular", defaultValue: "Regular")
+        case .medium: return String(localized: "Medium")
+        case .semibold: return String(localized: "font.label.semibold", defaultValue: "Semibold")
+        case .bold: return String(localized: "font.label.bold", defaultValue: "Bold")
+        case .heavy: return String(localized: "font.label.heavy", defaultValue: "Heavy")
+        case .black: return String(localized: "font.label.black", defaultValue: "Black")
+        default: return String(localized: "Unknown")
         }
     }
 
@@ -53,11 +53,11 @@ extension Font.Weight {
 extension Font.Width {
     var displayName: String {
         switch self {
-        case .condensed: return "Condensed"
-        case .expanded: return "Expanded"
-        case .compressed: return "Compressed"
-        case .standard: return "Standard"
-        default: return "Unknown"
+        case .condensed: return String(localized: "font.label.condensed", defaultValue: "Condensed")
+        case .expanded: return String(localized: "Expanded")
+        case .compressed: return String(localized: "font.label.compressed", defaultValue: "Compressed")
+        case .standard: return String(localized: "Standard")
+        default: return String(localized: "Unknown")
         }
     }
 

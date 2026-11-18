@@ -130,12 +130,12 @@ final class OttaiUIController: UINavigationController, CGMManagerOnboarding, Com
                 imageName: ottaiMode ? "ottaiSensor" : "sensor",
                 accountName: ottaiMode ? "Ottai" : "Ottai"
             )
-            return hostingController(rootView: view, title: String(localized: "Welcome!", comment: "welcome"))
+            return hostingController(rootView: view, title: String(localized: "Welcome!", bundle: .ottaiUI, comment: "welcome"))
 
         case .placementGuide:
             return hostingController(
                 rootView: OttaiSensorPlacementView(onDone: { [weak self] in self?.popScreen() }, ottai: ottaiMode),
-                title: String(localized: "Placement Guide", comment: "placement guide")
+                title: String(localized: "Placement Guide", bundle: .ottaiUI, comment: "placement guide")
             )
 
         case .login:
@@ -158,7 +158,7 @@ final class OttaiUIController: UINavigationController, CGMManagerOnboarding, Com
             )
             return hostingController(
                 rootView: OttaiLoginView(viewModel: viewModel),
-                title: String(localized: "Sign in", comment: "login title")
+                title: String(localized: "Sign in", bundle: .ottaiUI, comment: "login title")
             )
 
         case let .telemetryDisclosure(onContinue):
@@ -172,7 +172,7 @@ final class OttaiUIController: UINavigationController, CGMManagerOnboarding, Com
             })
             return hostingController(
                 rootView: view,
-                title: String(localized: "Data Sharing", comment: "telemetry disclosure title")
+                title: String(localized: "Data Sharing", bundle: .ottaiUI, comment: "telemetry disclosure title")
             )
 
         case .existingSensor:
@@ -184,7 +184,7 @@ final class OttaiUIController: UINavigationController, CGMManagerOnboarding, Com
             )
             return hostingController(
                 rootView: OttaiExistingSensorView(viewModel: viewModel),
-                title: String(localized: "Your Sensor", comment: "existing sensor title")
+                title: String(localized: "Your Sensor", bundle: .ottaiUI, comment: "existing sensor title")
             )
 
         case .pairing:
@@ -195,7 +195,7 @@ final class OttaiUIController: UINavigationController, CGMManagerOnboarding, Com
             )
             return hostingController(
                 rootView: OttaiPairingView(viewModel: viewModel),
-                title: String(localized: "Pairing with sensor", comment: "pairing title")
+                title: String(localized: "Pairing with sensor", bundle: .ottaiUI, comment: "pairing title")
             )
 
         case .settings:
@@ -249,7 +249,7 @@ final class OttaiUIController: UINavigationController, CGMManagerOnboarding, Com
             )
             return hostingController(
                 rootView: view,
-                title: String(localized: "Account", comment: "account title")
+                title: String(localized: "Account", bundle: .ottaiUI, comment: "account title")
             )
 
         case .sensorHistory:
@@ -260,7 +260,7 @@ final class OttaiUIController: UINavigationController, CGMManagerOnboarding, Com
             )
             return hostingController(
                 rootView: view,
-                title: String(localized: "Sensor History", comment: "sensor history title")
+                title: String(localized: "Sensor History", bundle: .ottaiUI, comment: "sensor history title")
             )
 
         case let .sensorDetail(deviceInfo):
@@ -280,7 +280,7 @@ final class OttaiUIController: UINavigationController, CGMManagerOnboarding, Com
             )
             return hostingController(
                 rootView: view,
-                title: String(localized: "Recent Readings", comment: "recent readings screen title")
+                title: String(localized: "Recent Readings", bundle: .ottaiUI, comment: "recent readings screen title")
             )
         }
     }

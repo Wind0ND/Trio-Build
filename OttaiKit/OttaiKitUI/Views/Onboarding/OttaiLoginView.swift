@@ -45,7 +45,7 @@ struct OttaiLoginView: View {
                     VStack(spacing: 0) {
                         fieldRow(icon: "phone.fill") {
                             TextField(
-                                String(localized: "Phone number", comment: "phone field placeholder"),
+                                String(localized: "Phone number", bundle: .ottaiUI, comment: "phone field placeholder"),
                                 text: $viewModel.phone
                             )
                             .keyboardType(.phonePad)
@@ -55,7 +55,7 @@ struct OttaiLoginView: View {
                         fieldRow(icon: "message.fill") {
                             HStack(spacing: 10) {
                                 TextField(
-                                    String(localized: "Code", comment: "sms code placeholder"),
+                                    String(localized: "Code", bundle: .ottaiUI, comment: "sms code placeholder"),
                                     text: $viewModel.smsCode
                                 )
                                 .keyboardType(.numberPad)
@@ -75,7 +75,7 @@ struct OttaiLoginView: View {
                     VStack(spacing: 0) {
                         fieldRow(icon: "envelope.fill") {
                             TextField(
-                                String(localized: "Email", comment: "email field placeholder"),
+                                String(localized: "Email", bundle: .ottaiUI, comment: "email field placeholder"),
                                 text: $viewModel.email
                             )
                             .keyboardType(.emailAddress)
@@ -86,7 +86,7 @@ struct OttaiLoginView: View {
                         Divider().padding(.leading, 54)
                         fieldRow(icon: "lock.fill") {
                             SecureField(
-                                String(localized: "Password", comment: "password field placeholder"),
+                                String(localized: "Password", bundle: .ottaiUI, comment: "password field placeholder"),
                                 text: $viewModel.password
                             )
                             .textContentType(.password)
@@ -100,7 +100,7 @@ struct OttaiLoginView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Toggle(isOn: $viewModel.keepLoggedIn) {
                             Label {
-                                Text("Keep me logged in", comment: "keep logged in toggle")
+                                Text("Keep me logged in", bundle: .ottaiUI, comment: "keep logged in toggle")
                             } icon: {
                                 Image(systemName: "key.fill").foregroundColor(.accentColor)
                             }
@@ -123,7 +123,7 @@ struct OttaiLoginView: View {
 
                 if let error = viewModel.errorMessage {
                     Label {
-                        Text("Failed to login: \(error)")
+                        Text("Failed to login: \(error)", bundle: .ottaiUI)
                     } icon: {
                         Image(systemName: "exclamationmark.triangle.fill")
                     }
@@ -148,7 +148,7 @@ struct OttaiLoginView: View {
                     if viewModel.isBusy {
                         ActivityIndicator(isAnimating: .constant(true), style: .medium)
                     }
-                    Text("Log In", comment: "log in button")
+                    Text("Log In", bundle: .ottaiUI, comment: "log in button")
                 }
             }
             .buttonStyle(ActionButtonStyle())
@@ -159,7 +159,7 @@ struct OttaiLoginView: View {
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: dismiss) { Text("Cancel", comment: "cancel") }
+                Button(action: dismiss) { Text("Cancel", bundle: .ottaiUI, comment: "cancel") }
             }
         }
     }

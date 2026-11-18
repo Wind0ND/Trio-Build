@@ -516,7 +516,7 @@ extension Treatments {
                     await MainActor.run {
                         isAwaitingDeterminationResult = false
                         showDeterminationFailureAlert = true
-                        determinationFailureMessage = "Glucose data is stale"
+                        determinationFailureMessage = String(localized: "Glucose data is stale")
                     }
                     return hideModal()
                 }

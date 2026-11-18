@@ -83,7 +83,7 @@ struct TagCloudView: View {
             }
         }
 
-        let formattedTextTag = formatGlucoseTags(textTag, isMmolL: isMmolL)
+        let formattedTextTag = LoopReasonDisplay.localized(formatGlucoseTags(textTag, isMmolL: isMmolL))
 
         return ZStack {
             Text(formattedTextTag)
@@ -219,6 +219,114 @@ struct TestTagCloudView: View {
                 tags: ["Apple", "Google", "Amazon", "Microsoft", "Oracle", "Facebook"],
                 shouldParseToMmolL: false
             )
+        }
+    }
+}
+
+// Display localization only. The algorithm's reason, units conversion,
+// stored history and alert rules still use the English original.
+enum LoopReasonDisplay {
+    private static let phrases: [(source: String, translated: String)] = [
+        ("CGM is calibrating, in ??? state, or noise is high", String(localized: "loop.reason.1", defaultValue: "CGM is calibrating, in ??? state, or noise is high")),
+        ("CGM was just calibrated", String(localized: "loop.reason.2", defaultValue: "CGM was just calibrated")),
+        ("CGM data is unchanged", String(localized: "loop.reason.3", defaultValue: "CGM data is unchanged")),
+        ("If current system time", String(localized: "loop.reason.4", defaultValue: "If current system time")),
+        ("is correct, then BG data is too old. The last BG data was read", String(localized: "loop.reason.5", defaultValue: "is correct, then BG data is too old. The last BG data was read")),
+        ("~15m change", String(localized: "loop.reason.6", defaultValue: "~15m change")),
+        ("~45m change", String(localized: "loop.reason.7", defaultValue: "~45m change")),
+        ("Suggested rate is same as profile rate, a temp basal is active, canceling current temp", String(localized: "loop.reason.8", defaultValue: "Suggested rate is same as profile rate, a temp basal is active, canceling current temp")),
+        ("Suggested rate is same as profile rate, no temp basal is active, doing nothing", String(localized: "loop.reason.9", defaultValue: "Suggested rate is same as profile rate, no temp basal is active, doing nothing")),
+        ("no temp required", String(localized: "loop.reason.10", defaultValue: "no temp required")),
+        ("setting current basal of", String(localized: "loop.reason.11", defaultValue: "setting current basal of")),
+        ("as temp", String(localized: "loop.reason.12", defaultValue: "as temp")),
+        ("basal testing; no adjustment.", String(localized: "loop.reason.13", defaultValue: "basal testing; no adjustment.")),
+        ("SMB disabled!", String(localized: "loop.reason.14", defaultValue: "SMB disabled!")),
+        ("Autosens/Dynamic Limit:", String(localized: "loop.reason.15", defaultValue: "Autosens/Dynamic Limit:")),
+        ("SMB Delivery Ratio:", String(localized: "loop.reason.16", defaultValue: "SMB Delivery Ratio:")),
+        ("SMB Ratio:", String(localized: "loop.reason.17", defaultValue: "SMB Ratio:")),
+        ("Dynamic ISF: On", String(localized: "loop.reason.18", defaultValue: "Dynamic ISF: On")),
+        ("Dynamic ISF/CR", String(localized: "loop.reason.19", defaultValue: "Dynamic ISF/CR")),
+        ("Sigmoid function", String(localized: "loop.reason.20", defaultValue: "Sigmoid function")),
+        ("Logarithmic formula", String(localized: "loop.reason.21", defaultValue: "Logarithmic formula")),
+        ("Autosens ratio:", String(localized: "loop.reason.22", defaultValue: "Autosens ratio:")),
+        ("Basal ratio:", String(localized: "loop.reason.23", defaultValue: "Basal ratio:")),
+        ("Smoothing: On", String(localized: "loop.reason.24", defaultValue: "Smoothing: On")),
+        ("minPredBG", String(localized: "loop.reason.26", defaultValue: "minPredBG")),
+        ("minGuardBG", String(localized: "loop.reason.27", defaultValue: "minGuardBG")),
+        ("IOBpredBG", String(localized: "loop.reason.28", defaultValue: "IOBpredBG")),
+        ("COBpredBG", String(localized: "loop.reason.29", defaultValue: "COBpredBG")),
+        ("UAMpredBG", String(localized: "loop.reason.30", defaultValue: "UAMpredBG")),
+        ("naive_eventualBG", String(localized: "loop.reason.31", defaultValue: "naive_eventualBG")),
+        ("Eventual BG", String(localized: "loop.reason.32", defaultValue: "Eventual BG")),
+        ("maxDelta", String(localized: "loop.reason.33", defaultValue: "maxDelta")),
+        ("of BG", String(localized: "loop.reason.34", defaultValue: "of BG")),
+        ("TDD:", String(localized: "loop.reason.35", defaultValue: "TDD:")),
+        ("AF:", String(localized: "loop.reason.36", defaultValue: "AF:")),
+        ("ISF:", String(localized: "loop.reason.37", defaultValue: "ISF:")),
+        ("COB:", String(localized: "loop.reason.38", defaultValue: "COB:")),
+        ("Dev:", String(localized: "loop.reason.39", defaultValue: "Dev:")),
+        ("BGI:", String(localized: "loop.reason.40", defaultValue: "BGI:")),
+        ("CR:", String(localized: "loop.reason.41", defaultValue: "CR:")),
+        ("Target:", String(localized: "loop.reason.42", defaultValue: "Target:")),
+        ("max_iob", String(localized: "loop.reason.43", defaultValue: "max_iob")),
+        ("insulinReq", String(localized: "loop.reason.44", defaultValue: "insulinReq")),
+        ("maxBolus", String(localized: "loop.reason.45", defaultValue: "maxBolus")),
+        ("doing nothing", String(localized: "loop.reason.46", defaultValue: "doing nothing")),
+        ("is a lot less than needed", String(localized: "loop.reason.47", defaultValue: "is a lot less than needed")),
+        ("Middleware:", String(localized: "loop.reason.48", defaultValue: "Middleware:")),
+        ("Microbolusing", String(localized: "loop.reason.49", defaultValue: "Microbolusing")),
+        ("to microbolus again", String(localized: "loop.reason.50", defaultValue: "to microbolus again"))
+    ]
+
+    private static let templates: [(regex: NSRegularExpression, format: String)] = [
+        ("Replacing high temp basal of %@ with neutral temp of %@", String(localized: "loop.reason.template.1", defaultValue: "Replacing high temp basal of %@ with neutral temp of %@")),
+        ("Shortening %@m long zero temp to 30m.", String(localized: "loop.reason.template.2", defaultValue: "Shortening %@m long zero temp to 30m.")),
+        ("Temp %@ <= current basal %@U/hr; doing nothing.", String(localized: "loop.reason.template.3", defaultValue: "Temp %@ <= current basal %@U/hr; doing nothing.")),
+        ("Setting neutral temp basal of %@U/hr", String(localized: "loop.reason.template.4", defaultValue: "Setting neutral temp basal of %@U/hr")),
+        ("%@m left and %@ ~ req %@U/hr: no temp required", String(localized: "loop.reason.template.5", defaultValue: "%@m left and %@ ~ req %@U/hr: no temp required")),
+        ("Canceling temp at %@min before turn of the hour to avoid beeping of MDT. SMB are disabled anyways.", String(localized: "loop.reason.template.6", defaultValue: "Canceling temp at %@min before turn of the hour to avoid beeping of MDT. SMB are disabled anyways.")),
+        ("%@ add'l carbs req w/in %@m", String(localized: "loop.reason.template.7", defaultValue: "%@ add'l carbs req w/in %@m")),
+        ("temp %@ ~ req %@U/hr.", String(localized: "loop.reason.template.8", defaultValue: "temp %@ ~ req %@U/hr.")),
+        ("temp %@ ~< req %@U/hr.", String(localized: "loop.reason.template.9", defaultValue: "temp %@ ~< req %@U/hr.")),
+        ("temp %@ >~ req %@U/hr.", String(localized: "loop.reason.template.10", defaultValue: "temp %@ >~ req %@U/hr.")),
+        ("temp %@<%@U/hr.", String(localized: "loop.reason.template.11", defaultValue: "temp %@<%@U/hr.")),
+        ("setting %@m zero temp.", String(localized: "loop.reason.template.12", defaultValue: "setting %@m zero temp.")),
+        ("setting %@m low temp of %@U/h", String(localized: "loop.reason.template.13", defaultValue: "setting %@m low temp of %@U/h")),
+        ("no temp, setting %@U/hr.", String(localized: "loop.reason.template.14", defaultValue: "no temp, setting %@U/hr.")),
+        ("Setting temp basal of %@U/hr.", String(localized: "loop.reason.template.15", defaultValue: "Setting temp basal of %@U/hr.")),
+        ("setting %@U/hr.", String(localized: "loop.reason.template.16", defaultValue: "setting %@U/hr.")),
+        ("Microbolusing %@U.", String(localized: "loop.reason.template.17", defaultValue: "Microbolusing %@U.")),
+        ("Waiting %@m %@s to microbolus again.", String(localized: "loop.reason.template.18", defaultValue: "Waiting %@m %@s to microbolus again.")),
+        ("adj. req. rate: %@ to maxSafeBasal: %@", String(localized: "loop.reason.template.19", defaultValue: "adj. req. rate: %@ to maxSafeBasal: %@")),
+        ("%@-%@ in range: no temp required", String(localized: "loop.reason.template.20", defaultValue: "%@-%@ in range: no temp required"))
+    ].compactMap { source, localized in
+        let fragments = source.components(separatedBy: "%@").map(NSRegularExpression.escapedPattern(for:))
+        let number = #"([-+]?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+))"#
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?<![a-zA-Z])"# + fragments.joined(separator: number)
+        ) else { return nil }
+        return (regex, localized)
+    }
+
+    static func localized(_ reason: String) -> String {
+
+        if reason.hasPrefix("Middleware:") {
+            return String(localized: "loop.reason.48", defaultValue: "Middleware:") + String(reason.dropFirst("Middleware:".count))
+        }
+        var display = reason
+        for template in templates {
+            let matches = template.regex.matches(in: display, range: NSRange(display.startIndex..., in: display))
+            for match in matches.reversed() {
+                guard let range = Range(match.range, in: display) else { continue }
+                let arguments: [CVarArg] = (1 ..< match.numberOfRanges).compactMap { index in
+                    Range(match.range(at: index), in: display).map { String(display[$0]) }
+                }
+                guard arguments.count == match.numberOfRanges - 1 else { continue }
+                display.replaceSubrange(range, with: String(format: template.format, arguments: arguments))
+            }
+        }
+        return phrases.reduce(display) { result, phrase in
+            result.replacingOccurrences(of: phrase.source, with: phrase.translated)
         }
     }
 }

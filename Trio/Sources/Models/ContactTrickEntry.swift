@@ -104,10 +104,10 @@ struct ContactImageEntry: Hashable, Equatable, Sendable {
 
         var displayName: String {
             switch self {
-            case .tiny: return "Tiny"
-            case .small: return "Small"
-            case .regular: return "Regular"
-            case .large: return "Large"
+            case .tiny: return String(localized: "Tiny")
+            case .small: return String(localized: "Small")
+            case .regular: return String(localized: "Regular")
+            case .large: return String(localized: "Large")
             }
         }
     }
@@ -121,11 +121,11 @@ struct ContactImageEntry: Hashable, Equatable, Sendable {
 
         var displayName: String {
             switch self {
-            case .tiny: return "Tiny"
-            case .small: return "Small"
-            case .regular: return "Regular"
-            case .medium: return "Medium"
-            case .large: return "Large"
+            case .tiny: return String(localized: "Tiny")
+            case .small: return String(localized: "Small")
+            case .regular: return String(localized: "Regular")
+            case .medium: return String(localized: "Medium")
+            case .large: return String(localized: "Large")
             }
         }
     }
@@ -139,11 +139,11 @@ struct ContactImageEntry: Hashable, Equatable, Sendable {
 
         var displayName: String {
             switch self {
-            case .tiny: return "Tiny"
-            case .small: return "Small"
-            case .regular: return "Regular"
-            case .medium: return "Medium"
-            case .large: return "Large"
+            case .tiny: return String(localized: "Tiny")
+            case .small: return String(localized: "Small")
+            case .regular: return String(localized: "Regular")
+            case .medium: return String(localized: "Medium")
+            case .large: return String(localized: "Large")
             }
         }
     }

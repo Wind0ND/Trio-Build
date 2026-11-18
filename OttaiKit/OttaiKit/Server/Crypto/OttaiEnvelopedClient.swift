@@ -35,12 +35,12 @@ public actor OttaiEnvelopedClient {
 
         public var description: String {
             switch self {
-            case .notConfigured: return "Ottai backend not configured (log in first)."
-            case let .http(c, b): return "Ottai HTTP \(c): \(b)"
-            case let .badResponse(m): return "Ottai response: \(m)"
-            case let .sessionRejected(c): return "Ottai session rejected (code \(c)). Re-login required."
+            case .notConfigured: return String(localized: "Ottai backend not configured (log in first).", bundle: .ottaiKit)
+            case let .http(c, b): return String(localized: "Ottai HTTP \(String(describing: c)): \(String(describing: b))", bundle: .ottaiKit)
+            case let .badResponse(m): return String(localized: "Ottai response: \(String(describing: m))", bundle: .ottaiKit)
+            case let .sessionRejected(c): return String(localized: "Ottai session rejected (code \(String(describing: c))). Re-login required.", bundle: .ottaiKit)
             case .accountLockedOutElsewhere:
-                return "Ottai account is logged in elsewhere (latched; a re-login is required, not a retry)."
+                return String(localized: "Ottai account is logged in elsewhere (latched; a re-login is required, not a retry).", bundle: .ottaiKit)
             }
         }
 

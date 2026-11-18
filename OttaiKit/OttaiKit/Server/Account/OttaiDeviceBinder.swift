@@ -36,7 +36,7 @@ public struct OttaiServerDeviceBinder: Sendable {
         case notConfigured
         public var description: String {
             switch self {
-            case .notConfigured: return "Ottai backend credentials not configured (log in first)."
+            case .notConfigured: return String(localized: "Ottai backend credentials not configured (log in first).", bundle: .ottaiKit)
             }
         }
     }

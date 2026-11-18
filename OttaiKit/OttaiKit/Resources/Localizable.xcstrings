@@ -1,0 +1,908 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Log in to Ottai first." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先登录欧态账户。"
+          }
+        }
+      }
+    },
+    "Could not check this sensor with Ottai: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法通过欧态检查此传感器：%@"
+          }
+        }
+      }
+    },
+    "Activation failed: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "激活失败：%@"
+          }
+        }
+      }
+    },
+    "Activation failed." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "激活失败。"
+          }
+        }
+      }
+    },
+    "Sensor discovery failed: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索传感器失败：%@"
+          }
+        }
+      }
+    },
+    "BLE connect/auth failed: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "蓝牙连接或身份验证失败：%@"
+          }
+        }
+      }
+    },
+    "OK" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "好"
+          }
+        }
+      }
+    },
+    "Signal Loss" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "信号中断"
+          }
+        }
+      }
+    },
+    "Sensor Expired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器已到期"
+          }
+        }
+      }
+    },
+    "Sensor Malfunction" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器故障"
+          }
+        }
+      }
+    },
+    "Sensor Not Activated" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器未激活"
+          }
+        }
+      }
+    },
+    "Signal lost. Check that your sensor is nearby and Bluetooth is on." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "信号已中断。请确认传感器在附近，且蓝牙已开启。"
+          }
+        }
+      }
+    },
+    "Sensor expired. Replace your sensor now." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器已到期，请立即更换。"
+          }
+        }
+      }
+    },
+    "Sensor malfunction. Replace your sensor now." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器出现故障，请立即更换。"
+          }
+        }
+      }
+    },
+    "Sensor reports as not activated. If this continues, remove and re-pair it." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器报告尚未激活。如果问题持续，请移除此传感器并重新配对。"
+          }
+        }
+      }
+    },
+    "No sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无传感器"
+          }
+        }
+      }
+    },
+    "Warming up" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在预热"
+          }
+        }
+      }
+    },
+    "Active" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已启用"
+          }
+        }
+      }
+    },
+    "Expired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已到期"
+          }
+        }
+      }
+    },
+    "Signal loss" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "信号中断"
+          }
+        }
+      }
+    },
+    "Sensor failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器已失效"
+          }
+        }
+      }
+    },
+    "Sensor uninitialized" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器未初始化"
+          }
+        }
+      }
+    },
+    "Sensor malfunction, replace sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器故障，请更换传感器"
+          }
+        }
+      }
+    },
+    "Sensor uninitialized, is it activated?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器未初始化，是否已激活？"
+          }
+        }
+      }
+    },
+    "Sensor readings implausible, consider replacing sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器读数异常，请考虑更换传感器"
+          }
+        }
+      }
+    },
+    "Sensor malfunction" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器故障"
+          }
+        }
+      }
+    },
+    "This sensor was already ended in %1$@ and can't be used again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此传感器已在 %1$@ 中停用，无法再次使用。"
+          }
+        }
+      }
+    },
+    "This sensor's wear period has ended." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此传感器的使用期限已结束。"
+          }
+        }
+      }
+    },
+    "This sensor's firmware (%1$@) isn't supported yet. Keep using it with the official Ottai app." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂不支持此传感器的固件版本（%1$@）。请继续通过欧态官方应用使用它。"
+          }
+        }
+      }
+    },
+    "Sensor data looks wrong, readings paused — if this persists, replace the sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器数据异常，已暂停接收读数。如果问题持续，请更换传感器。"
+          }
+        }
+      }
+    },
+    "Sensor expired, replace sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器已到期，请更换"
+          }
+        }
+      }
+    },
+    "Searching for nearby sensors…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在搜索附近的传感器…"
+          }
+        }
+      }
+    },
+    "Found sensor %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已找到传感器 %@"
+          }
+        }
+      }
+    },
+    "Searching for sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在搜索传感器"
+          }
+        }
+      }
+    },
+    "Connecting" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在连接"
+          }
+        }
+      }
+    },
+    "Authenticating" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在验证身份"
+          }
+        }
+      }
+    },
+    "Loading calibration" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在加载校准数据"
+          }
+        }
+      }
+    },
+    "Registering sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在注册传感器"
+          }
+        }
+      }
+    },
+    "Activating sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在激活传感器"
+          }
+        }
+      }
+    },
+    "incorrect username or password entered, please retry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用户名或密码错误，请重试。"
+          }
+        }
+      }
+    },
+    "your account has been deleted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "您的账户已被删除。"
+          }
+        }
+      }
+    },
+    "your account has been disabled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "您的账户已被停用。"
+          }
+        }
+      }
+    },
+    "too many attempts, please retry after 1 hour" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尝试次数过多，请在 1 小时后重试。"
+          }
+        }
+      }
+    },
+    "server returned no apiToken." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器未返回 apiToken。"
+          }
+        }
+      }
+    },
+    "server returned a malformed response body: %@." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器返回的响应正文格式不正确：%@。"
+          }
+        }
+      }
+    },
+    "please check your connection and try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请检查网络连接后重试。"
+          }
+        }
+      }
+    },
+    "Missing the sensor key group. Please try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缺少传感器密钥组。请重试。"
+          }
+        }
+      }
+    },
+    "Couldn't find the sensor over Bluetooth. Make sure it's active and nearby." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "蓝牙未找到传感器。请确认传感器已激活且就在附近。"
+          }
+        }
+      }
+    },
+    "Sensor is out of range or not advertising. Keep it nearby; %@ will keep trying." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器超出范围或未发送蓝牙广播。请让传感器靠近手机，%@ 会继续尝试。"
+          }
+        }
+      }
+    },
+    "Lost the connection, reconnecting…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接已中断，正在重新连接…"
+          }
+        }
+      }
+    },
+    "This sensor's firmware (%@) isn't supported yet. It hasn't been activated, so it can still be used with the official Ottai app." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂不支持此传感器的固件版本（%@）。传感器尚未激活，仍可通过 欧态 官方应用使用。"
+          }
+        }
+      }
+    },
+    "The sensor is activated, but Ottai hasn't provided its calibration yet (%@). Try again; pairing will pick up where it left off." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器已激活，但 欧态 尚未提供校准数据（%@）。请重试，配对将从中断处继续。"
+          }
+        }
+      }
+    },
+    "Ottai returned two different calibrations for this sensor, so %@ won't use it. Please report this with your logs." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "欧态 为同一传感器返回了两套不同的校准数据，因此 %@ 不会使用此传感器。请附上日志报告问题。"
+          }
+        }
+      }
+    },
+    "Your Ottai account was signed in on another device, which ended this session. Sign in again to continue." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的 欧态 账户已在另一台设备上登录，当前会话已结束。请重新登录后继续。"
+          }
+        }
+      }
+    },
+    "No sensor is paired." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未配对传感器。"
+          }
+        }
+      }
+    },
+    "Ottai refused to end the session (%@)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "欧态 拒绝结束会话（%@）。"
+          }
+        }
+      }
+    },
+    "Could not confirm the sensor shut down." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法确认传感器是否已关闭。"
+          }
+        }
+      }
+    },
+    "Missing glucoseSecretKey; log in again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缺少血糖密钥（glucoseSecretKey），请重新登录。"
+          }
+        }
+      }
+    },
+    "Ottai server returned '%@' when looking up your sensor." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查询你的传感器时，欧态 服务器返回了“%@”。"
+          }
+        }
+      }
+    },
+    "Ottai didn't provide this sensor's calibration, so %@ can't use it. Pair a new sensor instead." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "欧态 未提供此传感器的校准数据，因此 %@ 无法使用它。请改为配对新的传感器。"
+          }
+        }
+      }
+    },
+    "Couldn't read your bound sensor: %@." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取与账户关联的传感器：%@。"
+          }
+        }
+      }
+    },
+    "Sensor stack not configured (no sensor kit / calibration provider)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未配置传感器组件（缺少传感器驱动或校准数据源）。"
+          }
+        }
+      }
+    },
+    "No Ottai account is logged in." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未登录 欧态 账户。"
+          }
+        }
+      }
+    },
+    "Ottai backend credentials not configured (log in first)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未配置 欧态 服务的登录凭据（请先登录）。"
+          }
+        }
+      }
+    },
+    "Missing glucoseSecretKey (needed to decipher coefficients). Log in again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缺少解密校准系数所需的血糖密钥（glucoseSecretKey）。请重新登录。"
+          }
+        }
+      }
+    },
+    "Couldn't decode the server's sensor record: %@." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法解码服务器返回的传感器记录：%@。"
+          }
+        }
+      }
+    },
+    "This sensor was already activated (by any account), so it can't be paired again. Use a fresh, never-activated sensor." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此传感器已被激活，无论是由哪个账户激活，都无法重新配对。请使用从未激活过的新传感器。"
+          }
+        }
+      }
+    },
+    "This sensor's session has ended (wear window elapsed or ended in the official app). It can't be paired. Use a fresh sensor." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此传感器的会话已结束，可能是佩戴期限已到，或在官方应用中结束了会话。无法重新配对，请使用新的传感器。"
+          }
+        }
+      }
+    },
+    "The server doesn't know this sensor's MAC. Check you scanned the right sensor." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器未识别到此传感器的 MAC 地址。请确认扫描了正确的传感器。"
+          }
+        }
+      }
+    },
+    "This device type isn't a supported Ottai sensor." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此设备类型不在支持的 欧态 传感器范围内。"
+          }
+        }
+      }
+    },
+    "This sensor isn't bound to your account yet on the server side." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此传感器尚未在服务器上绑定到你的账户。"
+          }
+        }
+      }
+    },
+    "This sensor is past its shelf life and can't be activated." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此传感器已超过有效期，无法激活。"
+          }
+        }
+      }
+    },
+    "Ottai server returned '%@' for this sensor." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "欧态 服务器对此传感器返回了“%@”。"
+          }
+        }
+      }
+    },
+    "Ottai backend not configured (log in first)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未配置 欧态 服务（请先登录）。"
+          }
+        }
+      }
+    },
+    "Ottai HTTP %@: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "欧态 HTTP %@：%@"
+          }
+        }
+      }
+    },
+    "Ottai response: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "欧态 响应：%@"
+          }
+        }
+      }
+    },
+    "Ottai session rejected (code %@). Re-login required." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "欧态 拒绝了当前会话（代码 %@）。请重新登录。"
+          }
+        }
+      }
+    },
+    "Ottai account is logged in elsewhere (latched; a re-login is required, not a retry)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "欧态 账户已在其他地方登录。当前会话已失效，请重新登录。"
+          }
+        }
+      }
+    },
+    "Bluetooth unavailable (state %@)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "蓝牙不可用（状态 %@）。"
+          }
+        }
+      }
+    },
+    "BLE connect failed: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "蓝牙连接失败：%@"
+          }
+        }
+      }
+    },
+    "BLE disconnected: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "蓝牙已断开：%@"
+          }
+        }
+      }
+    },
+    "Bluetooth is busy with another sensor operation. Try again in a moment." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "蓝牙正在处理另一项传感器操作。请稍后重试。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -106,18 +106,18 @@ extension SettingsExport {
                                             state.isExporting = false
                                             showSettingsExport = true
                                         } else {
-                                            exportErrorMessage = "Export file is empty (0 bytes)"
+                                            exportErrorMessage = String(localized: "Export file is empty (0 bytes)")
                                             showExportError = true
                                             state.isExporting = false
                                         }
                                     } catch {
-                                        exportErrorMessage = "Could not verify file attributes: \(error.localizedDescription)"
+                                        exportErrorMessage = String(localized: "Could not verify file attributes: \(error.localizedDescription)")
                                         showExportError = true
                                         // Stop spinner on error
                                         state.isExporting = false
                                     }
                                 } else {
-                                    exportErrorMessage = "Export file was created but could not be found at: \(fileURL.path)"
+                                    exportErrorMessage = String(localized: "Export file was created but could not be found at: \(fileURL.path)")
                                     showExportError = true
                                     // Stop spinner on error
                                     state.isExporting = false

@@ -67,7 +67,7 @@
 	<key>NSAlarmKitUsageDescription</key>
 	<string>Trio uses alarms so urgent glucose and pump alerts can reach you even when your phone is silenced or a Focus is on.</string>
 	<key>NFCReaderUsageDescription</key>
-	<string>NFC is used to scan Libre sensors.</string>
+	<string>Trio uses NFC to scan Libre sensors and wake compatible Ottai sensors.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
@@ -82,7 +82,7 @@
 	<key>NSCalendarsUsageDescription</key>
 	<string>Calendar is used to create new glucose events.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Camera is used to scan the code on your Dexcom sensor packaging.</string>
+	<string>Trio uses the camera to scan pairing codes on sensor packaging or applicators.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Contact is used to create a Apple Watch complication</string>
 	<key>NSFaceIDUsageDescription</key>

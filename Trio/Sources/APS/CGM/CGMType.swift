@@ -11,15 +11,15 @@ enum CGMType: String, JSON, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .none:
-            return "None"
+            return String(localized: "None")
         case .nightscout:
-            return "Nightscout as CGM"
+            return String(localized: "Nightscout as CGM")
         case .xdrip:
             return "xDrip4iOS"
         case .simulator:
             return String(localized: "Glucose Simulator", comment: "Glucose Simulator CGM type")
         case .plugin:
-            return "Plugin CGM"
+            return String(localized: "Plugin CGM")
         }
     }
 

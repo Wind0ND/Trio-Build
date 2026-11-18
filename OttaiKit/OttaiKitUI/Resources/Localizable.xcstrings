@@ -1,222 +1,2565 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "NFC only wakes the sensor. Pairing still checks its Bluetooth address.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NFC 仅用于唤醒传感器；配对时仍会校验其蓝牙地址。"
+  "sourceLanguage" : "en",
+  "strings" : {
+    "NFC only wakes the sensor. Pairing still checks its Bluetooth address." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NFC 只负责唤醒传感器。配对时仍需核对其蓝牙地址。"
           }
         }
       }
     },
-    "Only previously used sensors were heard. Replace the sensor or scan its applicator.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "只搜索到曾使用过的传感器。请更换传感器或扫描其敷贴器。"
+    "Only previously used sensors were heard. Replace the sensor or scan its applicator." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只找到已使用过的传感器。请换用新传感器，或扫描敷贴器上的二维码。"
           }
         }
       }
     },
-    "Try NFC Again": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重试 NFC"
+    "Try NFC Again" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重试 NFC"
           }
         }
       }
     },
-    "Wake with NFC": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "使用 NFC 唤醒"
+    "Wake with NFC" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用 NFC 唤醒"
           }
         }
       }
     },
-    "NFC signal sent. Looking for the sensor's Bluetooth signal…": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已发送 NFC 信号，正在寻找传感器的蓝牙信号…"
+    "NFC signal sent. Looking for the sensor's Bluetooth signal…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已发送 NFC 信号，正在查找传感器的蓝牙信号…"
           }
         }
       }
     },
-    "NFC was cancelled. You can try again.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NFC 已取消，可以重试。"
+    "NFC was cancelled. You can try again." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已取消 NFC 扫描。你可以重试。"
           }
         }
       }
     },
-    "NFC couldn't wake the sensor. Try again.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NFC 未能唤醒传感器，请重试。"
+    "NFC couldn't wake the sensor. Try again." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法通过 NFC 唤醒传感器，请重试。"
           }
         }
       }
     },
-    "NFC signal sent. Keep the iPhone near the sensor.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已发送 NFC 信号，请将 iPhone 靠近传感器。"
+    "NFC signal sent. Keep the iPhone near the sensor." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已发送 NFC 信号。请让 iPhone 保持靠近传感器。"
           }
         }
       }
     },
-    "Looking for the sensor's Bluetooth signal…": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在寻找传感器的蓝牙信号…"
+    "Looking for the sensor's Bluetooth signal…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在查找传感器的蓝牙信号…"
           }
         }
       }
     },
-    "The scanned sensor is awake. Confirm it is yours.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "扫描到的传感器已唤醒，请确认这是您的传感器。"
+    "The scanned sensor is awake. Confirm it is yours." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已在蓝牙中找到扫码选中的传感器，请确认是你要配对的设备。"
           }
         }
       }
     },
-    "Sensor is awake. Confirm it is yours.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "传感器已唤醒，请确认这是您的传感器。"
+    "Sensor is awake. Confirm it is yours." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已找到这枚传感器，请确认是你要配对的设备。"
           }
         }
       }
     },
-    "Bluetooth sensors found. Choose the sensor you just applied.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已发现蓝牙传感器。请选择您刚佩戴的传感器。"
+    "Bluetooth sensors found. Choose the sensor you just applied." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已找到附近的蓝牙传感器，请选择刚贴上的那枚。"
           }
         }
       }
     },
-    "This iPhone can't read NFC tags.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此 iPhone 无法读取 NFC 标签。"
+    "This iPhone can't read NFC tags." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这台 iPhone 无法读取 NFC 标签。"
           }
         }
       }
     },
-    "Hold the top of this iPhone against the sensor for a second.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "将 iPhone 顶部贴近传感器并保持一秒。"
+    "Hold the top of this iPhone against the sensor for a second." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请将 iPhone 顶部贴近传感器约一秒。"
           }
         }
       }
     },
-    "Search Again": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重新搜索"
+    "Search Again" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新搜索"
           }
         }
       }
     },
-    "If the sensor is asleep, wake it with NFC first.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "如果传感器处于休眠状态，请先用 NFC 唤醒。"
+    "If the sensor is asleep, wake it with NFC first." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果传感器处于休眠状态，请先用 NFC 唤醒。"
           }
         }
       }
     },
-    "Sign Out of Ottai": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "退出欧态账号"
+    "Sign Out of Ottai" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出欧态账号"
           }
         }
       }
     },
-    "Account Diagnostics (copied to clipboard)": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "账号诊断（复制到剪贴板）"
+    "Account Diagnostics (copied to clipboard)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "账号诊断（将复制到剪贴板）"
           }
         }
       }
     },
-    "Checking sensor with Ottai…": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在向欧态核验传感器…"
+    "Checking sensor with Ottai…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在向欧态核验传感器…"
           }
         }
       }
     },
-    "Diagnostics copied to the clipboard.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "诊断信息已复制到剪贴板。"
+    "Diagnostics copied to the clipboard." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "诊断信息已复制到剪贴板。"
           }
         }
       }
     },
-    "NFC is already waiting. Cancel it and try again.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NFC 正在等待中，请先取消后再试。"
+    "NFC is already waiting. Cancel it and try again." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NFC 扫描正在进行，请取消后重试。"
           }
         }
       }
     },
-    "That sensor hasn't advertised yet. Keep it near the iPhone and tap Try NFC Again.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "尚未发现该传感器的蓝牙信号。请将其靠近 iPhone，然后点按“重试 NFC”。"
+    "That sensor hasn't advertised yet. Keep it near the iPhone and tap Try NFC Again." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还未收到该传感器的蓝牙信号。请让它靠近 iPhone，再轻点“重试 NFC”。"
+          }
+        }
+      }
+    },
+    "OK" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "好"
+          }
+        }
+      }
+    },
+    "Sensor Expired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器已到期"
+          }
+        }
+      }
+    },
+    "Sensor Malfunction" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器故障"
+          }
+        }
+      }
+    },
+    "Active" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已启用"
+          }
+        }
+      }
+    },
+    "Expired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已到期"
+          }
+        }
+      }
+    },
+    "Searching for nearby sensors…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在搜索附近的传感器…"
+          }
+        }
+      }
+    },
+    "Found sensor %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已找到传感器 %@"
+          }
+        }
+      }
+    },
+    "Searching for sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在搜索传感器"
+          }
+        }
+      }
+    },
+    "Connecting" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在连接"
+          }
+        }
+      }
+    },
+    "Authenticating" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在验证身份"
+          }
+        }
+      }
+    },
+    "Loading calibration" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在加载校准数据"
+          }
+        }
+      }
+    },
+    "Registering sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在注册传感器"
+          }
+        }
+      }
+    },
+    "Activating sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在激活传感器"
+          }
+        }
+      }
+    },
+    "please check your connection and try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请检查网络连接后重试。"
+          }
+        }
+      }
+    },
+    "Close\nOttai App" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭\n欧态应用"
+          }
+        }
+      }
+    },
+    "Sensor\nWarmup" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器\n预热中"
+          }
+        }
+      }
+    },
+    "Sensor\nExpired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器\n已到期"
+          }
+        }
+      }
+    },
+    "Signal\nLoss" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "信号\n中断"
+          }
+        }
+      }
+    },
+    "Replace\nSensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更换\n传感器"
+          }
+        }
+      }
+    },
+    "Sensor\nNot Activated" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器\n未激活"
+          }
+        }
+      }
+    },
+    "Welcome!" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "欢迎！"
+          }
+        }
+      }
+    },
+    "Placement Guide" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "贴敷指南"
+          }
+        }
+      }
+    },
+    "Sign in" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录"
+          }
+        }
+      }
+    },
+    "Data Sharing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "数据共享"
+          }
+        }
+      }
+    },
+    "Your Sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "您的传感器"
+          }
+        }
+      }
+    },
+    "Pairing with sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在配对传感器"
+          }
+        }
+      }
+    },
+    "Account" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "账户"
+          }
+        }
+      }
+    },
+    "Sensor History" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器历史记录"
+          }
+        }
+      }
+    },
+    "Recent Readings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近的读数"
+          }
+        }
+      }
+    },
+    "No Sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无传感器"
+          }
+        }
+      }
+    },
+    "Sensor OK" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器正常"
+          }
+        }
+      }
+    },
+    "Warming Up" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在预热"
+          }
+        }
+      }
+    },
+    "Not Activated" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未激活"
+          }
+        }
+      }
+    },
+    "Readings Unavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂时无法获取读数"
+          }
+        }
+      }
+    },
+    "Signal Lost" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "信号已中断"
+          }
+        }
+      }
+    },
+    "Pair a new sensor to start receiving readings." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配对新传感器后即可接收读数。"
+          }
+        }
+      }
+    },
+    "Establishing a connection to your sensor." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在连接传感器。"
+          }
+        }
+      }
+    },
+    "Your sensor is functioning normally." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器运行正常。"
+          }
+        }
+      }
+    },
+    "Your sensor is warming up." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器正在预热。"
+          }
+        }
+      }
+    },
+    "Your sensor has expired. Start a new one as soon as possible." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器已到期。请尽快启用新的传感器。"
+          }
+        }
+      }
+    },
+    "Your sensor is malfunctioning. Start a new one as soon as possible." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器出现故障。请尽快启用新的传感器。"
+          }
+        }
+      }
+    },
+    "Your sensor reports itself as not activated. Check that your sensor is nearby, or re-pair if this continues." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器报告尚未激活。请确认传感器在附近。如果问题持续，请重新配对。"
+          }
+        }
+      }
+    },
+    "This could be due to compression or connection loss. Wait for it to resolve, or replace the sensor if it persists." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这可能是传感器受压或连接中断所致。请等待恢复。如果问题持续，请更换传感器。"
+          }
+        }
+      }
+    },
+    "Readings have been unavailable for a while. This could be compression or connection loss, and it usually resolves on its own. Replace the sensor only if it persists." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已有一段时间未收到读数。这可能是传感器受压或连接中断所致，通常会自行恢复。只有在问题持续时才需要更换传感器。"
+          }
+        }
+      }
+    },
+    "Checking your account for a sensor…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在查询账户关联的传感器…"
+          }
+        }
+      }
+    },
+    "Close the Ottai app first" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先关闭欧态应用"
+          }
+        }
+      }
+    },
+    "The sensor can only talk to one app at a time. Force-quit the official Ottai app (swipe it away in the app switcher) before continuing, or %@ won't be able to connect." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器一次只能与一个应用通信。继续前，请在应用切换器中向上轻扫，强制关闭欧态官方应用。否则 %@ 无法连接。"
+          }
+        }
+      }
+    },
+    "MAC" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MAC 地址"
+          }
+        }
+      }
+    },
+    "Started at" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始时间"
+          }
+        }
+      }
+    },
+    "Sensor on your account" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "账户关联的传感器"
+          }
+        }
+      }
+    },
+    "Use This Sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用此传感器"
+          }
+        }
+      }
+    },
+    "Pair a New Sensor Instead" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "改为配对新传感器"
+          }
+        }
+      }
+    },
+    "Pair a New Sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配对新传感器"
+          }
+        }
+      }
+    },
+    "Try Again" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重试"
+          }
+        }
+      }
+    },
+    "Phone number" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手机号码"
+          }
+        }
+      }
+    },
+    "Code" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "验证码"
+          }
+        }
+      }
+    },
+    "Email" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "电子邮件"
+          }
+        }
+      }
+    },
+    "Password" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "密码"
+          }
+        }
+      }
+    },
+    "Keep me logged in" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保持登录"
+          }
+        }
+      }
+    },
+    "Failed to login: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录失败：%@"
+          }
+        }
+      }
+    },
+    "Log In" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录"
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
+          }
+        }
+      }
+    },
+    "Before you begin" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始之前"
+          }
+        }
+      }
+    },
+    "Apply the sensor and sign in to your %@ account. Then, you can activate the sensor and read from it directly in the app." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "贴上传感器并登录您的 %@ 账户，然后即可在应用中激活传感器并直接接收读数。"
+          }
+        }
+      }
+    },
+    "Continue" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "继续"
+          }
+        }
+      }
+    },
+    "Find your sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查找传感器"
+          }
+        }
+      }
+    },
+    "Scan the QR code on the sensor applicator, or search for sensors nearby." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "扫描传感器敷贴器上的二维码，或搜索附近的传感器。"
+          }
+        }
+      }
+    },
+    "Please be patient" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请稍候"
+          }
+        }
+      }
+    },
+    "Keep your phone near the sensor. This can take up to a minute." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请将手机靠近传感器。此过程最长可能需要一分钟。"
+          }
+        }
+      }
+    },
+    "Scanned sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已扫描的传感器"
+          }
+        }
+      }
+    },
+    "%lld dBm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dBm"
+          }
+        }
+      }
+    },
+    "Is this your sensor?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这是您的传感器吗？"
+          }
+        }
+      }
+    },
+    "No sensors heard. The sensor advertises in bursts. Try scanning again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未发现传感器。传感器会间歇广播，请重新搜索。"
+          }
+        }
+      }
+    },
+    "Previously used, can't be re-paired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已使用过，无法重新配对"
+          }
+        }
+      }
+    },
+    "Select your sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择您的传感器"
+          }
+        }
+      }
+    },
+    "Found sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已找到传感器"
+          }
+        }
+      }
+    },
+    "Change Sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更换传感器"
+          }
+        }
+      }
+    },
+    "Scan Applicator" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "扫描敷贴器"
+          }
+        }
+      }
+    },
+    "Search Nearby" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索附近设备"
+          }
+        }
+      }
+    },
+    "Pair" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配对"
+          }
+        }
+      }
+    },
+    "Scan Again" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新搜索"
+          }
+        }
+      }
+    },
+    "My sensor isn't listed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "列表中没有我的传感器"
+          }
+        }
+      }
+    },
+    "Scan Applicator Instead" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "改为扫描敷贴器"
+          }
+        }
+      }
+    },
+    "Camera Access Is Off" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "相机权限已关闭"
+          }
+        }
+      }
+    },
+    "Open Settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开设置"
+          }
+        }
+      }
+    },
+    "Allow camera access in Settings to scan the applicator, or search for sensors nearby instead." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请在系统设置中允许使用相机以扫描敷贴器，或改为搜索附近的传感器。"
+          }
+        }
+      }
+    },
+    "Step 1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 1 步"
+          }
+        }
+      }
+    },
+    "Choose the back of your upper arm as the application site. Avoid areas with scars, moles, stretch marks, or lumps." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择上臂后侧作为贴敷部位，避开疤痕、痣、拉伸纹和硬块。"
+          }
+        }
+      }
+    },
+    "Note" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "注意"
+          }
+        }
+      }
+    },
+    "For optimal monitor performance, please select a site:" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "为获得最佳监测效果，请按以下要求选择贴敷部位："
+          }
+        }
+      }
+    },
+    "Without scars, moles, stretch marks, or lumps." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择没有疤痕、痣、拉伸纹或硬块的部位。"
+          }
+        }
+      }
+    },
+    "Avoid bony areas and irritated skin." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "避开骨骼突出部位和有刺激症状的皮肤。"
+          }
+        }
+      }
+    },
+    "Generally stays flat during your normal daily activities, avoiding any bending or folding." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择在日常活动中通常能保持平坦、不易弯折或产生褶皱的部位。"
+          }
+        }
+      }
+    },
+    "At least 2.5 cm (1 inch) away from an insulin injection site." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "距离胰岛素注射部位至少 2.5 cm（1 英寸）。"
+          }
+        }
+      }
+    },
+    "Select a different site from the one most recently used to prevent discomfort or skin irritation." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请选择与上次不同的部位，以减少不适或皮肤刺激。"
+          }
+        }
+      }
+    },
+    "Consider shaving the area to ensure a snug fit." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以考虑剃去该部位的毛发，使传感器贴合。"
+          }
+        }
+      }
+    },
+    "Step 2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 2 步"
+          }
+        }
+      }
+    },
+    "Clean the application site and wait for the skin to dry before proceeding." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清洁贴敷部位，等皮肤干燥后再继续。"
+          }
+        }
+      }
+    },
+    "The application site MUST be sufficiently clean and dry to make the Monitor adhere securely to the skin." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "贴敷部位必须充分清洁和干燥，以确保传感器牢牢贴在皮肤上。"
+          }
+        }
+      }
+    },
+    "Clean the skin using soap and wait to dry before sanitizing the application site with alcohol pads. Allow the site to air-dry before proceeding." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用肥皂清洗皮肤，待其干燥后，用酒精棉片为贴敷部位消毒。等其自然晾干后再继续。"
+          }
+        }
+      }
+    },
+    "Step 3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 3 步"
+          }
+        }
+      }
+    },
+    "Rotate to open the bottom cover of the Applicator." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "旋开敷贴器底盖。"
+          }
+        }
+      }
+    },
+    "Caution" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "注意"
+          }
+        }
+      }
+    },
+    "Do NOT use if the Applicator is opened or damaged before use. The needle is sterile unless the Applicator has been opened or damaged." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如敷贴器在使用前已经打开或损坏，请勿使用。只有敷贴器完好且未打开时，才能保证针头无菌。"
+          }
+        }
+      }
+    },
+    "Do NOT put the cover back on as it may damage the Monitor." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请勿重新盖上底盖，以免损坏传感器。"
+          }
+        }
+      }
+    },
+    "Do NOT touch inside the Applicator as it contains a needle." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "敷贴器内有针头，请勿触摸内部。"
+          }
+        }
+      }
+    },
+    "Do NOT apply it if the expiry date has passed." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果已超过有效期，请勿使用。"
+          }
+        }
+      }
+    },
+    "Step 4" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 4 步"
+          }
+        }
+      }
+    },
+    "Place the Applicator over your arm, press the launch button on the top, and gently pull away the Applicator. The Monitor should now be attached to the skin." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将敷贴器放在上臂，按下顶部的释放按钮，然后轻轻移开敷贴器。此时传感器应已贴在皮肤上。"
+          }
+        }
+      }
+    },
+    "Hold the Applicator flat against your arm and make sure the bottom edge is fully adhered to the skin, or application failure may occur." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "让敷贴器平贴上臂，确保底部边缘与皮肤完全接触，否则可能贴敷失败。"
+          }
+        }
+      }
+    },
+    "Before removing the Applicator, keep holding the Applicator against your arm for a few seconds. This can help the adhesive stick to your skin." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移开敷贴器前，请将它在上臂上多按住几秒。这有助于胶贴与皮肤贴合。"
+          }
+        }
+      }
+    },
+    "Applying the Monitor may cause bleeding. If bleeding occurs," : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "贴敷传感器时可能出血。如果出血，"
+          }
+        }
+      }
+    },
+    "Wipe away the blood with a cotton swab." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请用棉签擦去血液。"
+          }
+        }
+      }
+    },
+    "If necessary, use a cotton swab to press on the small opening on the Monitor or apply ice packs to help stop the bleeding." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "必要时，用棉签按压传感器上的小孔，或用冰袋帮助止血。"
+          }
+        }
+      }
+    },
+    "Remove the Monitor and apply a new one at a different site only if bleeding does not stop." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只有在出血无法止住时，才移除传感器并在另一处贴敷新的传感器。"
+          }
+        }
+      }
+    },
+    "Step 5" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 5 步"
+          }
+        }
+      }
+    },
+    "Gently press the tape around the edge of the Monitor to attach it firmly to the skin." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "轻按传感器边缘周围的胶贴，使它牢固贴在皮肤上。"
+          }
+        }
+      }
+    },
+    "Discard the used Applicator following local guidelines for disposal of blood and bodily fluid contact parts." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按照当地有关处置接触血液和体液物品的规定，丢弃用过的敷贴器。"
+          }
+        }
+      }
+    },
+    "Back" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "返回"
+          }
+        }
+      }
+    },
+    "Next" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步"
+          }
+        }
+      }
+    },
+    "Done" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成"
+          }
+        }
+      }
+    },
+    "Your sensor is registered to your Ottai account when you pair it, and released when you end it, whichever you choose below. That is how pairing works and cannot be turned off. Everything beyond it is up to you." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无论选择以下哪一项，配对时都会将传感器注册到您的欧态账户，结束会话时则会解除关联。这是配对所必需的流程，无法关闭。其余共享内容由您决定。"
+          }
+        }
+      }
+    },
+    "You can change this at any time in Account settings." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "您可以随时在账户设置中更改此选项。"
+          }
+        }
+      }
+    },
+    "What do you share with Ottai?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "您将向欧态共享哪些数据？"
+          }
+        }
+      }
+    },
+    "Log Out" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出登录"
+          }
+        }
+      }
+    },
+    "You'll need to sign in again to pair a new sensor or resume data sharing. Your current sensor keeps working." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配对新传感器或恢复数据共享前，您需要重新登录。当前传感器会继续工作。"
+          }
+        }
+      }
+    },
+    "Signed in until" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录有效期至"
+          }
+        }
+      }
+    },
+    "Session" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "会话"
+          }
+        }
+      }
+    },
+    "Logged in elsewhere. Telemetry is paused until you sign in again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "账户已在其他地方登录。重新登录前，遥测数据共享会暂停。"
+          }
+        }
+      }
+    },
+    "Sign In Again" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新登录"
+          }
+        }
+      }
+    },
+    "Your sensor is registered to your Ottai account and released again when you end it whichever option you pick, because that is how a sensor is paired at all. An account with no readings may look unusual to Ottai if you ever need warranty or support." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无论选择哪一项，配对时都会将传感器注册到您的欧态账户，停用时则会解除关联。这是传感器配对所必需的流程。如果日后需要保修或技术支持，欧态可能会认为完全没有读数的账户不寻常。"
+          }
+        }
+      }
+    },
+    "Serial" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "序列号"
+          }
+        }
+      }
+    },
+    "Batch" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批次"
+          }
+        }
+      }
+    },
+    "Model" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "型号"
+          }
+        }
+      }
+    },
+    "Firmware" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "固件"
+          }
+        }
+      }
+    },
+    "Production Date" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "生产日期"
+          }
+        }
+      }
+    },
+    "Expires" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到期时间"
+          }
+        }
+      }
+    },
+    "No readings yet." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无读数。"
+          }
+        }
+      }
+    },
+    "Value" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "数值"
+          }
+        }
+      }
+    },
+    "Time" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "时间"
+          }
+        }
+      }
+    },
+    "Time (relative)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "相对时间"
+          }
+        }
+      }
+    },
+    "Trend" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "趋势"
+          }
+        }
+      }
+    },
+    "Rate of change" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "变化速率"
+          }
+        }
+      }
+    },
+    "Reading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "读数"
+          }
+        }
+      }
+    },
+    "Range" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "范围"
+          }
+        }
+      }
+    },
+    "Below display range (LO)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "低于显示范围（LO）"
+          }
+        }
+      }
+    },
+    "Above display range (HI)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "高于显示范围（HI）"
+          }
+        }
+      }
+    },
+    "Issue" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "问题"
+          }
+        }
+      }
+    },
+    "Sensor reported fault" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器报告故障"
+          }
+        }
+      }
+    },
+    "Quality" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "质量"
+          }
+        }
+      }
+    },
+    "Sent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已发送"
+          }
+        }
+      }
+    },
+    "Reason" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原因"
+          }
+        }
+      }
+    },
+    "Forwarding to Trio" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在转发给 Trio"
+          }
+        }
+      }
+    },
+    "Path" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "路径"
+          }
+        }
+      }
+    },
+    "Raw base" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原始基值"
+          }
+        }
+      }
+    },
+    "Source" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "来源"
+          }
+        }
+      }
+    },
+    "Sample detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "读数详情"
+          }
+        }
+      }
+    },
+    "Yes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "是"
+          }
+        }
+      }
+    },
+    "No" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "否"
+          }
+        }
+      }
+    },
+    "Rising quickly ⇈" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快速上升 ⇈"
+          }
+        }
+      }
+    },
+    "Rising ↗" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上升 ↗"
+          }
+        }
+      }
+    },
+    "Stable →" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "平稳 →"
+          }
+        }
+      }
+    },
+    "Falling ↘" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下降 ↘"
+          }
+        }
+      }
+    },
+    "Falling quickly ⇊" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快速下降 ⇊"
+          }
+        }
+      }
+    },
+    "Realtime (live BLE)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "实时（蓝牙直连）"
+          }
+        }
+      }
+    },
+    "Historical backfill" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "补读历史数据"
+          }
+        }
+      }
+    },
+    "No sensors have been paired yet." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚无传感器配对记录。"
+          }
+        }
+      }
+    },
+    "Tap a sensor to see its calibration and device details." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "轻点某个传感器可查看其校准信息和设备详情。"
+          }
+        }
+      }
+    },
+    "current" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前"
+          }
+        }
+      }
+    },
+    "Retired %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已于 %@ 停用"
+          }
+        }
+      }
+    },
+    "Active since %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自 %@ 起启用"
+          }
+        }
+      }
+    },
+    "Remove CGM" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除 CGM"
+          }
+        }
+      }
+    },
+    "Are you sure you want to stop using the Ottai Ultra? Your Ottai account stays signed in, and sensor history is kept." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确定要停止使用 Ottai Ultra 吗？您的欧态账户仍会保持登录，传感器历史记录也会保留。"
+          }
+        }
+      }
+    },
+    "Confirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确认"
+          }
+        }
+      }
+    },
+    "End Sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "结束传感器会话"
+          }
+        }
+      }
+    },
+    "This shuts the sensor down and releases it from your Ottai account. You cannot reverse this action or reuse the sensor. Remove it from your arm afterwards." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这会关闭传感器，并解除它与您欧态账户的关联。此操作无法撤销，传感器也无法再次使用。完成后请从上臂取下传感器。"
+          }
+        }
+      }
+    },
+    "Could Not Confirm Shutdown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法确认是否已关闭"
+          }
+        }
+      }
+    },
+    "Trio could not reach the sensor to confirm it powered down. It may still be transmitting nearby, or it may already be off the air for good. Ending the session now releases it from your account without that confirmation." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trio 无法连接传感器以确认它已关闭。它可能仍在附近发送信号，也可能已经永久停止发送信号。现在结束会话会解除传感器与账户的关联，即使无法确认它是否已关闭。"
+          }
+        }
+      }
+    },
+    "End Anyway" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仍要结束"
+          }
+        }
+      }
+    },
+    "No sensor paired." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未配对传感器。"
+          }
+        }
+      }
+    },
+    "Connecting to sensor…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在连接传感器…"
+          }
+        }
+      }
+    },
+    "Warming up:" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在预热："
+          }
+        }
+      }
+    },
+    "min remaining" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剩余分钟"
+          }
+        }
+      }
+    },
+    "Sensor expires in:" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器距离到期："
+          }
+        }
+      }
+    },
+    "days" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "天"
+          }
+        }
+      }
+    },
+    "hrs" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "小时"
+          }
+        }
+      }
+    },
+    "Sensor expired!" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器已到期！"
+          }
+        }
+      }
+    },
+    "Close the Ottai App" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭欧态应用"
+          }
+        }
+      }
+    },
+    "%@ can't reach this sensor yet. It can only talk to one app at a time, so force-quit the official Ottai app (swipe it away in the app switcher) to let %@ connect." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 暂时无法连接此传感器。它一次只能与一个应用通信。请在应用切换器中向上轻扫，强制关闭欧态官方应用，让 %@ 能够连接。"
+          }
+        }
+      }
+    },
+    "Account Logged Out" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "账户已退出登录"
+          }
+        }
+      }
+    },
+    "Your Ottai account has been forcibly logged out. Telemetry and glucose uploads are paused. Please ensure that you are not signed in elsewhere (e.g. the official Ottai app)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "您的欧态账户已被强制退出登录。遥测和血糖上传均已暂停。请确认未在其他地方登录，例如欧态官方应用。"
+          }
+        }
+      }
+    },
+    "Sign In" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录"
+          }
+        }
+      }
+    },
+    "Delete CGM" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除 CGM"
+          }
+        }
+      }
+    },
+    "Could not end sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法结束传感器会话"
+          }
+        }
+      }
+    },
+    "Show all %d" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示全部 %d 项"
+          }
+        }
+      }
+    },
+    "Ends at" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "结束时间"
+          }
+        }
+      }
+    },
+    "Sensor information" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器信息"
+          }
+        }
+      }
+    },
+    "Share Ottai logs" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分享欧态日志"
+          }
+        }
+      }
+    },
+    "Pair New Sensor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配对新传感器"
+          }
+        }
+      }
+    },
+    "Manage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "管理"
+          }
+        }
+      }
+    },
+    "Login" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录"
+          }
+        }
+      }
+    },
+    "Recommended" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "推荐"
+          }
+        }
+      }
+    },
+    "Minimal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最少"
+          }
+        }
+      }
+    },
+    "Standard" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标准"
+          }
+        }
+      }
+    },
+    "Full" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完整"
+          }
+        }
+      }
+    },
+    "Only what pairing a sensor requires." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅共享配对传感器所需的信息。"
+          }
+        }
+      }
+    },
+    "Also tells Ottai when your sensor connects, disconnects, or reports a problem." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "也会在传感器连接、断开或报告问题时通知欧态。"
+          }
+        }
+      }
+    },
+    "Also uploads your glucose readings, exactly as the official app does. Allows your doctor/caregivers to keep following your treatment." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还会像官方应用一样上传您的血糖读数，让医生或照护者继续跟进您的治疗情况。"
+          }
+        }
+      }
+    },
+    "%@/min" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@/分钟"
+          }
+        }
+      }
+    },
+    "Starting…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在启动…"
+          }
+        }
+      }
+    },
+    "Reading the account…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在读取账户信息…"
+          }
+        }
+      }
+    },
+    "Confirming sensor shutdown…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在确认传感器已关闭…"
+          }
+        }
+      }
+    },
+    "Releasing from your account…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在解除与您账户的关联…"
           }
         }
       }

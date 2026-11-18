@@ -533,7 +533,7 @@ extension NightscoutAPI {
             throw NSError(
                 domain: "ImportError",
                 code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "Can't find the default Nightscout Profile."]
+                userInfo: [NSLocalizedDescriptionKey: String(localized: "Can't find the default Nightscout Profile.")]
             )
         }
 

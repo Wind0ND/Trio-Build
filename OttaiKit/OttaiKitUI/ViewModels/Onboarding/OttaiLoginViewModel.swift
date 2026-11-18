@@ -160,7 +160,7 @@ import OttaiKit
                 // The login flow either throws LoginError or a transport error
                 self.errorMessage = (error as? OttaiEnvelopedClient.LoginError)?.description
                     ?? String(
-                        localized: "please check your connection and try again.",
+                        localized: "please check your connection and try again.", bundle: .ottaiUI,
                         comment: "login error: unexpected failure"
                     )
             }

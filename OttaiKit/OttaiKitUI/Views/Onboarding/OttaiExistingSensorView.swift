@@ -29,7 +29,7 @@ struct OttaiExistingSensorView: View {
                     Section {
                         HStack {
                             ActivityIndicator(isAnimating: .constant(true), style: .medium)
-                            Text("Checking your account for a sensor…", comment: "existing sensor: checking")
+                            Text("Checking your account for a sensor…", bundle: .ottaiUI, comment: "existing sensor: checking")
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -40,10 +40,10 @@ struct OttaiExistingSensorView: View {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundStyle(guidanceColors.warning)
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("Close the Ottai app first", comment: "existing sensor: one connection title")
+                                Text("Close the Ottai app first", bundle: .ottaiUI, comment: "existing sensor: one connection title")
                                     .fontWeight(.heavy)
                                 Text(
-                                    "The sensor can only talk to one app at a time. Force-quit the official Ottai app (swipe it away in the app switcher) before continuing, or \(Bundle.main.ottaiHostAppName) won't be able to connect.",
+                                    "The sensor can only talk to one app at a time. Force-quit the official Ottai app (swipe it away in the app switcher) before continuing, or \(Bundle.main.ottaiHostAppName) won't be able to connect.", bundle: .ottaiUI,
                                     comment: "existing sensor: one connection message (1: appName)"
                                 )
                                 .foregroundStyle(.secondary)
@@ -79,12 +79,12 @@ struct OttaiExistingSensorView: View {
                     .frame(height: 120)
                 Spacer()
             }
-            row(Text("MAC", comment: "sensor mac"), sensor.mac)
+            row(Text("MAC", bundle: .ottaiUI, comment: "sensor mac"), sensor.mac)
             if let activatedAt = sensor.activatedAt {
-                row(Text("Started at", comment: "started"), Self.dateFormatter.string(from: activatedAt))
+                row(Text("Started at", bundle: .ottaiUI, comment: "started"), Self.dateFormatter.string(from: activatedAt))
             }
         } header: {
-            Text("Sensor on your account", comment: "existing sensor header")
+            Text("Sensor on your account", bundle: .ottaiUI, comment: "existing sensor header")
         }
     }
 
@@ -103,11 +103,11 @@ struct OttaiExistingSensorView: View {
         case .found:
             VStack(spacing: 10) {
                 Button(action: viewModel.useSensor) {
-                    Text("Use This Sensor", comment: "adopt bound sensor button")
+                    Text("Use This Sensor", bundle: .ottaiUI, comment: "adopt bound sensor button")
                 }
                 .buttonStyle(ActionButtonStyle())
                 Button(action: viewModel.pairNewSensor) {
-                    Text("Pair a New Sensor Instead", comment: "skip bound sensor button")
+                    Text("Pair a New Sensor Instead", bundle: .ottaiUI, comment: "skip bound sensor button")
                 }
                 .buttonStyle(ActionButtonStyle(.secondary))
             }
@@ -115,17 +115,17 @@ struct OttaiExistingSensorView: View {
             ActivityIndicator(isAnimating: .constant(true), style: .medium)
         case .unusable:
             Button(action: viewModel.pairNewSensor) {
-                Text("Pair a New Sensor", comment: "pair new sensor button")
+                Text("Pair a New Sensor", bundle: .ottaiUI, comment: "pair new sensor button")
             }
             .buttonStyle(ActionButtonStyle())
         case .failed:
             VStack(spacing: 10) {
                 Button(action: viewModel.check) {
-                    Text("Try Again", comment: "retry button")
+                    Text("Try Again", bundle: .ottaiUI, comment: "retry button")
                 }
                 .buttonStyle(ActionButtonStyle())
                 Button(action: viewModel.pairNewSensor) {
-                    Text("Pair a New Sensor Instead", comment: "skip bound sensor button")
+                    Text("Pair a New Sensor Instead", bundle: .ottaiUI, comment: "skip bound sensor button")
                 }
                 .buttonStyle(ActionButtonStyle(.secondary))
             }

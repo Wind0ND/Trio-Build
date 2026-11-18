@@ -13,21 +13,21 @@ enum ProfileError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case let .invalidDIA(value):
-            return "DIA of \(String(describing: value)) is not supported (must be > 1)"
+            return String(localized: "DIA of \(String(describing: value)) is not supported (must be > 1)")
         case let .invalidCurrentBasal(value):
-            return "Current basal of \(String(describing: value)) is not supported (must be > 0)"
+            return String(localized: "Current basal of \(String(describing: value)) is not supported (must be > 0)")
         case let .invalidMaxDailyBasal(value):
-            return "Max daily basal of \(String(describing: value)) is not supported (must be > 0)"
+            return String(localized: "Max daily basal of \(String(describing: value)) is not supported (must be > 0)")
         case let .invalidMaxBasal(value):
-            return "Max basal of \(String(describing: value)) is not supported (must be >= 0.1)"
+            return String(localized: "Max basal of \(String(describing: value)) is not supported (must be >= 0.1)")
         case let .invalidISF(value):
-            return "ISF of \(String(describing: value)) is not supported (must be >= 5)"
+            return String(localized: "ISF of \(String(describing: value)) is not supported (must be >= 5)")
         case .invalidCarbRatio:
-            return "Profile wasn't given carb ratio data, cannot calculate carb_ratio"
+            return String(localized: "Profile wasn't given carb ratio data, cannot calculate carb_ratio")
         case .invalidBgTargets:
-            return "Profile wasn't given bg target data"
+            return String(localized: "Profile wasn't given bg target data")
         case .invalidCalendar:
-            return "Unable to extract hours and minutes from the current calendar"
+            return String(localized: "Unable to extract hours and minutes from the current calendar")
         }
     }
 }

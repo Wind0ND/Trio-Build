@@ -17,7 +17,7 @@ struct OttaiRecentReadingsView: View {
         List {
             if samples.isEmpty {
                 Section {
-                    Text("No readings yet.", comment: "empty recent readings")
+                    Text("No readings yet.", bundle: .ottaiUI, comment: "empty recent readings")
                         .foregroundColor(.secondary)
                 }
             } else {

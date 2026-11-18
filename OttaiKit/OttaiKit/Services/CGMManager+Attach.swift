@@ -14,7 +14,7 @@ public extension OttaiCGMManager {
         case service(OttaiPairingService.Failure)
         public var description: String {
             switch self {
-            case .notConfigured: return "Sensor stack not configured (no sensor kit / calibration provider)."
+            case .notConfigured: return String(localized: "Sensor stack not configured (no sensor kit / calibration provider).", bundle: .ottaiKit)
             case let .service(f): return f.description
             }
         }

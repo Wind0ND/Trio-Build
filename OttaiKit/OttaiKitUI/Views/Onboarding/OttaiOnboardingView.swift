@@ -44,10 +44,10 @@ struct OttaiOnboardingView: View {
                         Text(Self.buildStamp)
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text("Before you begin", comment: "onboarding header")
+                        Text("Before you begin", bundle: .ottaiUI, comment: "onboarding header")
                             .font(.title3).bold()
                         Text(
-                            "Apply the sensor and sign in to your \(accountName) account. Then, you can activate the sensor and read from it directly in the app.",
+                            "Apply the sensor and sign in to your \(accountName) account. Then, you can activate the sensor and read from it directly in the app.", bundle: .ottaiUI,
                             comment: "onboarding BYOA explanation"
                         )
                     }
@@ -57,12 +57,12 @@ struct OttaiOnboardingView: View {
             Spacer()
             VStack(spacing: 10) {
                 Button(action: onShowPlacement) {
-                    Text("Placement Guide", comment: "placement guide button")
+                    Text("Placement Guide", bundle: .ottaiUI, comment: "placement guide button")
                 }
                 .buttonStyle(ActionButtonStyle(.secondary))
 
                 Button(action: onContinue) {
-                    Text("Continue", comment: "continue button")
+                    Text("Continue", bundle: .ottaiUI, comment: "continue button")
                 }
                 .buttonStyle(ActionButtonStyle())
             }
@@ -70,7 +70,7 @@ struct OttaiOnboardingView: View {
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: dismiss) { Text("Cancel", comment: "cancel") }
+                Button(action: dismiss) { Text("Cancel", bundle: .ottaiUI, comment: "cancel") }
             }
         }
     }

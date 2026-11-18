@@ -12,7 +12,7 @@ extension Onboarding.StateModel {
         }
 
         guard let nightscoutUrl = URL(string: nightscoutUrl), self.nightscoutUrl.hasPrefix("https://") else {
-            nightscoutResponseMessage = "Invalid URL"
+            nightscoutResponseMessage = String(localized: "Invalid URL")
             isValidNightscoutURL = false
             return
         }
@@ -27,7 +27,7 @@ extension Onboarding.StateModel {
                 switch completion {
                 case .finished: break
                 case let .failure(error):
-                    self.nightscoutResponseMessage = "Error: \(error.localizedDescription)"
+                    self.nightscoutResponseMessage = String(localized: "Error: \(error.localizedDescription)")
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                     self.isConnectingToNS = false
@@ -62,7 +62,7 @@ extension Onboarding.StateModel {
                 throw NSError(
                     domain: "ImportError",
                     code: 1,
-                    userInfo: [NSLocalizedDescriptionKey: "Cannot find the Nightscout Profile named \"default\"."]
+                    userInfo: [NSLocalizedDescriptionKey: String(localized: "Cannot find the Nightscout Profile named \"default\".")]
                 )
             }
 
@@ -83,7 +83,7 @@ extension Onboarding.StateModel {
                 throw NSError(
                     domain: "ImportError",
                     code: 2,
-                    userInfo: [NSLocalizedDescriptionKey: "Invalid Carb Ratio settings in Nightscout. Import aborted."]
+                    userInfo: [NSLocalizedDescriptionKey: String(localized: "Invalid Carb Ratio settings in Nightscout. Import aborted.")]
                 )
             }
 
@@ -102,7 +102,7 @@ extension Onboarding.StateModel {
                 throw NSError(
                     domain: "ImportError",
                     code: 3,
-                    userInfo: [NSLocalizedDescriptionKey: "Invalid Nightscout basal rates found. Import aborted."]
+                    userInfo: [NSLocalizedDescriptionKey: String(localized: "Invalid Nightscout basal rates found. Import aborted.")]
                 )
             }
 
@@ -111,7 +111,7 @@ extension Onboarding.StateModel {
                     domain: "ImportError",
                     code: 4,
                     userInfo: [
-                        NSLocalizedDescriptionKey: "Invalid Nightscout basal rates found. Basal rate total cannot be 0 U/hr. Import aborted."
+                        NSLocalizedDescriptionKey: String(localized: "Invalid Nightscout basal rates found. Basal rate total cannot be 0 U/hr. Import aborted.")
                     ]
                 )
             }
@@ -129,7 +129,7 @@ extension Onboarding.StateModel {
                 throw NSError(
                     domain: "ImportError",
                     code: 5,
-                    userInfo: [NSLocalizedDescriptionKey: "Invalid Nightscout insulin sensitivity profile. Import aborted."]
+                    userInfo: [NSLocalizedDescriptionKey: String(localized: "Invalid Nightscout insulin sensitivity profile. Import aborted.")]
                 )
             }
 

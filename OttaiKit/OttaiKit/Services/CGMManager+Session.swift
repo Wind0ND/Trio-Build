@@ -25,7 +25,7 @@ extension OttaiCGMManager {
         case notLoggedIn
         public var description: String {
             switch self {
-            case .notLoggedIn: return "No Ottai account is logged in."
+            case .notLoggedIn: return String(localized: "No Ottai account is logged in.", bundle: .ottaiKit)
             }
         }
     }

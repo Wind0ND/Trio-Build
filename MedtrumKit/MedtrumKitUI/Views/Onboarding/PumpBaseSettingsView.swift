@@ -17,7 +17,7 @@ struct PumpBaseSettingsView: View {
                             Text("Serial number", comment: "Label for serial number")
                                 .foregroundStyle(.primary)
                             Spacer()
-                            TextField("1234ABCD", text: $viewModel.serialNumber.max(8))
+                            TextField(String(localized: "1234ABCD"), text: $viewModel.serialNumber.max(8))
                                 .multilineTextAlignment(.trailing)
                         }
                         Text(

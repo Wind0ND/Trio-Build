@@ -44,43 +44,43 @@ extension OttaiSettingsView {
         switch viewModel.cgmState {
         case .noSensor:
             HStack {
-                Text("No sensor paired.", comment: "no sensor").foregroundColor(.secondary)
+                Text("No sensor paired.", bundle: .ottaiUI, comment: "no sensor").foregroundColor(.secondary)
                 Spacer()
             }
         case .connecting:
             HStack {
                 SwiftUI.ProgressView()
-                Text("Connecting to sensor…", comment: "connecting")
+                Text("Connecting to sensor…", bundle: .ottaiUI, comment: "connecting")
                     .foregroundColor(.secondary)
                     .padding(.leading, 6)
                 Spacer()
             }
         case .warmingUp:
             HStack(alignment: .lastTextBaseline) {
-                Text("Warming up:", comment: "warming up").foregroundColor(.secondary)
+                Text("Warming up:", bundle: .ottaiUI, comment: "warming up").foregroundColor(.secondary)
                 Spacer()
                 Text(String(format: "%.0f", viewModel.sensorWarmupMinutes))
                     .font(.system(size: 28)).fontWeight(.heavy)
-                Text("min remaining", comment: "min remaining").foregroundColor(.secondary)
+                Text("min remaining", bundle: .ottaiUI, comment: "min remaining").foregroundColor(.secondary)
             }
             SwiftUI.ProgressView(value: viewModel.sensorWarmupProgress)
                 .scaleEffect(x: 1, y: 4, anchor: .center).padding(.top, 7)
         case .active:
             HStack(alignment: .lastTextBaseline) {
-                Text("Sensor expires in:", comment: "expires in").foregroundColor(.secondary)
+                Text("Sensor expires in:", bundle: .ottaiUI, comment: "expires in").foregroundColor(.secondary)
                 Spacer()
                 Text(String(format: "%.0f", viewModel.sensorAgeDays))
                     .font(.system(size: 28)).fontWeight(.heavy)
-                Text("days", comment: "days").foregroundColor(.secondary)
+                Text("days", bundle: .ottaiUI, comment: "days").foregroundColor(.secondary)
                 Text(String(format: "%.0f", viewModel.sensorAgeHours))
                     .font(.system(size: 28)).fontWeight(.heavy)
-                Text("hrs", comment: "hours").foregroundColor(.secondary)
+                Text("hrs", bundle: .ottaiUI, comment: "hours").foregroundColor(.secondary)
             }
             SwiftUI.ProgressView(value: viewModel.sensorAgeProgress)
                 .scaleEffect(x: 1, y: 4, anchor: .center).padding(.top, 7)
         case .expired:
             HStack {
-                Text("Sensor expired!", comment: "expired").foregroundColor(guidanceColors.critical)
+                Text("Sensor expired!", bundle: .ottaiUI, comment: "expired").foregroundColor(guidanceColors.critical)
                 Spacer()
             }
             SwiftUI.ProgressView(value: 1)
@@ -112,7 +112,7 @@ extension OttaiSettingsView {
                     Text(verbatim: viewModel.endSensorStatusText)
                         .foregroundColor(.secondary)
                 } else {
-                    Text("End Sensor", comment: "end sensor")
+                    Text("End Sensor", bundle: .ottaiUI, comment: "end sensor")
                         .foregroundColor(guidanceColors.critical)
                 }
                 Spacer()
@@ -129,10 +129,10 @@ extension OttaiSettingsView {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(guidanceColors.warning)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Close the Ottai App", comment: "official app connected title")
+                Text("Close the Ottai App", bundle: .ottaiUI, comment: "official app connected title")
                     .fontWeight(.heavy).foregroundStyle(.primary)
                 Text(
-                    "\(Bundle.main.ottaiHostAppName) can't reach this sensor yet. It can only talk to one app at a time, so force-quit the official Ottai app (swipe it away in the app switcher) to let \(Bundle.main.ottaiHostAppName) connect.",
+                    "\(Bundle.main.ottaiHostAppName) can't reach this sensor yet. It can only talk to one app at a time, so force-quit the official Ottai app (swipe it away in the app switcher) to let \(Bundle.main.ottaiHostAppName) connect.", bundle: .ottaiUI,
                     comment: "official app connected message (1: appName)"
                 )
                 .foregroundStyle(.secondary)
@@ -146,10 +146,10 @@ extension OttaiSettingsView {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(guidanceColors.warning)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Account Logged Out", comment: "account locked out title")
+                Text("Account Logged Out", bundle: .ottaiUI, comment: "account locked out title")
                     .fontWeight(.heavy).foregroundStyle(.primary)
                 Text(
-                    "Your Ottai account has been forcibly logged out. Telemetry and glucose uploads are paused. Please ensure that you are not signed in elsewhere (e.g. the official Ottai app)",
+                    "Your Ottai account has been forcibly logged out. Telemetry and glucose uploads are paused. Please ensure that you are not signed in elsewhere (e.g. the official Ottai app)", bundle: .ottaiUI,
                     comment: "account locked out message"
                 )
                 .foregroundStyle(.secondary)
@@ -159,7 +159,7 @@ extension OttaiSettingsView {
         Button(action: { viewModel.showLogin() }) {
             HStack {
                 Spacer()
-                Text("Sign In", comment: "account locked out sign in")
+                Text("Sign In", bundle: .ottaiUI, comment: "account locked out sign in")
                     .font(.body.weight(.semibold))
                 Spacer()
             }

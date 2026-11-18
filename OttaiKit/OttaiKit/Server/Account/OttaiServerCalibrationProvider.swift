@@ -48,10 +48,10 @@ public struct OttaiServerCalibrationProvider: CalibrationProvider {
         case decode(String)
         public var description: String {
             switch self {
-            case .notConfigured: return "Ottai backend credentials not configured (log in first)."
-            case .noSecretKey: return "Missing glucoseSecretKey (needed to decipher coefficients). Log in again."
+            case .notConfigured: return String(localized: "Ottai backend credentials not configured (log in first).", bundle: .ottaiKit)
+            case .noSecretKey: return String(localized: "Missing glucoseSecretKey (needed to decipher coefficients). Log in again.", bundle: .ottaiKit)
             case let .business(c): return Self.describeBusiness(code: c)
-            case let .decode(m): return "Couldn't decode the server's sensor record: \(m)."
+            case let .decode(m): return String(localized: "Couldn't decode the server's sensor record: \(String(describing: m)).", bundle: .ottaiKit)
             }
         }
 
@@ -60,19 +60,19 @@ public struct OttaiServerCalibrationProvider: CalibrationProvider {
         static func describeBusiness(code: String) -> String {
             switch code {
             case "AppDevice_AlreadyUsed":
-                return "This sensor was already activated (by any account), so it can't be paired again. Use a fresh, never-activated sensor."
+                return String(localized: "This sensor was already activated (by any account), so it can't be paired again. Use a fresh, never-activated sensor.", bundle: .ottaiKit)
             case "AppDevice_EndUsing":
-                return "This sensor's session has ended (wear window elapsed or ended in the official app). It can't be paired. Use a fresh sensor."
+                return String(localized: "This sensor's session has ended (wear window elapsed or ended in the official app). It can't be paired. Use a fresh sensor.", bundle: .ottaiKit)
             case "AppDevice_NotExist":
-                return "The server doesn't know this sensor's MAC. Check you scanned the right sensor."
+                return String(localized: "The server doesn't know this sensor's MAC. Check you scanned the right sensor.", bundle: .ottaiKit)
             case "AppDevice_TypeError":
-                return "This device type isn't a supported Ottai sensor."
+                return String(localized: "This device type isn't a supported Ottai sensor.", bundle: .ottaiKit)
             case "AppDevice_UserNuBind":
-                return "This sensor isn't bound to your account yet on the server side."
+                return String(localized: "This sensor isn't bound to your account yet on the server side.", bundle: .ottaiKit)
             case "AppDevice_OutOfProduceTime":
-                return "This sensor is past its shelf life and can't be activated."
+                return String(localized: "This sensor is past its shelf life and can't be activated.", bundle: .ottaiKit)
             default:
-                return "Ottai server returned '\(code)' for this sensor."
+                return String(localized: "Ottai server returned '\(String(describing: code))' for this sensor.", bundle: .ottaiKit)
             }
         }
     }

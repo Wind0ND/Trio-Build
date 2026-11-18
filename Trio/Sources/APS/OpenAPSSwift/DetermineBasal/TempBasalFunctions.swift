@@ -6,7 +6,7 @@ enum TempBasalFunctionError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .invalidBasalRateOnProfile:
-            return "The currentBasal, maxBasal, or maxDailyBasal wasn't set on Profile"
+            return String(localized: "The currentBasal, maxBasal, or maxDailyBasal wasn't set on Profile")
         }
     }
 }

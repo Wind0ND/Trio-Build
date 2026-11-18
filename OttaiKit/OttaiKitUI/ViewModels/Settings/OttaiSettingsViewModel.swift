@@ -146,9 +146,9 @@ enum OttaiSettingsAlert: Identifiable {
     private static func text(for stage: OttaiCGMManager.EndSensorStage) -> String {
         switch stage {
         case .confirmingShutdown:
-            return String(localized: "Confirming sensor shutdown…", comment: "end sensor stage: confirming shutdown")
+            return String(localized: "Confirming sensor shutdown…", bundle: .ottaiUI, comment: "end sensor stage: confirming shutdown")
         case .releasingAccount:
-            return String(localized: "Releasing from your account…", comment: "end sensor stage: releasing account")
+            return String(localized: "Releasing from your account…", bundle: .ottaiUI, comment: "end sensor stage: releasing account")
         }
     }
 

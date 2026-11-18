@@ -43,45 +43,45 @@ struct FeatureSettingsView: BaseView {
             .listRowBackground(Color.chart)
 
             Section(
-                header: Text("后台保活"),
+                header: Text("Background Keep Alive"),
                 content: {
-                    Picker("保活模式", selection: $keepAliveMode) {
+                    Picker("Keep Alive Mode", selection: $keepAliveMode) {
                         ForEach(BackgroundKeepAlive.Mode.allCases) { mode in
                             Text(mode.title).tag(mode.rawValue)
                         }
                     }
                     if keepAliveMode == BackgroundKeepAlive.Mode.smart.rawValue {
                         Stepper(
-                            "无数据 \(stallMinutes) 分钟后启动保活",
+                            "Start keep alive after \(stallMinutes) minutes without readings",
                             value: $stallMinutes,
                             in: 5 ... 60,
                             step: 5
                         )
                         Stepper(
-                            "最长保活 \(maxSessionMinutes) 分钟",
+                            "Maximum keep alive: \(maxSessionMinutes) minutes",
                             value: $maxSessionMinutes,
                             in: 15 ... 180,
                             step: 15
                         )
                     }
-                    Text("Trio 在后台保持运行，CGM 掉线后能更快重连。智能模式只在数据停更时启动，仍会带来额外耗电。")
+                    Text("Keep Trio running in the background so it can reconnect more quickly after CGM disconnects. Smart mode only starts when readings stop and can use more battery.")
                         .font(.footnote)
                         .foregroundColor(.secondary)
                 }
             )
             .listRowBackground(Color.chart)
             Section(
-                header: Text("CGM 寿命"),
+                header: Text("CGM Wear Duration"),
                 content: {
                     Stepper(
                         ottaiExtraWearDays == 0
-                            ? "欧态传感器延长期：关闭"
-                            : "欧态传感器延长期：+\(ottaiExtraWearDays) 天",
+                            ? "Ottai wear extension: off"
+                            : "Ottai wear extension: +\(ottaiExtraWearDays) days",
                         value: $ottaiExtraWearDays,
                         in: 0 ... 28,
                         step: 7
                     )
-                    Text("只改 App 的到期判断，不碰云端额定寿命，也不改传感器固件。与原厂 App 同时开着时以原厂为准。")
+                    Text("Only changes the expiry check in Trio. It does not change the server's rated wear duration or the sensor firmware. The official app still uses its own expiration date.")
                         .font(.footnote)
                         .foregroundColor(.secondary)
                 }

@@ -313,7 +313,7 @@ struct LoopStatusView: View {
             }
         }
 
-        return updatedConclusion.capitalizingFirstLetter()
+        return LoopReasonDisplay.localized(updatedConclusion).capitalizingFirstLetter()
     }
 
     private func getComputedTags(_ determination: OrefDetermination) -> [String] {

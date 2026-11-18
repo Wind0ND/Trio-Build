@@ -8,7 +8,7 @@ protocol UnlockManager {
 final class BaseUnlockManager: UnlockManager {
     @MainActor func unlock() async throws -> Bool {
         let context = LAContext()
-        let reason = "We need to make sure you are the owner of the device."
+        let reason = String(localized: "We need to make sure you are the owner of the device.")
 
         do {
             _ = try await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)

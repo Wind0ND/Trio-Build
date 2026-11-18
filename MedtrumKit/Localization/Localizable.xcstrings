@@ -318,7 +318,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "(%lld 小时 %lld 分钟)"
+            "value" : "（%lld 小时 %lld 分钟）"
           }
         }
       }
@@ -480,7 +480,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "(%lld 分钟)"
+            "value" : "（%lld 分钟）"
           }
         }
       }
@@ -640,7 +640,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ 代替 %@"
+            "value" : "%@，持续 %@"
           }
         }
       }
@@ -802,7 +802,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@个单位仍在%@。"
+            "value" : "剩余 %@ 单位（%@ 时）"
           }
         }
       }
@@ -962,7 +962,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在临时基础率结束或被取消之前，%@ 不会自动调整您的胰岛素输注量。"
+            "value" : "临时基础输注结束或取消之前，%@ 不会自动调整胰岛素输注。"
           }
         }
       }
@@ -1124,7 +1124,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@U"
+            "value" : "%@ U"
           }
         }
       }
@@ -4192,7 +4192,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "激活"
+            "value" : "激活时间"
           }
         }
       }
@@ -4354,13 +4354,20 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "活跃"
+            "value" : "运行中"
           }
         }
       }
     },
     "After the patch is deactivated, retract the needle with the needle-eject tool." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停用贴泵后，用退针工具收回针头。"
+          }
+        }
+      }
     },
     "Age:" : {
       "comment" : "Text shown while patch is active",
@@ -4519,7 +4526,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "年龄："
+            "value" : "已使用："
           }
         }
       }
@@ -4681,7 +4688,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "闹钟设置"
+            "value" : "警报设置"
           }
         }
       }
@@ -4843,7 +4850,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "闹钟设置"
+            "value" : "警报设置"
           }
         }
       }
@@ -5005,7 +5012,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "提示：每日胰岛素用量上限"
+            "value" : "警报：达到每日胰岛素限量"
           }
         }
       }
@@ -5167,7 +5174,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "提醒：每日最大胰岛素剂量"
+            "value" : "警报：达到每日胰岛素限量"
           }
         }
       }
@@ -5329,7 +5336,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "警报：每小时胰岛素用量上限"
+            "value" : "警报：达到每小时胰岛素限量"
           }
         }
       }
@@ -5491,7 +5498,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "提醒：每小时最大胰岛素用量"
+            "value" : "警报：达到每小时胰岛素限量"
           }
         }
       }
@@ -5653,7 +5660,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "警报：阻塞"
+            "value" : "警报：输注阻塞"
           }
         }
       }
@@ -5815,13 +5822,20 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "警报：贴泵硬件故障"
+            "value" : "警报：贴泵故障"
           }
         }
       }
     },
     "Alert: Pump base restarted" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "警报：泵座已重启"
+          }
+        }
+      }
     },
     "Alert: Reservoir empty" : {
       "comment" : "alert reservoir empty",
@@ -5980,13 +5994,20 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "警报：水箱已空"
+            "value" : "警报：储药器已空"
           }
         }
       }
     },
     "APPLY PATCH" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "贴上贴泵"
+          }
+        }
+      }
     },
     "Are you sure you want to stop using Medtrum TouchCare Nano 200u/300u?" : {
       "comment" : "Message for PumpManager deletion action sheet",
@@ -6145,7 +6166,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "您确定要停止使用Medtrum TouchCare Nano 200u/300u？"
+            "value" : "确定要停止使用 Medtrum TouchCare Nano 200 U／300 U 吗？"
           }
         }
       }
@@ -6307,19 +6328,40 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你确定吗？"
+            "value" : "确定要继续吗？"
           }
         }
       }
     },
     "At least 70 U is required to activate the patch." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "激活贴泵至少需要 70 U 胰岛素。"
+          }
+        }
+      }
     },
     "Attach and Activate the Patch" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "贴上并激活贴泵"
+          }
+        }
+      }
     },
     "Attach the patch to your skin." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将贴泵贴在皮肤上。"
+          }
+        }
+      }
     },
     "Attach the pump to the body." : {
       "comment" : "Label for inserting needle step 2",
@@ -6478,7 +6520,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "将水泵附加到身体上。"
+            "value" : "将贴泵贴在身体上。"
           }
         }
       }
@@ -6640,7 +6682,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "身份校验并停用贴泵"
+            "value" : "验证身份并停用贴泵"
           }
         }
       }
@@ -6802,7 +6844,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "验证失败"
+            "value" : "身份验证失败"
           }
         }
       }
@@ -6964,7 +7006,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "基础"
+            "value" : "基础输注"
           }
         }
       }
@@ -7126,7 +7168,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "电量："
+            "value" : "电池"
           }
         }
       }
@@ -7288,7 +7330,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "电池没电"
+            "value" : "电池电量耗尽"
           }
         }
       }
@@ -7450,7 +7492,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "电池耗尽"
+            "value" : "电池电量耗尽"
           }
         }
       }
@@ -7612,13 +7654,20 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "仅蜜蜂："
+            "value" : "仅响铃"
           }
         }
       }
     },
     "Bluetooth is unavailable. Restart the app if this persists." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "蓝牙不可用。如果问题持续，请重启 App。"
+          }
+        }
+      }
     },
     "Bolus" : {
       "comment" : "Pump Event title for UnfinalizedDose with doseType of .bolus",
@@ -7777,7 +7826,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "玻流体"
+            "value" : "大剂量输注"
           }
         }
       }
@@ -7937,7 +7986,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在进行推注……"
+            "value" : "正在进行大剂量输注…"
           }
         }
       }
@@ -8099,7 +8148,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "大剂量给药异常。贴泵正在执行大剂量推注中"
+            "value" : "无法输注大剂量：贴泵正在输注另一笔大剂量。"
           }
         }
       }
@@ -8261,7 +8310,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "大剂量给药异常。贴泵已暂停输注，请恢复输注"
+            "value" : "无法输注大剂量：贴泵已暂停。请先恢复输注。"
           }
         }
       }
@@ -8585,7 +8634,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在推注进行中无法停用"
+            "value" : "大剂量输注期间无法停用贴泵"
           }
         }
       }
@@ -8747,7 +8796,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "插管年龄"
+            "value" : "套管使用时长"
           }
         }
       }
@@ -8909,7 +8958,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "现在就更换贴泵。胰岛素输送将在 %@ 或胰岛素耗尽时停止。"
+            "value" : "请立即更换贴泵。%@ 后或胰岛素用尽时，输注将停止。"
           }
         }
       }
@@ -9071,7 +9120,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请立即更换贴泵。胰岛素输注将在 %@后停止，或胰岛素耗尽时停止。"
+            "value" : "请立即更换贴泵。%@ 后或胰岛素用尽时，输注将停止。"
           }
         }
       }
@@ -9233,13 +9282,20 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "检查地点"
+            "value" : "检查时间"
           }
         }
       }
     },
     "Choose a site on your abdomen, hips, lower back, upper arms or thighs. Wash your hands, clean the site with an alcohol wipe and let it dry completely." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择腹部、髋部、下背部、上臂或大腿的一个部位。洗手，用酒精棉片清洁该处并等待完全干燥。"
+          }
+        }
+      }
     },
     "Clear alert" : {
       "localizations" : {
@@ -9726,10 +9782,24 @@
       }
     },
     "CONNECT PUMP BASE" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接泵座"
+          }
+        }
+      }
     },
     "Connect your pump base to a new patch and fill the patch with insulin. Then press the needle button and start priming." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将泵座装到新贴泵上，并为贴泵加注胰岛素。然后按下进针按钮，开始预充。"
+          }
+        }
+      }
     },
     "Connect your pump base to the patch." : {
       "comment" : "Label for prime step 2.1",
@@ -9888,7 +9958,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "将您的主控头连接到贴泵。"
+            "value" : "将泵座装到贴泵上。"
           }
         }
       }
@@ -10210,7 +10280,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "连接至泵座……"
+            "value" : "正在连接泵座…"
           }
         }
       }
@@ -10534,7 +10604,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "目前，您没有使用心动模式。需要心动才能保持 %%1$@ 在后台运行。 建议保持启用此功能"
+            "value" : "当前未启用心跳模式。心跳模式可让 %%1$@ 在后台保持运行，建议启用此功能。"
           }
         }
       }
@@ -10696,7 +10766,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "目前，您正在使用心跳模式。这需要保持 %%1$@ 在后台运行。 如果您的 CGM 已经提供了一个心声，这可能是有趣的。建议保持启用此功能"
+            "value" : "当前已启用心跳模式。此模式用于让 %%1$@ 在后台保持运行。如果你的动态血糖监测设备已提供心跳，可在此查看或调整此设置。建议保持启用。"
           }
         }
       }
@@ -11506,7 +11576,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "停用于"
+            "value" : "停用时间"
           }
         }
       }
@@ -11668,13 +11738,20 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "停用"
+            "value" : "停用时间"
           }
         }
       }
     },
     "Decide on the amount of insulin together with your healthcare provider." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请与医护人员一起确定胰岛素用量。"
+          }
+        }
+      }
     },
     "Delete pump" : {
       "comment" : "Button text to confirm PumpManager deletion",
@@ -11833,7 +11910,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "删除水泵..."
+            "value" : "移除胰岛素泵"
           }
         }
       }
@@ -11995,7 +12072,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "删除输出"
+            "value" : "移除胰岛素泵"
           }
         }
       }
@@ -12157,13 +12234,20 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Disabled"
+            "value" : "已关闭"
           }
         }
       }
     },
     "Discard the used patch according to your local regulations. Keep the pump base: it is reusable." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按当地规定丢弃用过的贴泵。请保留可重复使用的泵座。"
+          }
+        }
+      }
     },
     "Disconnect" : {
       "comment" : "disconnect from patch",
@@ -12484,7 +12568,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "断开连接"
+            "value" : "已断开"
           }
         }
       }
@@ -12646,16 +12730,30 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "暂时不要将贴泵贴到身上。"
+            "value" : "先别将贴泵贴到身体上"
           }
         }
       }
     },
     "Do not attach the patch to your body yet." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先别将贴泵贴到身体上。"
+          }
+        }
+      }
     },
     "Do not inject air into the fill port. It may cause unintended or interrupted insulin delivery." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请勿向加注口注入空气，否则可能导致意外输注或输注中断。"
+          }
+        }
+      }
     },
     "Done" : {
       "comment" : "Button for closing settings",
@@ -12976,7 +13074,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "弹出"
+            "value" : "已退针"
           }
         }
       }
@@ -13138,7 +13236,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "弹出"
+            "value" : "正在退针"
           }
         }
       }
@@ -13300,7 +13398,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "启用静音铃声"
+            "value" : "启用静音提示"
           }
         }
       }
@@ -13462,7 +13560,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "到期"
+            "value" : "到期时间"
           }
         }
       }
@@ -13624,7 +13722,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已过期"
+            "value" : "已到期"
           }
         }
       }
@@ -13786,7 +13884,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "到期："
+            "value" : "距离到期还有："
           }
         }
       }
@@ -13948,7 +14046,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已延长使用的贴泵到期。仅保留基础率输注。"
+            "value" : "延长使用时间已到。仅提供基础输注。"
           }
         }
       }
@@ -14110,7 +14208,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "连接贴泵失败"
+            "value" : "无法连接贴泵"
           }
         }
       }
@@ -14272,7 +14370,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "连接贴泵失败 → 已达到超时时间"
+            "value" : "连接贴泵超时"
           }
         }
       }
@@ -14440,10 +14538,24 @@
       }
     },
     "Fill and Prime the Patch" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加注胰岛素并预充贴泵"
+          }
+        }
+      }
     },
     "FILL PATCH" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加注胰岛素"
+          }
+        }
+      }
     },
     "Fill the patch with insulin. NOTE: A minimum of 70U is required for activation." : {
       "comment" : "Label for prime step 2.4",
@@ -14602,7 +14714,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用胰岛素填充贴泵。注意：激活至少需要70U。"
+            "value" : "为贴泵加注胰岛素。注意：激活至少需要 70 U。"
           }
         }
       }
@@ -14764,13 +14876,20 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用隔热填充注射器"
+            "value" : "将胰岛素抽入注射器"
           }
         }
       }
     },
     "Fill the syringe with insulin." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将胰岛素抽入注射器。"
+          }
+        }
+      }
     },
     "Filled" : {
       "comment" : "Patch state for filled",
@@ -14929,13 +15048,20 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已填满"
+            "value" : "已完成加注"
           }
         }
       }
     },
     "Fold down and break the tab of the patch, then push the pump base up from the bottom to remove it." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向下折断贴泵上的卡扣，再从下方向上推，取出泵座。"
+          }
+        }
+      }
     },
     "Force remove" : {
       "comment" : "Force remove",
@@ -15100,7 +15226,14 @@
       }
     },
     "Gently remove the entire patch from your body." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "轻轻将整个贴泵从皮肤上揭下。"
+          }
+        }
+      }
     },
     "Go back to priming" : {
       "comment" : "label for go to prime patch",
@@ -15259,7 +15392,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "返回底漆"
+            "value" : "返回预充步骤"
           }
         }
       }
@@ -15421,7 +15554,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "返回泵基地"
+            "value" : "返回泵座步骤"
           }
         }
       }
@@ -15583,7 +15716,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "h"
+            "value" : "小时"
           }
         }
       }
@@ -16069,19 +16202,40 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "您希望贴泵最长暂停多长时间？到达该时长后将会自动恢复输注。"
+            "value" : "最多要暂停贴泵多久？到时将自动恢复输注。"
           }
         }
       }
     },
     "How to Attach the Patch" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如何贴上贴泵"
+          }
+        }
+      }
     },
     "How to Fill and Prime the Patch" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如何加注胰岛素并预充贴泵"
+          }
+        }
+      }
     },
     "How to Remove the Patch" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如何移除贴泵"
+          }
+        }
+      }
     },
     "Idle" : {
       "comment" : "Patch state for idle",
@@ -16240,7 +16394,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "闲置"
+            "value" : "空闲"
           }
         }
       }
@@ -16408,16 +16562,44 @@
       }
     },
     "INSERT NEEDLE" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "进针"
+          }
+        }
+      }
     },
     "Insert the needle straight into the fill port again and slowly fill the patch with insulin." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再次将针头垂直插入加注口，缓慢将胰岛素注入贴泵。"
+          }
+        }
+      }
     },
     "Insert the needle straight into the fill port. Gently pull the plunger back to draw one to two air bubbles into the syringe." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将针头垂直插入加注口。轻轻后拉活塞，将一到两个气泡抽入注射器。"
+          }
+        }
+      }
     },
     "Insert the pump base straight down into a new patch and push it all the way until it clicks into place." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将泵座垂直插入新贴泵，向下推到底，直到听见卡入声。"
+          }
+        }
+      }
     },
     "Insulin\nSuspended" : {
       "comment" : "Text shown in insulin delivery space when insulin suspended",
@@ -16576,7 +16758,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "防硫\n暂停"
+            "value" : "胰岛素输注\n已暂停"
           }
         }
       }
@@ -16738,7 +16920,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "硫化物交付"
+            "value" : "胰岛素输注"
           }
         }
       }
@@ -16900,7 +17082,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "胰岛素已暂停使用！"
+            "value" : "胰岛素输注已暂停！"
           }
         }
       }
@@ -17062,7 +17244,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "剩余硫化物"
+            "value" : "剩余胰岛素"
           }
         }
       }
@@ -17224,7 +17406,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "胰岛素停用"
+            "value" : "胰岛素输注已暂停"
           }
         }
       }
@@ -17386,7 +17568,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "硫磺类型"
+            "value" : "胰岛素类型"
           }
         }
       }
@@ -17548,7 +17730,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用的胰岛素"
+            "value" : "已用胰岛素"
           }
         }
       }
@@ -17710,7 +17892,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用的胰岛素"
+            "value" : "已用胰岛素"
           }
         }
       }
@@ -17872,7 +18054,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "建议先停用"
+            "value" : "建议先停用贴泵"
           }
         }
       }
@@ -18358,7 +18540,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "光和蜂鸣声"
+            "value" : "闪灯并响铃"
           }
         }
       }
@@ -18520,7 +18702,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "光和振动"
+            "value" : "闪灯并振动"
           }
         }
       }
@@ -18682,7 +18864,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "仅灯光"
+            "value" : "仅闪灯"
           }
         }
       }
@@ -18844,7 +19026,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "灯光、振动和蜂鸣声"
+            "value" : "闪灯、振动并响铃"
           }
         }
       }
@@ -19006,7 +19188,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "装载量"
+            "value" : "正在加载"
           }
         }
       }
@@ -19168,7 +19350,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在连接到贴泵前，请确保序列号正确。"
+            "value" : "将泵座装到贴泵前，请确认序列号正确。"
           }
         }
       }
@@ -19328,7 +19510,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "手动基础率"
+            "value" : "手动临时基础输注"
           }
         }
       }
@@ -19652,7 +19834,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每日最大绝缘量"
+            "value" : "每日胰岛素上限"
           }
         }
       }
@@ -19814,7 +19996,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "最大每小时绝缘数"
+            "value" : "每小时胰岛素上限"
           }
         }
       }
@@ -20144,7 +20326,14 @@
       }
     },
     "Next" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步"
+          }
+        }
+      }
     },
     "No active patch" : {
       "comment" : "Text shown when no patch active",
@@ -20303,7 +20492,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无激活状态的贴泵"
+            "value" : "没有运行中的贴泵"
           }
         }
       }
@@ -20465,7 +20654,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无校准"
+            "value" : "未校准"
           }
         }
       }
@@ -20627,7 +20816,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无校准"
+            "value" : "未校准"
           }
         }
       }
@@ -20787,7 +20976,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "与泵座未连接"
+            "value" : "未连接泵座"
           }
         }
       }
@@ -20949,7 +21138,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "不送货"
+            "value" : "未输注"
           }
         }
       }
@@ -21111,7 +21300,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无胰岛素"
+            "value" : "胰岛素已用尽"
           }
         }
       }
@@ -21273,7 +21462,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无贴泵"
+            "value" : "没有贴泵"
           }
         }
       }
@@ -21435,7 +21624,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "否，保持原来的状态"
+            "value" : "否，保持现状"
           }
         }
       }
@@ -21597,7 +21786,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "不，保持泵的原样"
+            "value" : "否，保留泵上的时间"
           }
         }
       }
@@ -21765,7 +21954,14 @@
       }
     },
     "Note" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "注意"
+          }
+        }
+      }
     },
     "Notification for expirate patch" : {
       "comment" : "Label for expired patch notification",
@@ -21924,7 +22120,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "贴泵过期通知"
+            "value" : "贴泵到期提醒"
           }
         }
       }
@@ -22086,7 +22282,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "水库水位低时的通知"
+            "value" : "储药量低提醒"
           }
         }
       }
@@ -22248,7 +22444,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "闭塞"
+            "value" : "输注阻塞"
           }
         }
       }
@@ -22408,16 +22604,30 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "好的"
+            "value" : "确定"
           }
         }
       }
     },
     "On the abdomen, back or buttocks, apply the patch horizontally. On the upper arm or thigh, apply it vertically." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "贴在腹部、背部或臀部时请横向放置。贴在上臂或大腿时请纵向放置。"
+          }
+        }
+      }
     },
     "Once the patch is off your skin, do not press the needle button again. Doing so will result in injury." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从皮肤上取下贴泵后，请勿再次按下进针按钮，以免受伤。"
+          }
+        }
+      }
     },
     "Patch activation" : {
       "comment" : "Patch activation header",
@@ -22576,7 +22786,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "贴泵激活"
+            "value" : "激活贴泵"
           }
         }
       }
@@ -22738,7 +22948,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "贴泵激活"
+            "value" : "激活贴泵"
           }
         }
       }
@@ -23224,7 +23434,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "贴泵已过期"
+            "value" : "贴泵已到期"
           }
         }
       }
@@ -23386,7 +23596,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "贴泵已到期。仅保留基础率输注。"
+            "value" : "贴泵已到期。仅提供基础输注。"
           }
         }
       }
@@ -23546,7 +23756,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "补丁错误：%@"
+            "value" : "贴泵故障：%@"
           }
         }
       }
@@ -23708,7 +23918,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "贴泵ID"
+            "value" : "贴泵 ID"
           }
         }
       }
@@ -23868,7 +24078,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "补丁已填满，准备就绪"
+            "value" : "贴泵已加注，可以继续"
           }
         }
       }
@@ -24028,7 +24238,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "补丁尚未填满"
+            "value" : "贴泵尚未加注"
           }
         }
       }
@@ -24190,7 +24400,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "贴泵已暂停。已超出 %lld 个 U 的限制。如果您提高限制，即可立即清除此警告。如果您稍等片刻，贴泵将在足够长的时间后恢复运行。"
+            "value" : "贴泵已暂停，因输注量超过 %lld U 的上限。提高上限后可立即清除警报。继续等待时，贴泵会在符合恢复条件后自动恢复输注。"
           }
         }
       }
@@ -24352,7 +24562,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "贴泵使用寿命"
+            "value" : "贴泵使用期限"
           }
         }
       }
@@ -24514,7 +24724,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "贴泵使用寿命"
+            "value" : "贴泵使用期限"
           }
         }
       }
@@ -24676,7 +24886,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "贴泵充盈中"
+            "value" : "贴泵预充"
           }
         }
       }
@@ -24838,7 +25048,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "贴泵充盈中"
+            "value" : "贴泵预充"
           }
         }
       }
@@ -25000,7 +25210,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "贴泵替换"
+            "value" : "更换贴泵"
           }
         }
       }
@@ -26134,16 +26344,30 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "暂停"
+            "value" : "已暂停"
           }
         }
       }
     },
     "Peel off the adhesive liners." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "揭下胶贴的离型纸。"
+          }
+        }
+      }
     },
     "Pick a site with enough fat, at least 2.5 cm (1 inch) from the last one and away from your navel." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择皮下脂肪充足的部位，距上次使用部位至少 2.5 cm（1 英寸），并避开肚脐。"
+          }
+        }
+      }
     },
     "Place the syringe in the patch and pull out 1 to 2 dashes of air." : {
       "comment" : "Label for prime step 2.3",
@@ -26302,16 +26526,30 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "将注射器插入贴泵，抽出 1‑2 格空气。"
+            "value" : "将注射器针头插入贴泵，抽出约一到两格空气。"
           }
         }
       }
     },
     "PREPARE SITE" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "准备贴敷部位"
+          }
+        }
+      }
     },
     "PREPARE SYRINGE" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "准备注射器"
+          }
+        }
+      }
     },
     "Press the needle button and start the priming process." : {
       "comment" : "Label for pressing needle button step 2.5",
@@ -26470,7 +26708,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按下针头按钮并启动初始化过程。"
+            "value" : "按下进针按钮并开始预充。"
           }
         }
       }
@@ -26632,13 +26870,20 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按下针键插入针头。点击“激活”来完成激活过程。"
+            "value" : "按下进针按钮插入针头，然后轻点“激活”完成激活。"
           }
         }
       }
     },
     "Press the needle button with one quick motion to insert the needle, then tap \"Activate Patch\"." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快速按下进针按钮插入针头，然后轻点“激活贴泵”。"
+          }
+        }
+      }
     },
     "Previous Patch Details" : {
       "comment" : "label for previous patch details",
@@ -26797,13 +27042,20 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "上一个贴泵详情"
+            "value" : "上一个贴泵的详情"
           }
         }
       }
     },
     "PRIME PATCH" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预充贴泵"
+          }
+        }
+      }
     },
     "Primed" : {
       "comment" : "Patch state for primed",
@@ -26962,7 +27214,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "引线"
+            "value" : "预充完成"
           }
         }
       }
@@ -27124,7 +27376,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打底"
+            "value" : "正在预充"
           }
         }
       }
@@ -27284,16 +27536,30 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无法启动预处理"
+            "value" : "无法开始预充"
           }
         }
       }
     },
     "Priming is complete. Remove the safety lock, attach the patch to your body and press the needle button to insert the needle. Then activate the patch." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预充完成。取下安全锁，把贴泵贴到身体上，按下进针按钮插入针头，然后激活贴泵。"
+          }
+        }
+      }
     },
     "Priming takes about 3 minutes. Keep your phone within about 30 cm (1 ft) of the pump." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预充约需 3 分钟。请将手机保持在距离胰岛素泵约 30 cm（1 英尺）以内。"
+          }
+        }
+      }
     },
     "Priming..." : {
       "localizations" : {
@@ -27450,7 +27716,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在加载..."
+            "value" : "正在预充…"
           }
         }
       }
@@ -27612,7 +27878,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "泵底座固件"
+            "value" : "泵座固件"
           }
         }
       }
@@ -27774,7 +28040,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "泵基模型"
+            "value" : "泵座型号"
           }
         }
       }
@@ -27936,7 +28202,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "泵站基准设置"
+            "value" : "泵座设置"
           }
         }
       }
@@ -28098,13 +28364,20 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "泵站 SN"
+            "value" : "泵座序列号"
           }
         }
       }
     },
     "Push air into the insulin vial." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将空气注入胰岛素药瓶。"
+          }
+        }
+      }
     },
     "Rate" : {
       "localizations" : {
@@ -28261,7 +28534,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "评分"
+            "value" : "速率"
           }
         }
       }
@@ -28585,16 +28858,30 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在重新连接..."
+            "value" : "正在重新连接…"
           }
         }
       }
     },
     "REMOVE AIR" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排出空气"
+          }
+        }
+      }
     },
     "REMOVE PATCH" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除贴泵"
+          }
+        }
+      }
     },
     "Remove Pump" : {
       "comment" : "Title for PumpManager deletion action sheet.",
@@ -28753,13 +29040,20 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "移除输出"
+            "value" : "移除胰岛素泵"
           }
         }
       }
     },
     "Remove the needle from the fill port. Hold the syringe upright, tap it to move the air bubbles to the top, and push the plunger until a drop of insulin appears at the tip." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将针头从加注口拔出。竖直握住注射器，轻弹针筒使气泡升到顶部，再推动活塞，直到针尖出现一滴胰岛素。"
+          }
+        }
+      }
     },
     "Remove the safety cover from the patch." : {
       "comment" : "Label for inserting needle step 1",
@@ -28918,7 +29212,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "从贴泵中移除安全盖。"
+            "value" : "取下贴泵的保护盖。"
           }
         }
       }
@@ -29080,7 +29374,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "现在就更换贴泵！"
+            "value" : "请立即更换贴泵！"
           }
         }
       }
@@ -29242,7 +29536,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "蓄水池空"
+            "value" : "储药器已空"
           }
         }
       }
@@ -29404,7 +29698,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "水库空"
+            "value" : "储药器已空"
           }
         }
       }
@@ -29566,7 +29860,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "水库低位（%lld U）"
+            "value" : "储药量低（%lld U）"
           }
         }
       }
@@ -29726,7 +30020,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "储液罐：%@ U"
+            "value" : "储药量：%@ U"
           }
         }
       }
@@ -29888,7 +30182,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "简历"
+            "value" : "恢复输注"
           }
         }
       }
@@ -30050,7 +30344,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "简历交付"
+            "value" : "恢复输注"
           }
         }
       }
@@ -30212,7 +30506,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "简历交付"
+            "value" : "恢复胰岛素输注"
           }
         }
       }
@@ -30378,7 +30672,14 @@
       }
     },
     "Run your finger around the entire edge of the adhesive pad and press the patch in place for 5 to 10 seconds." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用手指沿胶贴边缘按压一圈，再按住贴泵 5 到 10 秒。"
+          }
+        }
+      }
     },
     "Save" : {
       "comment" : "save",
@@ -30537,7 +30838,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "节省"
+            "value" : "保存"
           }
         }
       }
@@ -30861,7 +31162,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "预定的Basal"
+            "value" : "计划基础输注"
           }
         }
       }
@@ -31023,7 +31324,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择绝缘类型"
+            "value" : "选择胰岛素类型"
           }
         }
       }
@@ -31185,7 +31486,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择您将使用的绝缘类型"
+            "value" : "请选择你将使用的胰岛素类型"
           }
         }
       }
@@ -31509,7 +31810,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "设置手动临时基础率"
+            "value" : "设置手动临时基础输注"
           }
         }
       }
@@ -31671,7 +31972,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "分享移宇泵日志"
+            "value" : "分享 Medtrum 贴泵日志"
           }
         }
       }
@@ -32001,7 +32302,14 @@
       }
     },
     "Slide the safety lock off horizontally." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沿水平方向推下安全锁。"
+          }
+        }
+      }
     },
     "Start priming" : {
       "comment" : "label for prime start action",
@@ -32160,7 +32468,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "开始设置"
+            "value" : "开始预充"
           }
         }
       }
@@ -32328,7 +32636,14 @@
       }
     },
     "Step %1$d of %2$d" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 %1$d 步，共 %2$d 步"
+          }
+        }
+      }
     },
     "Stop Temp Basal" : {
       "comment" : "Stop temp basal",
@@ -32487,7 +32802,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "停止临时基础率"
+            "value" : "停止临时基础输注"
           }
         }
       }
@@ -32811,7 +33126,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "暂停交付"
+            "value" : "暂停输注"
           }
         }
       }
@@ -33297,7 +33612,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "暂停"
+            "value" : "已暂停"
           }
         }
       }
@@ -33459,7 +33774,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "暂停 - 自动"
+            "value" : "已自动暂停"
           }
         }
       }
@@ -33621,7 +33936,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "暂停 - 每日最高限额"
+            "value" : "已暂停：达到每日上限"
           }
         }
       }
@@ -33783,7 +34098,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "暂停 - 每小时最大值"
+            "value" : "已暂停：达到每小时上限"
           }
         }
       }
@@ -33945,7 +34260,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "暂停 - 低 BG"
+            "value" : "已暂停：低血糖"
           }
         }
       }
@@ -34107,7 +34422,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "同步储药器数据"
+            "value" : "同步贴泵数据"
           }
         }
       }
@@ -34269,7 +34584,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "临时篮子"
+            "value" : "临时基础输注"
           }
         }
       }
@@ -34431,13 +34746,20 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "贴泵建议仅使用 3 天 8 小时。超过该时长，贴泵工作可靠性会下降，不建议超期使用，请使用标准使用寿命配置。请注意：新一代主控头的新版固件，在运行满 10 天（240 小时）之后，可能会封锁大剂量给药指令。"
+            "value" : "贴泵的设计使用期限为 3 天 8 小时。超时使用可能导致贴泵工作不可靠，不建议这样做。请考虑使用标准期限。请注意，最新一代泵座的新固件可能在 5 天（120 小时）后拒绝大剂量输注指令。"
           }
         }
       }
     },
     "The pump beeps 4 times. Check that the serial number on the pump base matches the one in the pump base settings." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "胰岛素泵响了 4 声。请核对泵座上的序列号与泵座设置中的序列号是否一致。"
+          }
+        }
+      }
     },
     "The time on your pump is different from the current time. Do you want to update the time on your pump to the current time?" : {
       "comment" : "Message for pod sync time action sheet",
@@ -34596,7 +34918,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "泵上的时间与当前时间不同。您想将泵上的时间更新为当前时间吗？"
+            "value" : "胰岛素泵的时间与当前时间不同。要将泵时间同步到当前时间吗？"
           }
         }
       }
@@ -34758,7 +35080,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "泵上的时间与当前时间不同。泵上的时间控制着您的计划治疗设置。向下滚动到泵时间行，查看时差并配置您的泵。"
+            "value" : "胰岛素泵的时间与当前时间不同。泵会按自己的时间执行预设治疗计划。向下找到“泵时间”，查看时间差并进行设置。"
           }
         }
       }
@@ -34920,7 +35242,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "检测到的时间变化"
+            "value" : "检测到时间变化"
           }
         }
       }
@@ -35082,7 +35404,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "切换心跳动模式"
+            "value" : "切换心跳模式"
           }
         }
       }
@@ -35406,13 +35728,20 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "U/hr"
+            "value" : "U/小时"
           }
         }
       }
     },
     "Use a medical adhesive remover or baby oil if necessary." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如有需要，可以使用医用除胶剂或婴儿油。"
+          }
+        }
+      }
     },
     "Use at your own risk!" : {
       "comment" : "warning title",
@@ -35571,7 +35900,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用风险自负！"
+            "value" : "使用风险需自行承担！"
           }
         }
       }
@@ -35733,7 +36062,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用延长生命周期"
+            "value" : "使用延长期限"
           }
         }
       }
@@ -35895,7 +36224,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用正常生存时间(3d 8h)"
+            "value" : "使用标准期限（3 天 8 小时）"
           }
         }
       }
@@ -36057,7 +36386,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "振动和睡眠"
+            "value" : "振动并响铃"
           }
         }
       }
@@ -36225,10 +36554,24 @@
       }
     },
     "Wait at least 5 seconds before connecting the pump base to a new patch." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "至少等待 5 秒，再将泵座装到新贴泵上。"
+          }
+        }
+      }
     },
     "Warning" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "警告"
+          }
+        }
+      }
     },
     "Welcome" : {
       "comment" : "welcome header",
@@ -36387,7 +36730,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "欢迎使用"
+            "value" : "欢迎"
           }
         }
       }
@@ -36549,13 +36892,20 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "点击按钮时，您将获得生物计提示。 完成后，贴泵将被停用，您将被提示配对一个新贴泵。"
+            "value" : "轻点按钮后，系统会要求进行生物识别验证。验证完成后，贴泵会停用，App 将提示配对新贴泵。"
           }
         }
       }
     },
     "With the safety lock still on, press the needle button, then tap \"Start priming\"." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保持安全锁就位，按下进针按钮，再轻点“开始预充”。"
+          }
+        }
+      }
     },
     "Yes, Disable heartbeat mode" : {
       "comment" : "Button text to disable heartbeat mode",
@@ -36714,7 +37064,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "是，禁用心跳动模式"
+            "value" : "是，关闭心跳模式"
           }
         }
       }
@@ -37038,7 +37388,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "是，与当前时间同步"
+            "value" : "是，同步到当前时间"
           }
         }
       }
@@ -37200,7 +37550,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在激活贴泵之前，您将先设置您的胰岛素类型和基本贴泵设置。"
+            "value" : "激活贴泵前，先选择胰岛素类型并完成贴泵的基本设置。"
           }
         }
       }
@@ -37362,7 +37712,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "您的贴泵还剩 %lld 小时"
+            "value" : "贴泵还可使用 %lld 小时"
           }
         }
       }
@@ -37524,7 +37874,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "您的贴泵检测到管路堵塞！"
+            "value" : "贴泵检测到输注阻塞！"
           }
         }
       }
@@ -37686,7 +38036,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "您的贴泵已达到每日最大值！"
+            "value" : "贴泵已达到每日胰岛素输注上限！"
           }
         }
       }
@@ -37848,7 +38198,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "您的贴泵已达到每小时最大值！"
+            "value" : "贴泵已达到每小时胰岛素输注上限！"
           }
         }
       }
@@ -38010,7 +38360,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "您的贴泵处于故障状态！"
+            "value" : "贴泵发生故障！"
           }
         }
       }
@@ -38172,7 +38522,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "您的贴泵胰岛素已耗尽！"
+            "value" : "贴泵中的胰岛素已用尽！"
           }
         }
       }
@@ -38334,7 +38684,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "贴泵胰岛素即将耗尽！"
+            "value" : "贴泵中的胰岛素即将用尽！"
           }
         }
       }
@@ -38496,13 +38846,185 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "您的贴泵即将过期！"
+            "value" : "贴泵即将到期！"
           }
         }
       }
     },
     "Your pump base has restarted unexpectedly and is no longer delivering insulin!" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "泵座意外重启，已停止输注胰岛素！"
+          }
+        }
+      }
+    },
+    "Connection failure: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接失败：%@"
+          }
+        }
+      }
+    },
+    "This patch can no longer be activated (%@). Please replace it with a new patch." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此贴泵已无法激活（%@）。请更换新贴泵。"
+          }
+        }
+      }
+    },
+    "Unknown error: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未知错误：%@"
+          }
+        }
+      }
+    },
+    "Invalid Bluetooth state: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "蓝牙状态异常：%@"
+          }
+        }
+      }
+    },
+    "No Serial number setup. Please complete activation flow..." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未设置序列号。请完成激活流程。"
+          }
+        }
+      }
+    },
+    "Already scanning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在扫描"
+          }
+        }
+      }
+    },
+    "A command timeout is hit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "命令超时"
+          }
+        }
+      }
+    },
+    "A command is already running" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已有命令正在执行"
+          }
+        }
+      }
+    },
+    "No data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有收到数据"
+          }
+        }
+      }
+    },
+    "Invalid data received" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收到的数据无效"
+          }
+        }
+      }
+    },
+    "Invalid response code: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "响应码无效：%@"
+          }
+        }
+      }
+    },
+    "No peripheral manager" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外设管理器不可用"
+          }
+        }
+      }
+    },
+    "No write characteristic. Device might be disconnected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "找不到用于写入的蓝牙特征，设备可能已断开。"
+          }
+        }
+      }
+    },
+    "The patch is intended to be used for only 3 days and 8 hours. Exceeding this time may cause the patch to become unreliable. This is NOT recommended. Consider using normal lifetime. Please be aware that new firmware in the latest generation of pump bases may block bolus commands after 10 days (240 hours)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "贴泵的设计使用期限为 3 天 8 小时。超时使用可能导致贴泵工作不可靠，不建议这样做。请考虑使用标准期限。请注意，最新一代泵座的新固件可能在 10 天（240 小时）后拒绝大剂量输注指令。"
+          }
+        }
+      }
+    },
+    "Could not connect to the pump base" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法连接泵座"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

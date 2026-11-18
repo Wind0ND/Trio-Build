@@ -78,7 +78,7 @@ extension NightscoutConfig {
             }
 
             guard let url = URL(string: url), self.url.hasPrefix("https://") else {
-                message = "Invalid URL"
+                message = String(localized: "Invalid URL")
                 isValidURL = false
                 return
             }
@@ -93,7 +93,7 @@ extension NightscoutConfig {
                     switch completion {
                     case .finished: break
                     case let .failure(error):
-                        self.message = "Error: \(error.localizedDescription)"
+                        self.message = String(localized: "Error: \(error.localizedDescription)")
                     }
                     self.connecting = false
                 } receiveValue: {
@@ -150,10 +150,10 @@ extension NightscoutConfig {
                     }
                 } catch let error as CoreDataError {
                     warning(.storage, "Failed to store backfilled glucose", error: error)
-                    message = "Error: \(error.localizedDescription)"
+                    message = String(localized: "Error: \(error.localizedDescription)")
                 } catch {
                     warning(.storage, "Failed to store backfilled glucose", error: error)
-                    message = "Error: \(error.localizedDescription)"
+                    message = String(localized: "Error: \(error.localizedDescription)")
                 }
             } else {
                 debug(.nightscout, "No glucose to backfill")

@@ -69,6 +69,10 @@ extension Settings {
                     let versionIconName = versionInfo
                         .isUpdateAvailable ? "exclamationmark.triangle.fill" : "checkmark.circle.fill"
 
+                    let accessibilityStatus = versionInfo.isUpdateAvailable
+                        ? String(localized: "update available", comment: "Accessibility: version status")
+                        : String(localized: "up to date", comment: "Accessibility: version status")
+
                     HStack {
                         Text("Latest version: \(version)")
                             .font(.footnote)
@@ -77,11 +81,7 @@ extension Settings {
                             .foregroundColor(updateColor)
                     }
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(Text("Latest version: \(version), " + (
-                        versionInfo.isUpdateAvailable
-                            ? String(localized: "update available", comment: "Accessibility: version status")
-                            : String(localized: "up to date", comment: "Accessibility: version status")
-                    )))
+                    .accessibilityLabel(Text("Latest version: \(version), \(accessibilityStatus)"))
                     if versionInfo.isBlacklisted {
                         HStack {
                             Text("Warning: Known issues. Update now.")
@@ -105,6 +105,10 @@ extension Settings {
                         let devUpdateColor: Color = versionInfo.isDevUpdateAvailable ? .orange : .secondary
                         let devVersionIconName = versionInfo.isDevUpdateAvailable ? "arrow.up.circle.fill" : "hammer.fill"
 
+                        let accessibilityStatus = versionInfo.isDevUpdateAvailable
+                            ? String(localized: "update available", comment: "Accessibility: version status")
+                            : String(localized: "up to date", comment: "Accessibility: version status")
+
                         HStack {
                             Text("Latest dev: \(devVersion)")
                                 .font(.footnote)
@@ -114,11 +118,7 @@ extension Settings {
                                 .foregroundColor(devUpdateColor)
                         }
                         .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(Text("Latest dev: \(devVersion), " + (
-                            versionInfo.isDevUpdateAvailable
-                                ? String(localized: "update available", comment: "Accessibility: version status")
-                                : String(localized: "up to date", comment: "Accessibility: version status")
-                        )))
+                        .accessibilityLabel(Text("Latest dev: \(devVersion), \(accessibilityStatus)"))
                     } else {
                         Text("Latest dev: Fetching...")
                             .font(.footnote)

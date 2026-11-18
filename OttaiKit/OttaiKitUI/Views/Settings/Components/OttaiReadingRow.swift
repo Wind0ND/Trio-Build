@@ -70,14 +70,14 @@ struct OttaiReadingRowHeader: View {
 
     var body: some View {
         HStack {
-            Text("Time", comment: "recent readings column header: time")
+            Text("Time", bundle: .ottaiUI, comment: "recent readings column header: time")
                 .frame(width: 72, alignment: .leading)
             Text(displayGlucosePreference.unit.shortLocalizedUnitString())
                 .frame(width: 48, alignment: .trailing)
-            Text("\(displayGlucosePreference.unit.shortLocalizedUnitString())/min")
+            Text("\(displayGlucosePreference.unit.shortLocalizedUnitString())/min", bundle: .ottaiUI)
                 .frame(width: 56, alignment: .trailing)
             Spacer()
-            Text("Trend", comment: "recent readings column header: trend")
+            Text("Trend", bundle: .ottaiUI, comment: "recent readings column header: trend")
         }
         .font(.caption)
         .foregroundStyle(.secondary)

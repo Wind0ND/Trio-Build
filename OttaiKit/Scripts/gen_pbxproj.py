@@ -330,7 +330,7 @@ add(
     f"\t\t\tattributes = {{\n\t\t\t\tBuildIndependentTargetsInParallel = 1;\n"
     f"\t\t\t\tLastSwiftUpdateCheck = 2600;\n\t\t\t\tLastUpgradeCheck = 2600;\n\t\t\t}};\n"
     f"\t\t\tbuildConfigurationList = {proj_cfg_list} /* Build configuration list for PBXProject \"OttaiKit\" */;\n"
-    f"\t\t\tdevelopmentRegion = en;\n\t\t\thasScannedForEncodings = 0;\n\t\t\tknownRegions = (\n\t\t\t\ten,\n\t\t\t\tBase,\n\t\t\t);\n"
+    f"\t\t\tdevelopmentRegion = en;\n\t\t\thasScannedForEncodings = 0;\n\t\t\tknownRegions = (\n\t\t\t\ten,\n\t\t\t\tBase,\n\t\t\t\t\"zh-Hans\",\n\t\t\t);\n"
     f"\t\t\tmainGroup = {main_group};\n"
     f"\t\t\tminimizedProjectReferenceProxies = 1;\n"
     f"\t\t\tpreferredProjectObjectVersion = 77;\n"

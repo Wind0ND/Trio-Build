@@ -576,9 +576,9 @@ final class BackgroundKeepAlive {
 
         var title: String {
             switch self {
-            case .off: return "关闭"
-            case .smart: return "智能（掉线时才保活）"
-            case .always: return "常驻（后台一直保活）"
+            case .off: return String(localized: "Off")
+            case .smart: return String(localized: "Smart (keep alive only when readings stop)")
+            case .always: return String(localized: "Always (keep alive in the background)")
             }
         }
     }
@@ -654,8 +654,8 @@ final class BackgroundKeepAlive {
         guard wait >= 5 else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "血糖数据中断"
-        content.body = "已经 \(minutes) 分钟没有收到新的血糖数据。请打开 Trio 检查 CGM 连接。"
+        content.title = String(localized: "Glucose Data Interrupted")
+        content.body = String(localized: "No new glucose readings for \(minutes) minutes. Open Trio and check the CGM connection.")
         content.sound = .default
         content.interruptionLevel = .timeSensitive
 
@@ -762,8 +762,8 @@ final class BackgroundKeepAlive {
 
     private func notifyStallExpired() {
         let content = UNMutableNotificationContent()
-        content.title = "血糖数据中断"
-        content.body = "Trio 连续 \(Int(maxSession / 60)) 分钟没有收到血糖数据，后台保活已停止。请检查 CGM 连接。"
+        content.title = String(localized: "Glucose Data Interrupted")
+        content.body = String(localized: "Trio did not receive glucose readings for \(Int(maxSession / 60)) minutes. Background keep alive stopped. Check the CGM connection.")
         content.sound = .default
         let request = UNNotificationRequest(
             identifier: "background-keep-alive-expired",

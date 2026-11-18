@@ -58,7 +58,7 @@ extension OttaiCGMManager: @retroactive CGMManagerUI {
         if needsOfficialAppClosed {
             return OttaiDeviceStatusHighlight(
                 localizedMessage: String(
-                    localized: "Close\nOttai App",
+                    localized: "Close\nOttai App", bundle: .ottaiUI,
                     comment: "CGM status highlight: the official app still holds the sensor's connection"
                 ),
                 imageName: "exclamationmark.circle.fill",
@@ -68,26 +68,26 @@ extension OttaiCGMManager: @retroactive CGMManagerUI {
         switch sensorLifecycle {
         case .warmup:
             return OttaiDeviceStatusHighlight(
-                localizedMessage: String(localized: "Sensor\nWarmup", comment: "CGM status highlight: sensor warming up"),
+                localizedMessage: String(localized: "Sensor\nWarmup", bundle: .ottaiUI, comment: "CGM status highlight: sensor warming up"),
                 imageName: "clock",
                 state: .normalCGM
             )
         case .expired:
             return OttaiDeviceStatusHighlight(
-                localizedMessage: String(localized: "Sensor\nExpired", comment: "CGM status highlight: sensor expired"),
+                localizedMessage: String(localized: "Sensor\nExpired", bundle: .ottaiUI, comment: "CGM status highlight: sensor expired"),
                 imageName: "clock",
                 state: .normalCGM
             )
         case .signalLost:
             return OttaiDeviceStatusHighlight(
-                localizedMessage: String(localized: "Signal\nLoss", comment: "CGM status highlight: signal loss"),
+                localizedMessage: String(localized: "Signal\nLoss", bundle: .ottaiUI, comment: "CGM status highlight: signal loss"),
                 imageName: "exclamationmark.circle.fill",
                 state: .warning
             )
         case .failed:
             return OttaiDeviceStatusHighlight(
                 localizedMessage: String(
-                    localized: "Replace\nSensor",
+                    localized: "Replace\nSensor", bundle: .ottaiUI,
                     comment: "CGM status highlight: sensor failed, replace it"
                 ),
                 imageName: "exclamationmark.circle.fill",
@@ -96,7 +96,7 @@ extension OttaiCGMManager: @retroactive CGMManagerUI {
         case .unactivated:
             return OttaiDeviceStatusHighlight(
                 localizedMessage: String(
-                    localized: "Sensor\nNot Activated",
+                    localized: "Sensor\nNot Activated", bundle: .ottaiUI,
                     comment: "CGM status highlight: sensor reports itself not activated"
                 ),
                 imageName: "exclamationmark.circle.fill",

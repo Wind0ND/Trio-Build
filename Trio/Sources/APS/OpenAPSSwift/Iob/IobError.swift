@@ -13,21 +13,21 @@ enum IobError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .tempBasalDurationMismatch:
-            return "Incomplete temp basal / duration pair"
+            return String(localized: "Incomplete temp basal / duration pair")
         case let .tempBasalMissingDuration(timestamp):
-            return "Temp basal is missing duration @ \(timestamp)"
+            return String(localized: "Temp basal is missing duration @ \(String(describing: timestamp))")
         case let .tempBasalDurationMissingDuration(timestamp):
-            return "Temp basal duration @ \(timestamp) pump history entry without a duration set"
+            return String(localized: "Temp basal duration @ \(String(describing: timestamp)) pump history entry without a duration set")
         case .pumpSuspendResumeMismatch:
-            return "Had two consecutive pump suspend or resume events"
+            return String(localized: "Had two consecutive pump suspend or resume events")
         case .basalRateNotSet:
-            return "Unable to derive the current basal rate from the profile data"
+            return String(localized: "Unable to derive the current basal rate from the profile data")
         case let .rateNotSetOnTempBasal(timestamp):
-            return "Temp basal @ \(timestamp) without a rate set"
+            return String(localized: "Temp basal @ \(String(describing: timestamp)) without a rate set")
         case .bilinearCurveNotSupported:
-            return "Bilinear curve not supported in Trio"
+            return String(localized: "Bilinear curve not supported in Trio")
         case .diaNotSet:
-            return "DIA not set on Profile"
+            return String(localized: "DIA not set on Profile")
         }
     }
 }

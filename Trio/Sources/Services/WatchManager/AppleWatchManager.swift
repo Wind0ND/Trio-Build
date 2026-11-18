@@ -684,7 +684,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
                 // Acknowledge failure
                 self.sendAcknowledgment(
                     toWatch: false,
-                    message: "Error! Invalid or incomplete data received from watch.",
+                    message: String(localized: "Error! Invalid or incomplete data received from watch."),
                     ackCode: .genericFailure
                 )
             }
@@ -847,7 +847,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
                         // Acknowledge failure
                         self.sendAcknowledgment(
                             toWatch: false,
-                            message: "Error! Something went wrong when processing your request.",
+                            message: String(localized: "Error! Something went wrong when processing your request."),
                             ackCode: .genericFailure
                         )
                         return
@@ -868,7 +868,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
                     error(.treatments, "Saving carbs from watch failed", error: saveError)
 
                     // Acknowledge failure
-                    self.sendAcknowledgment(toWatch: false, message: "Error logging carbs", ackCode: .genericFailure)
+                    self.sendAcknowledgment(toWatch: false, message: String(localized: "Error logging carbs"), ackCode: .genericFailure)
                 }
             }
         }
@@ -910,7 +910,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
                         // Acknowledge failure
                         self.sendAcknowledgment(
                             toWatch: false,
-                            message: "Error! Something went wrong when processing your request.",
+                            message: String(localized: "Error! Something went wrong when processing your request."),
                             ackCode: .genericFailure
                         )
                         return
@@ -952,7 +952,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
 
             } catch let requestError {
                 error(.watch, "Logging carbs and bolus from watch failed", error: requestError)
-                sendAcknowledgment(toWatch: false, message: "Failed to log carbs and bolus", ackCode: .genericFailure)
+                sendAcknowledgment(toWatch: false, message: String(localized: "Failed to log carbs and bolus"), ackCode: .genericFailure)
             }
         }
     }
@@ -975,7 +975,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
                 warning(.treatments, "Stopping override from watch failed", error: error)
                 self.sendAcknowledgment(
                     toWatch: false,
-                    message: (error as? AdjustmentError)?.errorDescription ?? "Error stopping Override.",
+                    message: (error as? AdjustmentError)?.errorDescription ?? String(localized: "Error stopping Override."),
                     ackCode: .genericFailure
                 )
             }
@@ -1003,7 +1003,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
                 warning(.treatments, "Starting override from watch failed", error: error)
                 self.sendAcknowledgment(
                     toWatch: false,
-                    message: (error as? AdjustmentError)?.errorDescription ?? "Error activating Override \"\(presetName)\".",
+                    message: (error as? AdjustmentError)?.errorDescription ?? String(localized: "Error activating Override \"\(presetName)\"."),
                     ackCode: .genericFailure
                 )
             }
@@ -1031,7 +1031,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
                 warning(.treatments, "Starting temp target from watch failed", error: error)
                 self.sendAcknowledgment(
                     toWatch: false,
-                    message: (error as? AdjustmentError)?.errorDescription ?? "Error activating Temp Target \"\(presetName)\".",
+                    message: (error as? AdjustmentError)?.errorDescription ?? String(localized: "Error activating Temp Target \"\(presetName)\"."),
                     ackCode: .genericFailure
                 )
             }
@@ -1056,7 +1056,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
                 warning(.treatments, "Stopping temp target from watch failed", error: error)
                 self.sendAcknowledgment(
                     toWatch: false,
-                    message: (error as? AdjustmentError)?.errorDescription ?? "Error stopping Temp Target.",
+                    message: (error as? AdjustmentError)?.errorDescription ?? String(localized: "Error stopping Temp Target."),
                     ackCode: .genericFailure
                 )
             }

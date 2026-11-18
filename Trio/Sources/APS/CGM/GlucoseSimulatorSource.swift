@@ -267,12 +267,12 @@ enum SimulatedSensorScenario: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .runningNormally: return "Running normally"
-        case .expiringSoon: return "Expiring soon"
-        case .warmup: return "Warmup"
-        case .calibrationRequired: return "Calibration required"
-        case .expired: return "Expired"
-        case .sensorFailed: return "Sensor failed"
+        case .runningNormally: return String(localized: "Running normally")
+        case .expiringSoon: return String(localized: "Expiring soon")
+        case .warmup: return String(localized: "Warmup")
+        case .calibrationRequired: return String(localized: "Calibration required")
+        case .expired: return String(localized: "Expired")
+        case .sensorFailed: return String(localized: "Sensor failed")
         }
     }
 

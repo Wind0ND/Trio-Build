@@ -90,6 +90,9 @@ jobs:
           fetch-depth: 1
           submodules: recursive
 
+      - name: Apply Simplified Chinese dependency localization
+        run: python3 scripts/apply_zh_hans.py
+
       # Fingerprint dependency state (independent of app source) for the cache
       # key, so the restore hits on nearly every PR — app code churns, pins
       # rarely do.
@@ -106,9 +109,9 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-dd-${{ hashFiles('**/Package.resolved', '.submodule-status') }}-${{ github.sha }}
+          key: ${{ runner.os }}-dd-${{ hashFiles('**/Package.resolved', '.submodule-status', 'Trio/Sources/Localizations/Dependencies/zh-Hans.json', 'scripts/apply_zh_hans.py') }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-dd-${{ hashFiles('**/Package.resolved', '.submodule-status') }}-
+            ${{ runner.os }}-dd-${{ hashFiles('**/Package.resolved', '.submodule-status', 'Trio/Sources/Localizations/Dependencies/zh-Hans.json', 'scripts/apply_zh_hans.py') }}-
             ${{ runner.os }}-dd-
 
       # SwiftFormat is built from source by the Xcode build phase via
@@ -229,7 +232,7 @@ jobs:
         uses: actions/cache/save@v5
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-dd-${{ hashFiles('**/Package.resolved', '.submodule-status') }}-${{ github.sha }}
+          key: ${{ runner.os }}-dd-${{ hashFiles('**/Package.resolved', '.submodule-status', 'Trio/Sources/Localizations/Dependencies/zh-Hans.json', 'scripts/apply_zh_hans.py') }}-${{ github.sha }}
 
       - name: Run tests
         id: run_tests

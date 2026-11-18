@@ -61,45 +61,45 @@ enum OttaiSensorStatusDisplay: Equatable, CaseIterable {
 
     var title: Text {
         switch self {
-        case .noSensor: return Text("No Sensor", comment: "status no sensor")
-        case .connecting: return Text("Connecting", comment: "status connecting")
-        case .ok: return Text("Sensor OK", comment: "status ok")
-        case .warmingUp: return Text("Warming Up", comment: "status warming up")
-        case .expired: return Text("Sensor Expired", comment: "status expired")
-        case .malfunction: return Text("Sensor Malfunction", comment: "status malfunction")
-        case .notActivated: return Text("Not Activated", comment: "status sensor not activated")
-        case .readingsUnavailable: return Text("Readings Unavailable", comment: "status unavailable")
-        case .signalLost: return Text("Signal Lost", comment: "status signal lost")
+        case .noSensor: return Text("No Sensor", bundle: .ottaiUI, comment: "status no sensor")
+        case .connecting: return Text("Connecting", bundle: .ottaiUI, comment: "status connecting")
+        case .ok: return Text("Sensor OK", bundle: .ottaiUI, comment: "status ok")
+        case .warmingUp: return Text("Warming Up", bundle: .ottaiUI, comment: "status warming up")
+        case .expired: return Text("Sensor Expired", bundle: .ottaiUI, comment: "status expired")
+        case .malfunction: return Text("Sensor Malfunction", bundle: .ottaiUI, comment: "status malfunction")
+        case .notActivated: return Text("Not Activated", bundle: .ottaiUI, comment: "status sensor not activated")
+        case .readingsUnavailable: return Text("Readings Unavailable", bundle: .ottaiUI, comment: "status unavailable")
+        case .signalLost: return Text("Signal Lost", bundle: .ottaiUI, comment: "status signal lost")
         }
     }
 
     var message: Text {
         switch self {
         case .noSensor:
-            return Text("Pair a new sensor to start receiving readings.", comment: "msg no sensor")
+            return Text("Pair a new sensor to start receiving readings.", bundle: .ottaiUI, comment: "msg no sensor")
         case .connecting:
-            return Text("Establishing a connection to your sensor.", comment: "msg connecting")
+            return Text("Establishing a connection to your sensor.", bundle: .ottaiUI, comment: "msg connecting")
         case .ok:
-            return Text("Your sensor is functioning normally.", comment: "msg ok")
+            return Text("Your sensor is functioning normally.", bundle: .ottaiUI, comment: "msg ok")
         case .warmingUp:
-            return Text("Your sensor is warming up.", comment: "msg warming up")
+            return Text("Your sensor is warming up.", bundle: .ottaiUI, comment: "msg warming up")
         case .expired:
-            return Text("Your sensor has expired. Start a new one as soon as possible.", comment: "msg expired")
+            return Text("Your sensor has expired. Start a new one as soon as possible.", bundle: .ottaiUI, comment: "msg expired")
         case .malfunction:
-            return Text("Your sensor is malfunctioning. Start a new one as soon as possible.", comment: "msg malfunction")
+            return Text("Your sensor is malfunctioning. Start a new one as soon as possible.", bundle: .ottaiUI, comment: "msg malfunction")
         case .notActivated:
             return Text(
-                "Your sensor reports itself as not activated. Check that your sensor is nearby, or re-pair if this continues.",
+                "Your sensor reports itself as not activated. Check that your sensor is nearby, or re-pair if this continues.", bundle: .ottaiUI,
                 comment: "msg sensor not activated"
             )
         case .readingsUnavailable:
             return Text(
-                "This could be due to compression or connection loss. Wait for it to resolve, or replace the sensor if it persists.",
+                "This could be due to compression or connection loss. Wait for it to resolve, or replace the sensor if it persists.", bundle: .ottaiUI,
                 comment: "msg unavailable"
             )
         case .signalLost:
             return Text(
-                "Readings have been unavailable for a while. This could be compression or connection loss, and it usually resolves on its own. Replace the sensor only if it persists.",
+                "Readings have been unavailable for a while. This could be compression or connection loss, and it usually resolves on its own. Replace the sensor only if it persists.", bundle: .ottaiUI,
                 comment: "msg signal lost"
             )
         }

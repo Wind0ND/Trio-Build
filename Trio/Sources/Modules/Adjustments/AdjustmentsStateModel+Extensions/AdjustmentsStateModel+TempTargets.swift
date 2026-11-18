@@ -168,7 +168,7 @@ extension Adjustments.StateModel {
                     throw NSError(
                         domain: "TempTarget",
                         code: -1,
-                        userInfo: [NSLocalizedDescriptionKey: "Failed to find temp target"]
+                        userInfo: [NSLocalizedDescriptionKey: String(localized: "Failed to find temp target")]
                     )
                 }
 

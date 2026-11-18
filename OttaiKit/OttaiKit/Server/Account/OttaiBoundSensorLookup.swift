@@ -45,12 +45,12 @@ public struct OttaiBoundSensorLookup: Sendable {
 
         public var description: String {
             switch self {
-            case .notConfigured: return "Log in to Ottai first."
-            case .noSecretKey: return "Missing glucoseSecretKey; log in again."
-            case let .business(code): return "Ottai server returned '\(code)' when looking up your sensor."
+            case .notConfigured: return String(localized: "Log in to Ottai first.", bundle: .ottaiKit)
+            case .noSecretKey: return String(localized: "Missing glucoseSecretKey; log in again.", bundle: .ottaiKit)
+            case let .business(code): return String(localized: "Ottai server returned '\(String(describing: code))' when looking up your sensor.", bundle: .ottaiKit)
             case .noCalibration:
-                return "Ottai didn't provide this sensor's calibration, so \(Bundle.main.ottaiHostAppName) can't use it. Pair a new sensor instead."
-            case let .decode(message): return "Couldn't read your bound sensor: \(message)."
+                return String(localized: "Ottai didn't provide this sensor's calibration, so \(String(describing: Bundle.main.ottaiHostAppName)) can't use it. Pair a new sensor instead.", bundle: .ottaiKit)
+            case let .decode(message): return String(localized: "Couldn't read your bound sensor: \(String(describing: message)).", bundle: .ottaiKit)
             }
         }
 

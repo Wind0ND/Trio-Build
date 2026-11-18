@@ -272,6 +272,9 @@ jobs:
       - name: Sync clock
         run: sudo sntp -sS time.windows.com
 
+      - name: Apply Simplified Chinese dependency localization
+        run: python3 scripts/apply_zh_hans.py
+
       # Build signed Trio IPA file
       - name: Fastlane Build & Archive
         run: bundle exec fastlane build_trio

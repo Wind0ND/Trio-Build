@@ -23,7 +23,7 @@ struct OttaiTelemetryConsentView: View {
 
                 VStack(alignment: .leading, spacing: 14) {
                     Text(
-                        "Your sensor is registered to your Ottai account when you pair it, and released when you end it, whichever you choose below. That is how pairing works and cannot be turned off. Everything beyond it is up to you.",
+                        "Your sensor is registered to your Ottai account when you pair it, and released when you end it, whichever you choose below. That is how pairing works and cannot be turned off. Everything beyond it is up to you.", bundle: .ottaiUI,
                         comment: "telemetry consent explanation"
                     )
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -38,7 +38,7 @@ struct OttaiTelemetryConsentView: View {
                     row(
                         icon: "arrow.uturn.backward",
                         Text(
-                            "You can change this at any time in Account settings.",
+                            "You can change this at any time in Account settings.", bundle: .ottaiUI,
                             comment: "telemetry consent reversible point"
                         )
                     )
@@ -53,7 +53,7 @@ struct OttaiTelemetryConsentView: View {
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .safeAreaInset(edge: .bottom) {
             Button(action: { onChoice(selected) }) {
-                Text("Continue", comment: "telemetry consent confirm button")
+                Text("Continue", bundle: .ottaiUI, comment: "telemetry consent confirm button")
             }
             .buttonStyle(ActionButtonStyle())
             .padding(.horizontal)
@@ -72,7 +72,7 @@ struct OttaiTelemetryConsentView: View {
                     .font(.system(size: 32))
                     .foregroundColor(.accentColor)
             }
-            Text("What do you share with Ottai?", comment: "telemetry consent header")
+            Text("What do you share with Ottai?", bundle: .ottaiUI, comment: "telemetry consent header")
                 .font(.title2).bold()
                 .multilineTextAlignment(.center)
         }

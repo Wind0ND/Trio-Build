@@ -1,4 +1,5 @@
 import CoreBluetooth
+import Foundation
 
 public enum MedtrumScanResult {
     case success(peripheral: CBPeripheral, pumpSN: Data, deviceType: UInt8, version: UInt8)
@@ -13,11 +14,11 @@ public enum MedtrumScanError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case let .invalidBluetoothState(state: state):
-            return "Invalid Bluetooth state: \(state)"
+            return String(localized: "Invalid Bluetooth state: \(String(describing: state))")
         case .noSerialNumberAvailable:
-            return "No Serial number setup. Please complete activation flow..."
+            return String(localized: "No Serial number setup. Please complete activation flow...")
         case .alreadyScanning:
-            return "Already scanning"
+            return String(localized: "Already scanning")
         }
     }
 }

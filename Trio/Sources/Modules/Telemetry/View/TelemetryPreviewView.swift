@@ -59,7 +59,7 @@ struct TelemetryPreviewView: View {
             actions: [
                 GlassSheetAction("Reset and retry send", role: .destructive) {
                     TelemetryAttestor.shared.resetAttestState()
-                    resetStatus = "Reset done — attempting a fresh send. Check logs for status."
+                    resetStatus = String(localized: "Reset done — attempting a fresh send. Check logs for status.")
                     Task { await TelemetryClient.shared.maybeSend() }
                 }
             ]

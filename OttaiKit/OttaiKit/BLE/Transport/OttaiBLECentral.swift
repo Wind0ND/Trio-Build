@@ -17,10 +17,10 @@ public final class OttaiBLECentral: NSObject, @unchecked Sendable {
         case busy
         public var description: String {
             switch self {
-            case let .bluetoothUnavailable(s): return "Bluetooth unavailable (state \(s.rawValue))."
-            case let .connectFailed(m): return "BLE connect failed: \(m)"
-            case let .disconnected(m): return "BLE disconnected: \(m)"
-            case .busy: return "Bluetooth is busy with another sensor operation. Try again in a moment."
+            case let .bluetoothUnavailable(s): return String(localized: "Bluetooth unavailable (state \(String(describing: s.rawValue))).", bundle: .ottaiKit)
+            case let .connectFailed(m): return String(localized: "BLE connect failed: \(String(describing: m))", bundle: .ottaiKit)
+            case let .disconnected(m): return String(localized: "BLE disconnected: \(String(describing: m))", bundle: .ottaiKit)
+            case .busy: return String(localized: "Bluetooth is busy with another sensor operation. Try again in a moment.", bundle: .ottaiKit)
             }
         }
     }

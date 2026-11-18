@@ -14,7 +14,7 @@ struct SecureMessenger {
 
     func decrypt(base64EncodedString: String) throws -> CommandPayload {
         guard let combinedData = Data(base64Encoded: base64EncodedString) else {
-            throw NSError(domain: "SecureMessenger", code: 100, userInfo: [NSLocalizedDescriptionKey: "Invalid Base64 string"])
+            throw NSError(domain: "SecureMessenger", code: 100, userInfo: [NSLocalizedDescriptionKey: String(localized: "Invalid Base64 string")])
         }
 
         let nonceSize = 12
@@ -22,7 +22,7 @@ struct SecureMessenger {
             throw NSError(
                 domain: "SecureMessenger",
                 code: 101,
-                userInfo: [NSLocalizedDescriptionKey: "Encrypted data is too short to contain a nonce"]
+                userInfo: [NSLocalizedDescriptionKey: String(localized: "Encrypted data is too short to contain a nonce")]
             )
         }
         let nonce = Array(combinedData.prefix(nonceSize))

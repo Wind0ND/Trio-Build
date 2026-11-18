@@ -29,7 +29,7 @@ import OttaiKit
     /// Set when the MAC came from the applicator's QR code rather than from
     /// BLE discovery; the confirmation card shows it instead of a candidate.
     @Published var scannedMAC: String?
-    @Published var statusText = String(localized: "Starting…", comment: "pairing initial status")
+    @Published var statusText = String(localized: "Starting…", bundle: .ottaiUI, comment: "pairing initial status")
     @Published var errorMessage: String?
     @Published var isFinished = false
     /// True while the system NFC sheet is up. Repeated taps are ignored rather
@@ -164,7 +164,7 @@ import OttaiKit
         selectedMAC = nil
         scannedMAC = nil
         showsOnlyEligibleCandidates = false
-        statusText = String(localized: "Searching for nearby sensors…", comment: "scanning status")
+        statusText = String(localized: "Searching for nearby sensors…", bundle: .ottaiUI, comment: "scanning status")
         task?.cancel()
         task = Task { [weak self] in
             guard let self else { return }
@@ -249,7 +249,7 @@ import OttaiKit
                     self.phase = .picking
                     if found.isEmpty {
                         self.errorMessage = String(
-                            localized: "No sensors heard. The sensor advertises in bursts. Try scanning again.",
+                            localized: "No sensors heard. The sensor advertises in bursts. Try scanning again.", bundle: .ottaiUI,
                             comment: "no candidates text"
                         )
                         OttaiDiagnosticEvent.record(.bleNonMatch, .notMatched, count: 0)
@@ -343,7 +343,7 @@ import OttaiKit
     /// clipboard, so a refusal can be read without pulling log files off the
     /// phone. Read-only: it never binds, unbinds or connects anything.
     func runDiagnostics() {
-        statusText = String(localized: "Reading the account…", comment: "diagnostics status")
+        statusText = String(localized: "Reading the account…", bundle: .ottaiUI, comment: "diagnostics status")
         Task { [weak self] in
             guard let self else { return }
             guard let lookup = self.cgmManager.diagnosticsLookup() else {
@@ -403,17 +403,17 @@ import OttaiKit
 
     private static func text(for stage: OttaiPairingService.Stage) -> String {
         switch stage {
-        case .discoveringSensor: return String(localized: "Searching for nearby sensors…", comment: "stage discovery")
+        case .discoveringSensor: return String(localized: "Searching for nearby sensors…", bundle: .ottaiUI, comment: "stage discovery")
         case let .sensorFound(mac): return String(
-                format: String(localized: "Found sensor %@", comment: "stage sensor found"),
+                format: String(localized: "Found sensor %@", bundle: .ottaiUI, comment: "stage sensor found"),
                 mac
             )
-        case .bleSearching: return String(localized: "Searching for sensor", comment: "stage searching")
-        case .bleConnecting: return String(localized: "Connecting", comment: "stage connecting")
-        case .handshaking: return String(localized: "Authenticating", comment: "stage handshaking")
-        case .resolvingCalibration: return String(localized: "Loading calibration", comment: "stage calibration")
-        case .binding: return String(localized: "Registering sensor", comment: "stage binding")
-        case .activating: return String(localized: "Activating sensor", comment: "stage activating")
+        case .bleSearching: return String(localized: "Searching for sensor", bundle: .ottaiUI, comment: "stage searching")
+        case .bleConnecting: return String(localized: "Connecting", bundle: .ottaiUI, comment: "stage connecting")
+        case .handshaking: return String(localized: "Authenticating", bundle: .ottaiUI, comment: "stage handshaking")
+        case .resolvingCalibration: return String(localized: "Loading calibration", bundle: .ottaiUI, comment: "stage calibration")
+        case .binding: return String(localized: "Registering sensor", bundle: .ottaiUI, comment: "stage binding")
+        case .activating: return String(localized: "Activating sensor", bundle: .ottaiUI, comment: "stage activating")
         }
     }
 

@@ -20,11 +20,11 @@ public extension OttaiCGMManager {
         public var description: String {
             switch self {
             case .noSensor:
-                return "No sensor is paired."
+                return String(localized: "No sensor is paired.", bundle: .ottaiKit)
             case let .serverRejected(code):
-                return "Ottai refused to end the session (\(code))."
+                return String(localized: "Ottai refused to end the session (\(String(describing: code))).", bundle: .ottaiKit)
             case .shutdownNotConfirmed:
-                return "Could not confirm the sensor shut down."
+                return String(localized: "Could not confirm the sensor shut down.", bundle: .ottaiKit)
             }
         }
     }

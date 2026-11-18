@@ -45,115 +45,115 @@ struct OttaiSensorPlacementView: View {
     @ViewBuilder private func stepView(_ index: Int) -> some View {
         switch index {
         case 0:
-            stepCard(1, Text("Step 1", comment: "placement step 1 label"), images: art(["ottai_step1"], ["placement_step1"])) {
+            stepCard(1, Text("Step 1", bundle: .ottaiUI, comment: "placement step 1 label"), images: art(["ottai_step1"], ["placement_step1"])) {
                 Text(
-                    "Choose the back of your upper arm as the application site. Avoid areas with scars, moles, stretch marks, or lumps.",
+                    "Choose the back of your upper arm as the application site. Avoid areas with scars, moles, stretch marks, or lumps.", bundle: .ottaiUI,
                     comment: "placement step 1 body"
                 )
-                callout(.note, Text("Note", comment: "placement note label")) {
+                callout(.note, Text("Note", bundle: .ottaiUI, comment: "placement note label")) {
                     Text(
-                        "For optimal monitor performance, please select a site:",
+                        "For optimal monitor performance, please select a site:", bundle: .ottaiUI,
                         comment: "placement step 1 note intro"
                     )
-                    bullet(Text("Without scars, moles, stretch marks, or lumps.", comment: "placement step 1 note 1"))
-                    bullet(Text("Avoid bony areas and irritated skin.", comment: "placement step 1 note 2"))
+                    bullet(Text("Without scars, moles, stretch marks, or lumps.", bundle: .ottaiUI, comment: "placement step 1 note 1"))
+                    bullet(Text("Avoid bony areas and irritated skin.", bundle: .ottaiUI, comment: "placement step 1 note 2"))
                     bullet(Text(
-                        "Generally stays flat during your normal daily activities, avoiding any bending or folding.",
+                        "Generally stays flat during your normal daily activities, avoiding any bending or folding.", bundle: .ottaiUI,
                         comment: "placement step 1 note 3"
                     ))
                     bullet(Text(
-                        "At least 2.5 cm (1 inch) away from an insulin injection site.",
+                        "At least 2.5 cm (1 inch) away from an insulin injection site.", bundle: .ottaiUI,
                         comment: "placement step 1 note 4"
                     ))
                     bullet(Text(
-                        "Select a different site from the one most recently used to prevent discomfort or skin irritation.",
+                        "Select a different site from the one most recently used to prevent discomfort or skin irritation.", bundle: .ottaiUI,
                         comment: "placement step 1 note 5"
                     ))
-                    bullet(Text("Consider shaving the area to ensure a snug fit.", comment: "placement step 1 note 6"))
+                    bullet(Text("Consider shaving the area to ensure a snug fit.", bundle: .ottaiUI, comment: "placement step 1 note 6"))
                 }
             }
 
         case 1:
-            stepCard(2, Text("Step 2", comment: "placement step 2 label"), images: art(["ottai_step2"], ["placement_step2"])) {
+            stepCard(2, Text("Step 2", bundle: .ottaiUI, comment: "placement step 2 label"), images: art(["ottai_step2"], ["placement_step2"])) {
                 Text(
-                    "Clean the application site and wait for the skin to dry before proceeding.",
+                    "Clean the application site and wait for the skin to dry before proceeding.", bundle: .ottaiUI,
                     comment: "placement step 2 body"
                 )
-                callout(.note, Text("Note", comment: "placement note label")) {
+                callout(.note, Text("Note", bundle: .ottaiUI, comment: "placement note label")) {
                     Text(
-                        "The application site MUST be sufficiently clean and dry to make the Monitor adhere securely to the skin.",
+                        "The application site MUST be sufficiently clean and dry to make the Monitor adhere securely to the skin.", bundle: .ottaiUI,
                         comment: "placement step 2 note intro"
                     )
                     bullet(Text(
-                        "Clean the skin using soap and wait to dry before sanitizing the application site with alcohol pads. Allow the site to air-dry before proceeding.",
+                        "Clean the skin using soap and wait to dry before sanitizing the application site with alcohol pads. Allow the site to air-dry before proceeding.", bundle: .ottaiUI,
                         comment: "placement step 2 note 1"
                     ))
                 }
             }
 
         case 2:
-            stepCard(3, Text("Step 3", comment: "placement step 3 label"), images: art(["ottai_step3"], ["placement_step3"])) {
+            stepCard(3, Text("Step 3", bundle: .ottaiUI, comment: "placement step 3 label"), images: art(["ottai_step3"], ["placement_step3"])) {
                 Text(
-                    "Rotate to open the bottom cover of the Applicator.",
+                    "Rotate to open the bottom cover of the Applicator.", bundle: .ottaiUI,
                     comment: "placement step 3 body"
                 )
-                callout(.caution, Text("Caution", comment: "placement caution label")) {
+                callout(.caution, Text("Caution", bundle: .ottaiUI, comment: "placement caution label")) {
                     bullet(Text(
-                        "Do NOT use if the Applicator is opened or damaged before use. The needle is sterile unless the Applicator has been opened or damaged.",
+                        "Do NOT use if the Applicator is opened or damaged before use. The needle is sterile unless the Applicator has been opened or damaged.", bundle: .ottaiUI,
                         comment: "placement step 3 caution 1"
                     ))
                     bullet(Text(
-                        "Do NOT put the cover back on as it may damage the Monitor.",
+                        "Do NOT put the cover back on as it may damage the Monitor.", bundle: .ottaiUI,
                         comment: "placement step 3 caution 2"
                     ))
                     bullet(Text(
-                        "Do NOT touch inside the Applicator as it contains a needle.",
+                        "Do NOT touch inside the Applicator as it contains a needle.", bundle: .ottaiUI,
                         comment: "placement step 3 caution 3"
                     ))
-                    bullet(Text("Do NOT apply it if the expiry date has passed.", comment: "placement step 3 caution 4"))
+                    bullet(Text("Do NOT apply it if the expiry date has passed.", bundle: .ottaiUI, comment: "placement step 3 caution 4"))
                 }
             }
 
         case 3:
-            stepCard(4, Text("Step 4", comment: "placement step 4 label"), images: art(["ottai_step4", "ottai_step5"], ["placement_step5", "placement_step6"])) {
+            stepCard(4, Text("Step 4", bundle: .ottaiUI, comment: "placement step 4 label"), images: art(["ottai_step4", "ottai_step5"], ["placement_step5", "placement_step6"])) {
                 Text(
-                    "Place the Applicator over your arm, press the launch button on the top, and gently pull away the Applicator. The Monitor should now be attached to the skin.",
+                    "Place the Applicator over your arm, press the launch button on the top, and gently pull away the Applicator. The Monitor should now be attached to the skin.", bundle: .ottaiUI,
                     comment: "placement step 4 body"
                 )
-                callout(.note, Text("Note", comment: "placement note label")) {
+                callout(.note, Text("Note", bundle: .ottaiUI, comment: "placement note label")) {
                     bullet(Text(
-                        "Hold the Applicator flat against your arm and make sure the bottom edge is fully adhered to the skin, or application failure may occur.",
+                        "Hold the Applicator flat against your arm and make sure the bottom edge is fully adhered to the skin, or application failure may occur.", bundle: .ottaiUI,
                         comment: "placement step 4 note 1"
                     ))
                     bullet(Text(
-                        "Before removing the Applicator, keep holding the Applicator against your arm for a few seconds. This can help the adhesive stick to your skin.",
+                        "Before removing the Applicator, keep holding the Applicator against your arm for a few seconds. This can help the adhesive stick to your skin.", bundle: .ottaiUI,
                         comment: "placement step 4 note 2"
                     ))
                     bullet(Text(
-                        "Applying the Monitor may cause bleeding. If bleeding occurs,",
+                        "Applying the Monitor may cause bleeding. If bleeding occurs,", bundle: .ottaiUI,
                         comment: "placement step 4 note 3"
                     ))
-                    bullet(Text("Wipe away the blood with a cotton swab.", comment: "placement step 4 note 3a"), indented: true)
+                    bullet(Text("Wipe away the blood with a cotton swab.", bundle: .ottaiUI, comment: "placement step 4 note 3a"), indented: true)
                     bullet(Text(
-                        "If necessary, use a cotton swab to press on the small opening on the Monitor or apply ice packs to help stop the bleeding.",
+                        "If necessary, use a cotton swab to press on the small opening on the Monitor or apply ice packs to help stop the bleeding.", bundle: .ottaiUI,
                         comment: "placement step 4 note 3b"
                     ), indented: true)
                     bullet(Text(
-                        "Remove the Monitor and apply a new one at a different site only if bleeding does not stop.",
+                        "Remove the Monitor and apply a new one at a different site only if bleeding does not stop.", bundle: .ottaiUI,
                         comment: "placement step 4 note 3c"
                     ), indented: true)
                 }
             }
 
         default:
-            stepCard(5, Text("Step 5", comment: "placement step 5 label"), images: art(["ottai_step6", "ottai_step7"], ["placement_step7"])) {
+            stepCard(5, Text("Step 5", bundle: .ottaiUI, comment: "placement step 5 label"), images: art(["ottai_step6", "ottai_step7"], ["placement_step7"])) {
                 Text(
-                    "Gently press the tape around the edge of the Monitor to attach it firmly to the skin.",
+                    "Gently press the tape around the edge of the Monitor to attach it firmly to the skin.", bundle: .ottaiUI,
                     comment: "placement step 5 body"
                 )
-                callout(.note, Text("Note", comment: "placement note label")) {
+                callout(.note, Text("Note", bundle: .ottaiUI, comment: "placement note label")) {
                     bullet(Text(
-                        "Discard the used Applicator following local guidelines for disposal of blood and bodily fluid contact parts.",
+                        "Discard the used Applicator following local guidelines for disposal of blood and bodily fluid contact parts.", bundle: .ottaiUI,
                         comment: "placement step 5 note 1"
                     ))
                 }
@@ -176,7 +176,7 @@ struct OttaiSensorPlacementView: View {
                     Button {
                         withAnimation { step -= 1 }
                     } label: {
-                        Text("Back", comment: "placement stepper back button")
+                        Text("Back", bundle: .ottaiUI, comment: "placement stepper back button")
                     }
                     .buttonStyle(ActionButtonStyle(.secondary))
                 }
@@ -185,12 +185,12 @@ struct OttaiSensorPlacementView: View {
                     Button {
                         withAnimation { step += 1 }
                     } label: {
-                        Text("Next", comment: "placement stepper next button")
+                        Text("Next", bundle: .ottaiUI, comment: "placement stepper next button")
                     }
                     .buttonStyle(ActionButtonStyle())
                 } else if let onDone {
                     Button(action: onDone) {
-                        Text("Done", comment: "placement stepper done button")
+                        Text("Done", bundle: .ottaiUI, comment: "placement stepper done button")
                     }
                     .buttonStyle(ActionButtonStyle())
                 }

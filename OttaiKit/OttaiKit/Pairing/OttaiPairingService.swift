@@ -55,21 +55,21 @@ public final class OttaiPairingService {
         public var description: String {
             switch self {
             case .noKeyGroup:
-                return "Missing the sensor key group. Please try again."
+                return String(localized: "Missing the sensor key group. Please try again.", bundle: .ottaiKit)
             case .bleNoSensorDiscovered:
-                return "Couldn't find the sensor over Bluetooth. Make sure it's active and nearby."
+                return String(localized: "Couldn't find the sensor over Bluetooth. Make sure it's active and nearby.", bundle: .ottaiKit)
             case .sensorDormantNeedsNFC:
-                return "Sensor is out of range or not advertising. Keep it nearby; \(Bundle.main.ottaiHostAppName) will keep trying."
+                return String(localized: "Sensor is out of range or not advertising. Keep it nearby; \(String(describing: Bundle.main.ottaiHostAppName)) will keep trying.", bundle: .ottaiKit)
             case .droppedAfterConnect:
-                return "Lost the connection, reconnecting…"
+                return String(localized: "Lost the connection, reconnecting…", bundle: .ottaiKit)
             case let .unsupportedFirmware(version):
-                return "This sensor's firmware (\(version)) isn't supported yet. It hasn't been activated, so it can still be used with the official Ottai app."
+                return String(localized: "This sensor's firmware (\(String(describing: version))) isn't supported yet. It hasn't been activated, so it can still be used with the official Ottai app.", bundle: .ottaiKit)
             case let .awaitingSensorRecord(detail):
-                return "The sensor is activated, but Ottai hasn't provided its calibration yet (\(detail)). Try again; pairing will pick up where it left off."
+                return String(localized: "The sensor is activated, but Ottai hasn't provided its calibration yet (\(String(describing: detail))). Try again; pairing will pick up where it left off.", bundle: .ottaiKit)
             case .calibrationMismatch:
-                return "Ottai returned two different calibrations for this sensor, so \(Bundle.main.ottaiHostAppName) won't use it. Please report this with your logs."
+                return String(localized: "Ottai returned two different calibrations for this sensor, so \(String(describing: Bundle.main.ottaiHostAppName)) won't use it. Please report this with your logs.", bundle: .ottaiKit)
             case .accountLoggedOutElsewhere:
-                return "Your Ottai account was signed in on another device, which ended this session. Sign in again to continue."
+                return String(localized: "Your Ottai account was signed in on another device, which ended this session. Sign in again to continue.", bundle: .ottaiKit)
             case let .pairingRefused(code):
                 return OttaiServerCalibrationProvider.ServerError.describeBusiness(code: code)
             case let .underlying(m):
@@ -159,7 +159,7 @@ public final class OttaiPairingService {
             }
         }
 
-        guard let binder else { throw Failure.underlying("Log in to Ottai first.") }
+        guard let binder else { throw Failure.underlying(String(localized: "Log in to Ottai first.", bundle: .ottaiKit)) }
 
         // A picker-selected identity skips BLE discovery.
         let identity = try await resolveIdentity(knownIdentity: preselectedIdentity, onStage: onStage)
@@ -182,13 +182,13 @@ public final class OttaiPairingService {
                 if case let .business(code) = error, Self.isPermanentPairingRefusal(code) {
                     throw Failure.pairingRefused(code: code)
                 }
-                throw Failure.underlying("Could not check this sensor with Ottai: \(error.localizedDescription)")
+                throw Failure.underlying(String(localized: "Could not check this sensor with Ottai: \(String(describing: error.localizedDescription))", bundle: .ottaiKit))
             } catch {
                 // Prefer the error's own description: `localizedDescription` on a Swift
                 // error without LocalizedError is the generic "The operation couldn't
                 // be completed.", which is all a user would see.
                 let detail = (error as? CustomStringConvertible)?.description ?? error.localizedDescription
-                throw Failure.underlying("Could not check this sensor with Ottai: \(detail)")
+                throw Failure.underlying(String(localized: "Could not check this sensor with Ottai: \(String(describing: detail))", bundle: .ottaiKit))
             }
             expectedCoefficients = validation.coefficients
 
@@ -220,13 +220,13 @@ public final class OttaiPairingService {
                             ))
                         }
                         if let failure = error as? Failure { throw failure }
-                        throw Failure.underlying("Activation failed: \(error.localizedDescription)")
+                        throw Failure.underlying(String(localized: "Activation failed: \(String(describing: error.localizedDescription))", bundle: .ottaiKit))
                     }
                     logger.warning("activation attempt \(attempt) failed (\(error)); reconnecting for attempt \(attempt + 1)")
                     try await Task.sleep(nanoseconds: Self.activationRetryDelayNanos)
                 }
             }
-            guard let outcome else { throw Failure.underlying("Activation failed.") }
+            guard let outcome else { throw Failure.underlying(String(localized: "Activation failed.", bundle: .ottaiKit)) }
             if !outcome.didActivate, activateAttemptedAt == nil {
                 logger.warning("sensor was already activated before this attempt; binding with the current time as its start")
             }
@@ -376,7 +376,7 @@ public final class OttaiPairingService {
         } catch let failure as Failure {
             throw failure
         } catch {
-            throw Failure.underlying("Sensor discovery failed: \(error.localizedDescription)")
+            throw Failure.underlying(String(localized: "Sensor discovery failed: \(String(describing: error.localizedDescription))", bundle: .ottaiKit))
         }
         guard !identity.mac.isEmpty else { throw Failure.bleNoSensorDiscovered }
         logger.info("discovered sensor \(OttaiRedact.mac(identity.mac))")
@@ -400,7 +400,7 @@ public final class OttaiPairingService {
         } catch let failure as Failure {
             throw failure
         } catch {
-            throw Failure.underlying("BLE connect/auth failed: \(error.localizedDescription)")
+            throw Failure.underlying(String(localized: "BLE connect/auth failed: \(String(describing: error.localizedDescription))", bundle: .ottaiKit))
         }
     }
 

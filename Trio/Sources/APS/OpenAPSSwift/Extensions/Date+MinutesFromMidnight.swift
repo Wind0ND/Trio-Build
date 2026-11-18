@@ -7,9 +7,9 @@ enum CalendarError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .invalidCalendar:
-            return "Unable to extract hours and minutes from the current calendar"
+            return String(localized: "Unable to extract hours and minutes from the current calendar")
         case .invalidCalendarHourOnly:
-            return "Unable to extract hours from the current calendar"
+            return String(localized: "Unable to extract hours from the current calendar")
         }
     }
 }

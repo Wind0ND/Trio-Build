@@ -11,7 +11,7 @@ final class CarbPresetIntentRequest: BaseIntentsRequest {
         _ dateDefinedByUser: Bool
     ) async throws -> String {
         guard quantityCarbs >= 0 || quantityFat >= 0 || quantityProtein >= 0 else {
-            return "Amount must be positive."
+            return String(localized: "Amount must be positive.")
         }
 
         try await carbsStorage.storeCarbs(

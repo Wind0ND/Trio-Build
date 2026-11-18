@@ -21,16 +21,16 @@ public enum OttaiLoginErrorCode: String, Sendable {
         switch self {
         case .invalidParams:
             return String(
-                localized: "incorrect username or password entered, please retry",
+                localized: "incorrect username or password entered, please retry", bundle: .ottaiKit,
                 comment: "login error: incorrect credentials"
             )
         case .accountDeleted:
-            return String(localized: "your account has been deleted", comment: "login error: account deleted")
+            return String(localized: "your account has been deleted", bundle: .ottaiKit, comment: "login error: account deleted")
         case .accountDisabled:
-            return String(localized: "your account has been disabled", comment: "login error: account disabled")
+            return String(localized: "your account has been disabled", bundle: .ottaiKit, comment: "login error: account disabled")
         case .failedRetryTimes:
             return String(
-                localized: "too many attempts, please retry after 1 hour",
+                localized: "too many attempts, please retry after 1 hour", bundle: .ottaiKit,
                 comment: "login error: too many failed attempts"
             )
         }
@@ -53,12 +53,12 @@ public extension OttaiEnvelopedClient {
             switch self {
             case .noApiToken:
                 return String(
-                    localized: "server returned no apiToken.",
+                    localized: "server returned no apiToken.", bundle: .ottaiKit,
                     comment: "login error: no api token"
                 )
             case let .malformedResponseBody(m):
                 return String(
-                    localized: "server returned a malformed response body: \(m).",
+                    localized: "server returned a malformed response body: \(m).", bundle: .ottaiKit,
                     comment: "login error: no malformed response body"
                 )
             case let .serverError(code, message):
@@ -66,7 +66,7 @@ public extension OttaiEnvelopedClient {
                     guard let message = message else {
                         // Server returned an error without a code or message.
                         return String(
-                            localized: "please check your connection and try again.",
+                            localized: "please check your connection and try again.", bundle: .ottaiKit,
                             comment: "login error: generic failure"
                         )
                     }
@@ -79,7 +79,7 @@ public extension OttaiEnvelopedClient {
                 return errorCode.description
             case .transportFailure:
                 return String(
-                    localized: "please check your connection and try again.",
+                    localized: "please check your connection and try again.", bundle: .ottaiKit,
                     comment: "login error: connection failure"
                 )
             }

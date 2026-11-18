@@ -21,7 +21,7 @@ struct OttaiSensorHistoryView: View {
         List {
             if records.isEmpty {
                 Section {
-                    Text("No sensors have been paired yet.", comment: "empty sensor history")
+                    Text("No sensors have been paired yet.", bundle: .ottaiUI, comment: "empty sensor history")
                         .foregroundColor(.secondary)
                 }
             } else {
@@ -33,7 +33,7 @@ struct OttaiSensorHistoryView: View {
                     }
                 } footer: {
                     Text(
-                        "Tap a sensor to see its calibration and device details.",
+                        "Tap a sensor to see its calibration and device details.", bundle: .ottaiUI,
                         comment: "sensor history footer"
                     )
                 }
@@ -62,7 +62,7 @@ struct OttaiSensorHistoryView: View {
     }
 
     private var currentPill: some View {
-        Text("current", comment: "current sensor pill")
+        Text("current", bundle: .ottaiUI, comment: "current sensor pill")
             .font(.caption2.weight(.semibold))
             .textCase(.uppercase)
             .foregroundColor(.white)
@@ -75,17 +75,17 @@ struct OttaiSensorHistoryView: View {
     private func subtitle(for record: OttaiSensorRecord) -> String {
         if let retired = record.retiredAt {
             return String(
-                format: String(localized: "Retired %@", comment: "retired date"),
+                format: String(localized: "Retired %@", bundle: .ottaiUI, comment: "retired date"),
                 Self.dateFormatter.string(from: retired)
             )
         }
         if let activated = record.activatedAt {
             return String(
-                format: String(localized: "Active since %@", comment: "active since date"),
+                format: String(localized: "Active since %@", bundle: .ottaiUI, comment: "active since date"),
                 Self.dateFormatter.string(from: activated)
             )
         }
-        return String(localized: "Active", comment: "active sensor fallback subtitle")
+        return String(localized: "Active", bundle: .ottaiUI, comment: "active sensor fallback subtitle")
     }
 
     private static let dateFormatter: DateFormatter = {

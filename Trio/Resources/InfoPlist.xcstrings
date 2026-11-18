@@ -31,8 +31,8 @@
         },
         "en" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "NFC is used to scan Libre sensors."
+            "state" : "translated",
+            "value" : "Trio uses NFC to scan Libre sensors and wake compatible Ottai sensors."
           }
         },
         "es" : {
@@ -128,7 +128,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "NFC 用于扫描 Libre 传感器。"
+            "value" : "Trio 使用 NFC 扫描 Libre 传感器，并唤醒兼容的欧态传感器。"
           }
         },
         "zh-Hant" : {
@@ -265,8 +265,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Trio uses alarms so urgent glucose and pump alerts can reach you even when your phone is silenced or a Focus is on."
+            "state" : "translated",
+            "value" : "Trio 使用系统闹钟提醒你。即使手机处于静音或专注模式，紧急血糖警报和胰岛素泵警报也能提醒你。"
           }
         },
         "zh-Hant" : {
@@ -404,7 +404,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "蓝牙用于与胰岛素泵和动态血糖仪设备进行通信"
+            "value" : "Trio 使用蓝牙与胰岛素泵及动态血糖监测设备通信。"
           }
         },
         "zh-Hant" : {
@@ -542,7 +542,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "蓝牙用于与胰岛素泵和动态血糖仪设备进行通信"
+            "value" : "Trio 使用蓝牙与胰岛素泵及动态血糖监测设备通信。"
           }
         },
         "zh-Hant" : {
@@ -680,7 +680,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用于创建携带血糖数值的日历事件，以便可以在 Apple Watch 和 CarPlay 上查看血糖"
+            "value" : "Trio 创建含血糖值的日历事件，以便在 Apple Watch 和 CarPlay 上查看。"
           }
         },
         "zh-Hant" : {
@@ -818,7 +818,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "日历权限用于新建血糖事件记录。"
+            "value" : "Trio 使用日历创建血糖事件。"
           }
         },
         "zh-Hant" : {
@@ -955,7 +955,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "允许 Trio 访问通讯录，使用 “Contact‑Trick 联系人技巧” 功能，实现 Apple Watch 表盘联系人组件实时刷新血糖。"
+            "value" : "Trio 需要访问通讯录，才能通过“联系人表盘组件”功能在 Apple Watch 上实时更新数据。"
           }
         },
         "zh-Hant" : {
@@ -1093,7 +1093,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用于获得授权执行大剂量注射"
+            "value" : "验证身份后才可进行大剂量输注。"
           }
         },
         "zh-Hant" : {
@@ -1230,7 +1230,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用 健康App 存储血糖、胰岛素和碳水合物数据"
+            "value" : "Trio 使用“健康”App 保存血糖、胰岛素和碳水化合物数据。"
           }
         },
         "zh-Hant" : {
@@ -1367,7 +1367,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用 健康App 存储血糖、胰岛素和碳水合物数据"
+            "value" : "Trio 使用“健康”App 保存血糖、胰岛素和碳水化合物数据。"
           }
         },
         "zh-Hant" : {
@@ -1512,6 +1512,23 @@
           "stringUnit" : {
             "state" : "new",
             "value" : ""
+          }
+        }
+      }
+    },
+    "NSCameraUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trio uses the camera to scan pairing codes on sensor packaging or applicators."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trio 使用相机扫描传感器包装或敷贴器上的配对码。"
           }
         }
       }

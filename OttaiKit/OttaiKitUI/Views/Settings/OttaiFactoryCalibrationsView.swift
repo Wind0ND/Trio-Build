@@ -16,18 +16,18 @@ struct OttaiFactoryCalibrationsView: View {
         List {
             if let record = activeSensor, !record.mac.isEmpty {
                 Section {
-                    labelValueRow(Text("MAC", comment: "mac address"), Text(verbatim: record.mac))
-                    labelValueRow(Text("Serial", comment: "serial"), Text(verbatim: record.serialNo))
-                    labelValueRow(Text("Batch", comment: "batch"), Text(verbatim: record.batchNo))
-                    labelValueRow(Text("Model", comment: "model"), Text(verbatim: record.deviceType))
-                    labelValueRow(Text("Firmware", comment: "firmware"), Text(verbatim: record.deviceVersion))
+                    labelValueRow(Text("MAC", bundle: .ottaiUI, comment: "mac address"), Text(verbatim: record.mac))
+                    labelValueRow(Text("Serial", bundle: .ottaiUI, comment: "serial"), Text(verbatim: record.serialNo))
+                    labelValueRow(Text("Batch", bundle: .ottaiUI, comment: "batch"), Text(verbatim: record.batchNo))
+                    labelValueRow(Text("Model", bundle: .ottaiUI, comment: "model"), Text(verbatim: record.deviceType))
+                    labelValueRow(Text("Firmware", bundle: .ottaiUI, comment: "firmware"), Text(verbatim: record.deviceVersion))
                     labelValueRow(
-                        Text("Production Date", comment: "production date"),
+                        Text("Production Date", bundle: .ottaiUI, comment: "production date"),
                         Text(verbatim: Self.produceDateFmt.string(from: record.produceTime))
                     )
                     if let expireTime = record.expireTime {
                         labelValueRow(
-                            Text("Expires", comment: "expiration date"),
+                            Text("Expires", bundle: .ottaiUI, comment: "expiration date"),
                             Text(verbatim: Self.produceDateFmt.string(from: expireTime))
                         )
                     }

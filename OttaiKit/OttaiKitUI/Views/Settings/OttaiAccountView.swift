@@ -56,12 +56,12 @@ struct OttaiAccountView: View {
     // here since this screen is hosted inside Trio's `.sheet`-presented CGM flow.
     private var logOutAlert: Alert {
         Alert(
-            title: Text("Log Out", comment: "log out title"),
+            title: Text("Log Out", bundle: .ottaiUI, comment: "log out title"),
             message: Text(
-                "You'll need to sign in again to pair a new sensor or resume data sharing. Your current sensor keeps working.",
+                "You'll need to sign in again to pair a new sensor or resume data sharing. Your current sensor keeps working.", bundle: .ottaiUI,
                 comment: "log out message"
             ),
-            primaryButton: .destructive(Text("Log Out", comment: "log out confirm")) { onLogOut() },
+            primaryButton: .destructive(Text("Log Out", bundle: .ottaiUI, comment: "log out confirm")) { onLogOut() },
             secondaryButton: .cancel()
         )
     }
@@ -69,21 +69,21 @@ struct OttaiAccountView: View {
     var body: some View {
         List {
             Section {
-                labelValueRow(Text("Email", comment: "account email"), Text(verbatim: email))
+                labelValueRow(Text("Email", bundle: .ottaiUI, comment: "account email"), Text(verbatim: email))
                 // Show the concrete refresh-token expiry (the ~265-day window)
                 // rather than a bare "Active", since the date is the useful fact.
                 // Fall back to a status word only when no expiry is known.
                 if sessionValid, let expiry = refreshExpiry {
                     labelValueRow(
-                        Text("Signed in until", comment: "session expiry label"),
+                        Text("Signed in until", bundle: .ottaiUI, comment: "session expiry label"),
                         Text(verbatim: Self.dateFmt.string(from: expiry))
                     )
                 } else {
                     labelValueRow(
-                        Text("Session", comment: "session status"),
+                        Text("Session", bundle: .ottaiUI, comment: "session status"),
                         sessionValid
-                            ? Text("Active", comment: "session active")
-                            : Text("Expired", comment: "session expired")
+                            ? Text("Active", bundle: .ottaiUI, comment: "session active")
+                            : Text("Expired", bundle: .ottaiUI, comment: "session expired")
                     )
                 }
                 if accountLockedOutElsewhere {
@@ -91,13 +91,13 @@ struct OttaiAccountView: View {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(guidanceColors.warning)
                         Text(
-                            "Logged in elsewhere. Telemetry is paused until you sign in again.",
+                            "Logged in elsewhere. Telemetry is paused until you sign in again.", bundle: .ottaiUI,
                             comment: "account locked out elsewhere message"
                         )
                         .foregroundStyle(.secondary)
                     }
                     Button(action: onLoginAgain) {
-                        Text("Sign In Again", comment: "sign in again to clear the account lockout")
+                        Text("Sign In Again", bundle: .ottaiUI, comment: "sign in again to clear the account lockout")
                     }
                 }
             }
@@ -112,17 +112,17 @@ struct OttaiAccountView: View {
                     }
                 }
             } header: {
-                Text("Data Sharing", comment: "data sharing section")
+                Text("Data Sharing", bundle: .ottaiUI, comment: "data sharing section")
             } footer: {
                 Text(
-                    "Your sensor is registered to your Ottai account and released again when you end it whichever option you pick, because that is how a sensor is paired at all. An account with no readings may look unusual to Ottai if you ever need warranty or support.",
+                    "Your sensor is registered to your Ottai account and released again when you end it whichever option you pick, because that is how a sensor is paired at all. An account with no readings may look unusual to Ottai if you ever need warranty or support.", bundle: .ottaiUI,
                     comment: "data sharing footer"
                 )
             }
 
             Section {
                 Button(action: { showingLogOutConfirmation = true }) {
-                    Text("Log Out", comment: "log out")
+                    Text("Log Out", bundle: .ottaiUI, comment: "log out")
                         .foregroundColor(guidanceColors.critical)
                 }
                 .alert(isPresented: $showingLogOutConfirmation) { logOutAlert }
