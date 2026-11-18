@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1DE00000000000000000003 /* AiDEXKit in Frameworks */ = {isa = PBXBuildFile; productRef = A1DE00000000000000000002 /* AiDEXKit */; };
 		477F2885616B2839D22FF0A4 /* PumpStatusStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C7EA1FA38A1728182C949F4 /* PumpStatusStorageTests.swift */; };
 		3A627606ABC518974CC60B55 /* PumpStatusStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0E3EA2038BADFBCBC8801A4 /* PumpStatusStorage.swift */; };
 		4AB6E54D1659F6137A70BF74 /* PumpStatusStored+helper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EE4D8D4BA1BD69A89CA1C13 /* PumpStatusStored+helper.swift */; };
@@ -2427,6 +2428,7 @@
 				3B4BA77A2D8DBD690069D5B8 /* MinimedKitUI.framework in Frameworks */,
 				3BD9687C2D8DDD4600899469 /* SlideButton in Frameworks */,
 				5E12FE112EBC0000000000B2 /* RoundWhiteDiscKit in Frameworks */,
+				A1DE00000000000000000003 /* AiDEXKit in Frameworks */,
 				3B4BA7782D8DBD690069D5B8 /* MinimedKit.framework in Frameworks */,
 				3B4BA7762D8DBD690069D5B8 /* LibreTransmitterUI.framework in Frameworks */,
 				3E54EF2C2E476DA40006F54D /* MedtrumKit.framework in Frameworks */,
@@ -5392,6 +5394,7 @@
 				DD17A0282E3FE0BD008E1BF0 /* SwiftJWT */,
 				3E28F2AA2EB5337F00FB9EEB /* ConnectIQ */,
 				5E12FE112EBC0000000000B1 /* RoundWhiteDiscKit */,
+				A1DE00000000000000000002 /* AiDEXKit */,
 			);
 			productName = Trio;
 			productReference = 388E595825AD948C0019842D /* Trio.app */;
@@ -5570,6 +5573,7 @@
 				DD868FD92E381E1C005D3308 /* XCRemoteSwiftPackageReference "Swift-JWT" */,
 				3E28F2A92EB5337F00FB9EEB /* XCRemoteSwiftPackageReference "connectiq-companion-app-sdk-ios" */,
 				5E12FE112EBC0000000000B0 /* XCLocalSwiftPackageReference "RoundWhiteDiscKit" */,
+				A1DE00000000000000000001 /* XCLocalSwiftPackageReference "AiDEXKit" */,
 			);
 			productRefGroup = 388E595925AD948C0019842D /* Products */;
 			projectDirPath = "";
@@ -7433,6 +7437,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = RoundWhiteDiscKit;
 		};
+		A1DE00000000000000000001 /* XCLocalSwiftPackageReference "AiDEXKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = AiDEXKit;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -7558,6 +7566,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 5E12FE112EBC0000000000B0 /* XCLocalSwiftPackageReference "RoundWhiteDiscKit" */;
 			productName = RoundWhiteDiscKit;
+		};
+		A1DE00000000000000000002 /* AiDEXKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1DE00000000000000000001 /* XCLocalSwiftPackageReference "AiDEXKit" */;
+			productName = AiDEXKit;
 		};
 		B958F1B62BA0711600484851 /* MKRingProgressView */ = {
 			isa = XCSwiftPackageProductDependency;

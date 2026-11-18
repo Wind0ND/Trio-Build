@@ -1,3 +1,4 @@
+import AiDEXKit
 import SwiftUI
 
 struct ReportProblemView: View {
@@ -36,10 +37,14 @@ struct ReportProblemView: View {
 
                 LogShareRow(
                     title: "Export Diagnostics",
-                    footnote: "Feature events only: pairing stages and outcomes. No glucose, treatments, identifiers, serial numbers or raw logs.",
+                    footnote: "Feature events only: scanning and pairing stages and outcomes. No glucose, treatments, identifiers, serial numbers or raw logs.",
                     kinds: [.diagnostics],
                     logExport: state.logExport
                 )
+
+                NavigationLink(destination: AiDEXProbeView()) {
+                    AiDEXProbeLinkRow()
+                }
             }
             .listRowBackground(Color.chart)
 

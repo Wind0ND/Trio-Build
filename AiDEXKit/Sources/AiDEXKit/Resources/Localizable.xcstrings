@@ -1,0 +1,390 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "AiDEX Foreground Probe" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AiDEX 前台测试"
+          }
+        }
+      }
+    },
+    "Bluetooth is not ready." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "蓝牙尚未就绪。"
+          }
+        }
+      }
+    },
+    "Bluetooth is off." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "蓝牙已关闭。"
+          }
+        }
+      }
+    },
+    "Bluetooth off" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "蓝牙已关闭"
+          }
+        }
+      }
+    },
+    "Bluetooth permission denied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "蓝牙权限被拒绝"
+          }
+        }
+      }
+    },
+    "Bluetooth permission was denied." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "蓝牙权限已被拒绝。"
+          }
+        }
+      }
+    },
+    "Bluetooth unavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "蓝牙不可用"
+          }
+        }
+      }
+    },
+    "Display-only test. Reads advertisements in the foreground and never replaces your CGM." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅供显示测试。仅在前台读取广播，绝不替代您的 CGM。"
+          }
+        }
+      }
+    },
+    "Enter a valid sensor serial." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请输入有效的传感器序列号。"
+          }
+        }
+      }
+    },
+    "Enter the sensor serial from the box, then start a foreground scan." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请输入包装盒上的传感器序列号，然后开始前台扫描。"
+          }
+        }
+      }
+    },
+    "Enter the serial exactly as printed on the box. It stays in memory and is never saved or exported." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请输入包装盒上印制的完整序列号。序列号仅保存在内存中，不会被保存或导出。"
+          }
+        }
+      }
+    },
+    "Idle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "空闲"
+          }
+        }
+      }
+    },
+    "Last reading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近读数"
+          }
+        }
+      }
+    },
+    "No advertisement from the sensor for 60 seconds, so the scan stopped." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器 60 秒无广播，扫描已停止。"
+          }
+        }
+      }
+    },
+    "No reading received yet." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未收到读数。"
+          }
+        }
+      }
+    },
+    "Readings stay in memory only and are not used for dosing, alerts, or loop input." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "读数仅保存在内存中，不用于给药、警报或闭环输入。"
+          }
+        }
+      }
+    },
+    "Received" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接收时间"
+          }
+        }
+      }
+    },
+    "Scan stopped. Session data cleared." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "扫描已停止，会话数据已清除。"
+          }
+        }
+      }
+    },
+    "Scanning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "扫描中"
+          }
+        }
+      }
+    },
+    "Scanning for the exact serial. Lookalike devices are ignored." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在按完整序列号扫描。相似设备会被忽略。"
+          }
+        }
+      }
+    },
+    "Sensor matched" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已匹配传感器"
+          }
+        }
+      }
+    },
+    "Sensor matched. Latest accepted reading is shown below." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已匹配传感器，下方显示最近一次接受的读数。"
+          }
+        }
+      }
+    },
+    "Sensor matched. The last reading is stale; waiting for a new one." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已匹配传感器，最近读数已过期，正在等待新读数。"
+          }
+        }
+      }
+    },
+    "Sensor matched. Waiting for a valid advertisement." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已匹配传感器，正在等待有效广播。"
+          }
+        }
+      }
+    },
+    "Sensor serial" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "传感器序列号"
+          }
+        }
+      }
+    },
+    "Stale — no new value" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已过期 — 无新数值"
+          }
+        }
+      }
+    },
+    "Start Foreground Scan" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始前台扫描"
+          }
+        }
+      }
+    },
+    "Status" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "状态"
+          }
+        }
+      }
+    },
+    "Stop Scan" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止扫描"
+          }
+        }
+      }
+    },
+    "Stopped" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已停止"
+          }
+        }
+      }
+    },
+    "Testing only" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅供测试"
+          }
+        }
+      }
+    },
+    "The probe screen closed, so the scan stopped." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测试页面已关闭，扫描已停止。"
+          }
+        }
+      }
+    },
+    "This iPhone does not support Bluetooth." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 iPhone 不支持蓝牙。"
+          }
+        }
+      }
+    },
+    "This screen does not activate, connect to, write to, or calibrate the sensor. It only listens for advertisements in the foreground. Activate the sensor with the official AiDEX app first, and keep your current CGM active." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此页面不会激活、连接、写入或校准传感器，仅在前台监听广播。请先用 AiDEX 官方 App 激活传感器，并保持当前 CGM 正常运行。"
+          }
+        }
+      }
+    },
+    "Trio left the foreground, so the scan stopped." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trio 已离开前台，扫描已停止。"
+          }
+        }
+      }
+    }
+  }
+}

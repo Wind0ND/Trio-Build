@@ -22,6 +22,33 @@ import Testing
         #expect(store.allEvents.count == 1)
     }
 
+    @Test("The AiDEX feature accepts only its finite scan/match/reading events") func aidexAllowlist() {
+        let accepted: [(String, String)] = [
+            ("scan", "started"),
+            ("scan", "unavailable"),
+            ("scan", "cancelled"),
+            ("match", "matched"),
+            ("match", "not_matched"),
+            ("match", "absent"),
+            ("reading", "present"),
+            ("reading", "unsupported_frame"),
+            ("reading", "checksum_mismatch"),
+            ("reading", "reading_unavailable")
+        ]
+        for (stage, outcome) in accepted {
+            #expect(DiagnosticEventContract.accepts(feature: "aidex", stage: stage, outcome: outcome))
+        }
+        #expect(!DiagnosticEventContract.accepts(feature: "aidex", stage: "nfc", outcome: "started"))
+        #expect(!DiagnosticEventContract.accepts(feature: "aidex", stage: "scan", outcome: "succeeded"))
+        #expect(!DiagnosticEventContract.accepts(feature: "aidex", stage: "reading", outcome: "succeeded"))
+
+        let store = DiagnosticEventStore(defaults: Self.defaults(), now: { Self.start })
+        #expect(store.record(feature: "aidex", stage: "scan", outcome: "started"))
+        #expect(store.record(feature: "aidex", stage: "reading", outcome: "present", count: 99_999))
+        #expect(store.allEvents.count == 2)
+        #expect(store.allEvents.last?.count == DiagnosticEvent.maximumCount)
+    }
+
     @Test("Bounded counters are clamped and free-form payloads cannot enter") func boundedCounters() {
         let store = DiagnosticEventStore(defaults: Self.defaults(), now: { Self.start })
         #expect(store.record(feature: "ottai", stage: "nfc", outcome: "started", attempt: -9, count: 1_000_000))

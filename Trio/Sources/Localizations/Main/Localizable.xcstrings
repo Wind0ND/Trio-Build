@@ -21,12 +21,12 @@
         }
       }
     },
-    "Feature events only: pairing stages and outcomes. No glucose, treatments, identifiers, serial numbers or raw logs." : {
+    "Feature events only: scanning and pairing stages and outcomes. No glucose, treatments, identifiers, serial numbers or raw logs." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "仅包含功能事件，如配对阶段和结果。不含血糖、治疗数据、标识符、序列号或原始日志。"
+            "value" : "仅包含功能事件，如扫描和配对阶段与结果。不含血糖、治疗数据、标识符、序列号或原始日志。"
           }
         }
       }

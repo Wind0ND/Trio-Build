@@ -53,6 +53,25 @@ enum DiagnosticEventContract {
                 "absent",
                 "retried"
             ]
+        ),
+        "aidex": Feature(
+            stages: [
+                "scan",
+                "match",
+                "reading"
+            ],
+            outcomes: [
+                "started",
+                "unavailable",
+                "cancelled",
+                "matched",
+                "not_matched",
+                "absent",
+                "present",
+                "unsupported_frame",
+                "checksum_mismatch",
+                "reading_unavailable"
+            ]
         )
     ]
 
