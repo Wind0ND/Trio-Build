@@ -41,6 +41,7 @@ final class AiDEXDiagnosticEventTests: XCTestCase {
             Set([
                 "absent",
                 "cancelled",
+                "timed_out",
                 "checksum_mismatch",
                 "matched",
                 "not_matched",

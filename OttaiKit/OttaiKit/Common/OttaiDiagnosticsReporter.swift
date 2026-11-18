@@ -34,6 +34,7 @@ public enum OttaiDiagnosticEvent {
     public enum Outcome: String, Sendable {
         case started
         case succeeded
+        case tagDetected = "tag_detected"
         case failed
         case cancelled
         case unavailable

@@ -1,6 +1,39 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "The pump base rejected authorization (code 7). Disconnect the base from power for 10 seconds, then retry." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "底座拒绝了认证（错误码 7）。给底座断电 10 秒后重试。"
+          }
+        }
+      }
+    },
+    "The pump base rejected the backup token (code 32). Restart the base, then retry." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "底座拒绝了备用令牌（错误码 32）。重启底座后重试。"
+          }
+        }
+      }
+    },
+    "The connection to the pump base timed out. Move the base close to the phone and retry." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "与底座连接超时。请将底座靠近手机后重试。"
+          }
+        }
+      }
+    },
     "-" : {
       "localizations" : {
         "ar" : {

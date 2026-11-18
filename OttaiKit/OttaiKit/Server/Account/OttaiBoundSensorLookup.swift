@@ -106,50 +106,6 @@ public struct OttaiBoundSensorLookup: Sendable {
         }
     }
 
-    // MARK: - Onboarding diagnostics
-
-    /// Raw answers of every account-device endpoint the CN service exposes, in
-    /// one text block for onboarding. Read-only: nothing is bound, unbound,
-    /// activated or connected, and nothing is stored.
-    public func cnAccountDiagnostics(mac: String?) async -> String {
-        var lines: [String] = []
-        let customer = backend.userId ?? "<nil>"
-        lines.append("host=\(backend.baseURL.host ?? "?") userId=\(customer) (\(customer.count) chars)")
-        func note(_ label: String, _ data: Data) {
-            let text = String(data: data, encoding: .utf8) ?? "<\(data.count) bytes>"
-            lines.append("\(label) -> \(text.prefix(1200))")
-        }
-        do {
-            let d = try await sessionRetrying.run(client: client, backend: backend) { c, _ in try await c.getBindDevice() }
-            note("getBindDevice", d)
-        } catch { lines.append("getBindDevice !! \(error)") }
-        do {
-            let d = try await sessionRetrying.run(client: client, backend: backend) { c, _ in
-                try await c.envelopedGET(path: "deviceBind/getLastBindDevice", body: [:], authed: true)
-            }
-            note("getLastBindDevice", d)
-        } catch { lines.append("getLastBindDevice !! \(error)") }
-        do {
-            let d = try await sessionRetrying.run(client: client, backend: backend) { c, _ in
-                try await c.envelopedGET(
-                    path: "deviceBind/list",
-                    body: ["pageSize": 80, "pageNumber": 1],
-                    authed: true
-                )
-            }
-            note("deviceBind/list", d)
-        } catch { lines.append("deviceBind/list !! \(error)") }
-        if let mac {
-            do {
-                let d = try await sessionRetrying.run(client: client, backend: backend) { c, _ in
-                    try await c.validateMac(mac)
-                }
-                note("validateV3 \(mac)", d)
-            } catch { lines.append("validateV3 !! \(error)") }
-        }
-        return lines.joined(separator: "\n")
-    }
-
     /// The bound device object, or nil when the response says nothing is
     /// bound. A non-OK code is an error, not "no sensor".
     static func boundDeviceBody(_ data: Data) throws -> [String: Any]? {

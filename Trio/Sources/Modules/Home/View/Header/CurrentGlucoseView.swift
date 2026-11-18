@@ -294,15 +294,16 @@ struct CurrentGlucoseView: View {
         return cgmProgress?.progressState != .normalCGM
     }
 
-    /// String sniff — loopandlearn LoopKit has no structural warmup flag.
+    /// Device status highlights expose localized text without a warmup flag.
     private var isInWarmup: Bool {
         guard let message = cgmStatus?.localizedMessage else { return false }
         let lowered = message.lowercased()
-        return lowered.contains("warming up") || lowered.contains("warmup")
+        return lowered.contains("warming up") || lowered.contains("warmup") || lowered.contains("预热")
     }
 
     private var isStabilizing: Bool {
-        cgmStatus?.localizedMessage.lowercased().contains("stabilizing") ?? false
+        guard let message = cgmStatus?.localizedMessage.lowercased() else { return false }
+        return message.contains("stabilizing") || message.contains("正在稳定")
     }
 
     /// Warmup → hourglass + countdown; stabilizing → hourglass + "Stabilizing"
@@ -319,10 +320,12 @@ struct CurrentGlucoseView: View {
                     "hourglass"
                 )
             }
-            return ("Warming up", "Warming up", .orange, "hourglass")
+            let label = String(localized: "Warming up")
+            return (label, label, .orange, "hourglass")
         }
         if isStabilizing {
-            return ("Stabilizing", "Stabilizing", .orange, "hourglass")
+            let label = String(localized: "Stabilizing")
+            return (label, label, .orange, "hourglass")
         }
         if let status = cgmStatus {
             // Only the normal tier is gated to the arc's 48h window; a warning

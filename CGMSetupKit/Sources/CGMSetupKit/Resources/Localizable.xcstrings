@@ -1,6 +1,17 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Tap the Package Code" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点按要识别的包装码"
+          }
+        }
+      }
+    },
     "Scan Package Code" : {
       "extractionState" : "manual",
       "localizations" : {

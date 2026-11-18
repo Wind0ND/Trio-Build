@@ -33,12 +33,19 @@ public enum CGMPackageCode {
 
     private static func printedFields(_ payload: String) -> [Field]? {
         var result: [Field] = []
+        var seen: Set<String> = []
         for field in payload.dropFirst().split(separator: "(", omittingEmptySubsequences: false) {
             let parts = field.split(separator: ")", omittingEmptySubsequences: false)
             guard parts.count == 2, !parts[1].isEmpty else { return nil }
             let code = String(parts[0])
-            guard fixedLengths[code] != nil || variableCodes.contains(code) else { return nil }
-            result.append((code, String(parts[1])))
+            let value = parts[1]
+            guard seen.insert(code).inserted else { return nil }
+            if let length = fixedLengths[code] {
+                guard value.utf8.count == length, value.utf8.allSatisfy({ (48 ... 57).contains($0) }) else { return nil }
+            } else {
+                guard variableCodes.contains(code), (1 ... 20).contains(value.utf8.count) else { return nil }
+            }
+            result.append((code, String(value)))
         }
         return result
     }
@@ -50,8 +57,10 @@ public enum CGMPackageCode {
         }
         guard remaining.hasPrefix("01") else { return nil }
         var result: [Field] = []
+        var seen: Set<String> = []
         while !remaining.isEmpty {
             let code = String(remaining.prefix(2))
+            guard seen.insert(code).inserted else { return nil }
             remaining = remaining.dropFirst(2)
             if let length = fixedLengths[code] {
                 let value = remaining.prefix(length)

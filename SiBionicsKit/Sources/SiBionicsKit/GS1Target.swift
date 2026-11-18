@@ -10,9 +10,8 @@ struct GS1Target {
         self.identifier = identifier
     }
 
-    func matches(localName: String?, advertisesService: Bool) -> Bool {
+    func matches(localName: String?) -> Bool {
         guard let localName, let name = CGMPackageCode.identifier(localName, length: 8 ... 20) else { return false }
-        if name == identifier { return true }
-        return advertisesService && identifier.count == 8 && (10 ... 11).contains(name.count) && name.hasPrefix(identifier)
+        return name == identifier
     }
 }

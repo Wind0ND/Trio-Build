@@ -1,6 +1,17 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "No matching sensor found after 45 seconds. Check the serial and retry." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "45 秒内未找到匹配的传感器。请核对序列号后重试。"
+          }
+        }
+      }
+    },
     "Scan the box code or enter the sensor serial. Check the serial before starting the search." : {
       "localizations" : {
         "zh-Hans" : {

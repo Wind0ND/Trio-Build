@@ -104,8 +104,7 @@ final class GS1Probe: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
                   (advertisementData[CBAdvertisementDataIsConnectable] as? Bool) != false
             else { return }
             let names = advertisementData[CBAdvertisementDataLocalNameKey] as? String
-            let services = (advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID]) ?? []
-            guard target?.matches(localName: names, advertisesService: services.contains(Self.service)) == true else { return }
+            guard target?.matches(localName: names) == true else { return }
             self.peripheral = peripheral
             phase = .connecting
             record(.match, .matched)

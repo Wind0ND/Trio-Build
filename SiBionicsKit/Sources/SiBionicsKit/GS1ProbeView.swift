@@ -71,9 +71,9 @@ public struct GS1ProbeView: View {
         case .searching: "Searching nearby for this sensor…"
         case .connecting: "Sensor matched. Connecting…"
         case .inspecting: "Connected. Checking Bluetooth services…"
-        case .ready: "GS1 service and data characteristic found. Test complete."
+        case .ready: "Found Bluetooth service FF30 and characteristic FF31. Device model is unverified."
         case .unavailable: "Bluetooth unavailable. Check Bluetooth and Trio’s permissions."
-        case .notFound: "Sensor not found. Check the code and keep the sensor nearby."
+        case .notFound: "No exact Bluetooth name matched. Check the complete name and keep the sensor nearby."
         case .failed: "Connection or service check failed. Export diagnostics for details."
         case .stopped: "Test stopped."
         }

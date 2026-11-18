@@ -1,6 +1,28 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Found Bluetooth service FF30 and characteristic FF31. Device model is unverified." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已找到蓝牙服务 FF30 和特征 FF31。设备型号尚未验证。"
+          }
+        }
+      }
+    },
+    "No exact Bluetooth name matched. Check the complete name and keep the sensor nearby." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未找到蓝牙名称完全匹配的设备。请核对完整名称，并让传感器靠近手机。"
+          }
+        }
+      }
+    },
     "Sibionics GS1 Connection Test" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -133,17 +155,6 @@
         }
       }
     },
-    "GS1 service and data characteristic found. Test complete." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已找到 GS1 服务和数据特征，测试完成。"
-          }
-        }
-      }
-    },
     "Bluetooth unavailable. Check Bluetooth and Trio’s permissions." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -151,17 +162,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "蓝牙不可用，请检查蓝牙开关和 Trio 的蓝牙权限。"
-          }
-        }
-      }
-    },
-    "Sensor not found. Check the code and keep the sensor nearby." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未找到传感器。请核对代码，并让传感器靠近手机。"
           }
         }
       }

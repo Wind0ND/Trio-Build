@@ -19,6 +19,7 @@ public enum AiDEXDiagnosticEvent {
         case started
         case unavailable
         case cancelled
+        case timedOut = "timed_out"
         case matched
         case notMatched = "not_matched"
         case absent

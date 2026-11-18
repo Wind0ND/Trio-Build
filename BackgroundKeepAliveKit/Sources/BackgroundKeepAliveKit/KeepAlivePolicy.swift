@@ -20,6 +20,15 @@ struct KeepAlivePolicy {
     }
 
     private(set) var latestSample: Date?
+    private var monitoringSince: Date?
+
+    mutating func beginMonitoring(at date: Date) {
+        if monitoringSince == nil { monitoringSince = date }
+    }
+
+    mutating func endMonitoring() {
+        monitoringSince = nil
+    }
 
     @discardableResult
     mutating func accept(_ timestamp: Date, now: Date) -> Bool {
@@ -30,7 +39,7 @@ struct KeepAlivePolicy {
     }
 
     func deadline(interval: TimeInterval) -> Date? {
-        latestSample?.addingTimeInterval(interval)
+        (latestSample ?? monitoringSince)?.addingTimeInterval(interval)
     }
 
     func isStale(now: Date, interval: TimeInterval) -> Bool {

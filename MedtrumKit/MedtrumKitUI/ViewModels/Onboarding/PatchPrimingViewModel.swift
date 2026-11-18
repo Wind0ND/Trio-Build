@@ -170,7 +170,7 @@ class PatchPrimingViewModel: ObservableObject {
                         let raw = error.errorDescription ?? "EMPTY"
                         self.logger.warning("Failed to connect to pump base: \(raw)")
                         self.isConnected = false
-                        self.connectFailureDetail = Self.guidance(for: raw)
+                        self.connectFailureDetail = Self.guidance(for: error)
                         return
                     }
 
@@ -271,22 +271,17 @@ extension PatchPrimingViewModel: PumpManagerStatusObserver {
 }
 
 extension PatchPrimingViewModel {
-    /// Turns the raw transport error into something actionable: codes 7 and 32 come from the
-    /// pump base itself and mean it still holds a session from another app.
-    static func guidance(for raw: String) -> String {
-        if raw.contains("response code: 7") || raw.contains("responseCode: 7") {
-            return "底座拒绝了这次认证（错误码 7）：它还记得上一个 App 的会话。断开底座电源 10 秒后重试。"
+    static func guidance(for error: MedtrumConnectError) -> String {
+        switch error {
+        case .authorizationRejected(code: 7):
+            return String(localized: "The pump base rejected authorization (code 7). Disconnect the base from power for 10 seconds, then retry.")
+        case .authorizationRejected(code: 32):
+            return String(localized: "The pump base rejected the backup token (code 32). Restart the base, then retry.")
+        case .authorizationTimedOut, .failedToConnectToDevice:
+            return String(localized: "The connection to the pump base timed out. Move the base close to the phone and retry.")
+        default:
+            return error.localizedDescription
         }
-
-        if raw.contains("response code: 32") {
-            return "底座拒绝了备用令牌（错误码 32）。同样需要给底座断电复位后再试。"
-        }
-
-        if raw.contains("timeout") || raw.contains("MedtrumWriteError错误0") {
-            return "与底座通信超时。把底座放到手机旁边，然后点重试。"
-        }
-
-        return raw
     }
 }
 

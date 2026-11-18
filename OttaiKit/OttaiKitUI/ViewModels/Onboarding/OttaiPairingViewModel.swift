@@ -337,31 +337,6 @@ import OttaiKit
         }
     }
 
-    @Published var diagnostics: String?
-
-    /// Reads every account-device endpoint and puts the answer on the
-    /// clipboard, so a refusal can be read without pulling log files off the
-    /// phone. Read-only: it never binds, unbinds or connects anything.
-    func runDiagnostics() {
-        statusText = String(localized: "Reading the account…", bundle: .ottaiUI, comment: "diagnostics status")
-        Task { [weak self] in
-            guard let self else { return }
-            guard let lookup = self.cgmManager.diagnosticsLookup() else {
-                self.diagnostics = "no account session"
-                self.statusText = ""
-                return
-            }
-            let raw = await lookup.cnAccountDiagnostics(mac: self.selectedMAC)
-            let managerLine = "manager=\(type(of: self.cgmManager)) id=\(self.cgmManager.pluginIdentifier) templateIsCn=\(type(of: self.cgmManager).backendTemplate.isOttaiCn) sessionIsCn=\(self.cgmManager.account?.isOttaiCn.map { $0 ? "true" : "false" } ?? "nil")"
-            let text = managerLine + "\n" + raw
-            self.diagnostics = text
-            UIPasteboard.general.string = text
-            self.statusText = OttaiLocalizedString("Diagnostics copied to the clipboard.",
-                comment: "diagnostics done"
-            )
-        }
-    }
-
     /// The Keychain session outlives CGM deletion and a reinstall, so onboarding
     /// needs its own way to drop it and sign in again.
     func signOut() {
@@ -569,7 +544,7 @@ extension OttaiPairingViewModel {
                 self.isWakingWithNFC = false
                 switch result {
                 case .woke:
-                    OttaiDiagnosticEvent.record(.nfc, .succeeded, attempt: self.wakeAttempts)
+                    OttaiDiagnosticEvent.record(.nfc, .tagDetected, attempt: self.wakeAttempts)
                     self.statusText = OttaiLocalizedString("NFC signal sent. Looking for the sensor's Bluetooth signal…",
                         comment: "nfc wake searching"
                     )

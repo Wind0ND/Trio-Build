@@ -44,6 +44,7 @@ enum DiagnosticEventContract {
             outcomes: [
                 "started",
                 "succeeded",
+                "tag_detected",
                 "failed",
                 "cancelled",
                 "unavailable",
@@ -64,6 +65,7 @@ enum DiagnosticEventContract {
                 "started",
                 "unavailable",
                 "cancelled",
+                "timed_out",
                 "matched",
                 "not_matched",
                 "absent",

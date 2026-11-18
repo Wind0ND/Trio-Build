@@ -202,22 +202,6 @@ struct OttaiPairingView: View {
                         Text(verbatim: OttaiLocalizedString("Sign Out of Ottai", comment: "sign out and sign in again"))
                     }
                     .buttonStyle(ActionButtonStyle(.secondary))
-                    Button(action: viewModel.runDiagnostics) {
-                        Text(verbatim: OttaiLocalizedString(
-                            "Account Diagnostics (copied to clipboard)",
-                            comment: "account diagnostics button"
-                        ))
-                    }
-                    .buttonStyle(ActionButtonStyle(.secondary))
-                    if let diagnostics = viewModel.diagnostics {
-                        ScrollView {
-                            Text(diagnostics)
-                                .font(.caption2.monospaced())
-                                .textSelection(.enabled)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .frame(maxHeight: 220)
-                    }
                 }
                 .padding(.horizontal)
                 .padding(.bottom)

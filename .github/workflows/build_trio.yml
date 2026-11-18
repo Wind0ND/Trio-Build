@@ -2,6 +2,11 @@ name: 4. Build Trio
 run-name: Build Trio (${{ github.ref_name }})
 on:
   workflow_dispatch:
+    inputs:
+      upload_to_testflight:
+        description: Upload the signed build to TestFlight
+        type: boolean
+        default: false
   schedule:
     # Check for updates every Sunday
     #   Later logic builds if there are updates or if it is the 2nd Sunday of the month
@@ -98,7 +103,7 @@ jobs:
       - name: Sync upstream changes
         if: | # do not run the upstream sync action on the upstream repository
           steps.workflow-permission.outputs.has_permission == 'true' &&
-          vars.SCHEDULED_SYNC != 'false' && github.repository_owner != 'nightscout'
+          github.event_name == 'schedule' && vars.SCHEDULED_SYNC != 'false' && github.repository_owner != 'nightscout'
         id: sync
         uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.2
         with:
@@ -207,7 +212,7 @@ jobs:
         with:
           token: ${{ secrets.GH_PAT }}
           submodules: recursive
-          ref: ${{ env.TARGET_BRANCH }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || env.TARGET_BRANCH }}
 
       # Customize Trio: Use patches or download and apply patches from GitHub
       - name: Customize Trio
@@ -288,6 +293,7 @@ jobs:
 
       # Upload to TestFlight
       - name: Fastlane upload to TestFlight
+        if: github.event_name == 'schedule' || inputs.upload_to_testflight
         run: bundle exec fastlane release
         env:
           TEAMID: ${{ secrets.TEAMID }}

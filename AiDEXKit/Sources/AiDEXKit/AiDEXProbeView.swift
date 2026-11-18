@@ -150,16 +150,8 @@ public struct AiDEXProbeView: View {
             model.tick()
         }
         .onChange(of: scenePhase) { _, newPhase in
-            if newPhase != .active {
+            if newPhase == .background {
                 model.stop(.sceneInactive)
-            }
-        }
-        .onChange(of: model.phase) { _, newPhase in
-            switch newPhase {
-            case .stopped, .unavailable:
-                serial = ""
-            default:
-                break
             }
         }
         .onDisappear {
@@ -214,6 +206,8 @@ public struct AiDEXProbeView: View {
                 return localized("The probe screen closed, so the scan stopped.")
             case .disappeared:
                 return localized("No advertisement from the sensor for 60 seconds, so the scan stopped.")
+            case .notFound:
+                return localized("No matching sensor found after 45 seconds. Check the serial and retry.")
             }
         case let .unavailable(reason):
             switch reason {

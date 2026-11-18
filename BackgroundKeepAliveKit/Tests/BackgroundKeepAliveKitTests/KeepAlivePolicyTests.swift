@@ -32,6 +32,16 @@ final class KeepAlivePolicyTests: XCTestCase {
         XCTAssertTrue(policy.isStale(now: now, interval: 600))
     }
 
+    func testMonitoringWithoutFirstSampleHasStableDeadline() {
+        var policy = KeepAlivePolicy()
+        policy.beginMonitoring(at: now)
+        policy.beginMonitoring(at: now + 120)
+        XCTAssertEqual(policy.deadline(interval: 600), now + 600)
+        XCTAssertTrue(policy.isStale(now: now + 600, interval: 600))
+        XCTAssertTrue(policy.accept(now + 630, now: now + 630))
+        XCTAssertEqual(policy.deadline(interval: 600), now + 1230)
+    }
+
     func testConfigurationUsesDefaultsAndClampsBeforeConvertingToSeconds() {
         let defaults = KeepAlivePolicy.Configuration(mode: nil, stallMinutes: 0, maxSessionMinutes: 0)
         XCTAssertEqual(defaults.mode, .smart)

@@ -38,7 +38,7 @@ struct ReportProblemView: View {
 
                 LogShareRow(
                     title: "Export Diagnostics",
-                    footnote: "Feature events only: scanning and pairing stages and outcomes. No glucose, treatments, identifiers, serial numbers or raw logs.",
+                    footnote: "Includes app version and feature events for scanning, pairing and background monitoring.",
                     kinds: [.diagnostics],
                     logExport: state.logExport
                 )

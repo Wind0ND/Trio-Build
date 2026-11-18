@@ -6,7 +6,6 @@
 //  Licensed under the MIT License. See LICENSE in the project root.
 //
 
-import Combine
 import LoopKitUI
 import SwiftUI
 import OttaiKit
@@ -15,31 +14,10 @@ struct OttaiLoginView: View {
     @Environment(\.dismissAction) private var dismiss
     @ObservedObject var viewModel: OttaiLoginViewModel
 
-    /// Last few CN wire exchanges, mirrored on screen: the sign-in failures so far could
-    /// not be diagnosed without exporting the log file.
-    @State private var traceLines: [String] = []
-    private let traceTicker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 header
-
-                if !traceLines.isEmpty {
-                    VStack(alignment: .leading, spacing: 3) {
-                        ForEach(Array(traceLines.enumerated()), id: \.offset) { _, line in
-                            Text(line)
-                                .font(.system(size: 9, design: .monospaced))
-                                .foregroundColor(.secondary)
-                                .textSelection(.enabled)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
-                    .padding(10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(UIColor.tertiarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                }
 
                 if viewModel.mode == .phone {
                     VStack(spacing: 0) {
@@ -145,10 +123,6 @@ struct OttaiLoginView: View {
             .padding()
         }
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
-        .onReceive(traceTicker) { _ in
-            let next = Array(OttaiWireTrace.shared.snapshot.suffix(8))
-            if next != traceLines { traceLines = next }
-        }
         .safeAreaInset(edge: .bottom) {
             Button(action: viewModel.submit) {
                 HStack {

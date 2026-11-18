@@ -163,7 +163,7 @@ extension PeripheralManager {
 
             log.error("Failed to complete authorization flow: \(error.localizedDescription)")
             disconnectIfActive()
-            completion?(.failedToCompleteAuthorizationFlow(localizedError: error.localizedDescription))
+            completion?(MedtrumConnectError(authorizationError: error))
 
         case let .success(data):
             guard let authResponse = data as? AuthorizeResponse else {
@@ -188,7 +188,7 @@ extension PeripheralManager {
         case let .failure(error):
             log.error("Failed to synchronize: \(error.localizedDescription)")
             disconnectIfActive()
-            completion?(.failedToCompleteAuthorizationFlow(localizedError: error.localizedDescription))
+            completion?(MedtrumConnectError(authorizationError: error))
 
         case let .success(data):
             guard let syncResponse = data as? SynchronizePacketResponse else {
@@ -211,7 +211,7 @@ extension PeripheralManager {
         case let .failure(error):
             log.error("Failed to subscribe: \(error.localizedDescription)")
             disconnectIfActive()
-            completion?(.failedToCompleteAuthorizationFlow(localizedError: error.localizedDescription))
+            completion?(MedtrumConnectError(authorizationError: error))
 
         case .success:
             guard !isInvalidatedLocked else {

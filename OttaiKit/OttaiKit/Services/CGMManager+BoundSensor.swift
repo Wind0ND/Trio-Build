@@ -61,10 +61,6 @@ public extension OttaiCGMManager {
         return nil
     }
 
-    /// Onboarding-only handle on the account lookup, so the pairing screen can
-    /// show what the CN service answers without touching logs on the phone.
-    public func diagnosticsLookup() -> OttaiBoundSensorLookup? { makeBoundSensorLookup() }
-
     func makeBoundSensorLookup() -> OttaiBoundSensorLookup? {
         guard let account else { return nil }
         return OttaiBoundSensorLookup(

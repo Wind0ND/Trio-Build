@@ -106,12 +106,14 @@ public final class BackgroundKeepAlive {
         check = nil
         let configuration = configuration
         guard configuration.mode != .off, hasSource() else {
+            policy.endMonitoring()
             clearReminder()
             stopAudio(.stopped)
             return
         }
 
         let now = Date()
+        policy.beginMonitoring(at: now)
         let deadline = policy.deadline(interval: configuration.stallInterval)
         if let deadline { scheduleReminder(for: deadline, now: now, interval: configuration.stallInterval) }
 

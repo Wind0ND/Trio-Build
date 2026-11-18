@@ -1,15 +1,16 @@
-name: zzz [DO NOT RUN] Automated unit tests
+name: Trio build and unit tests
 
 # Called from upstream_automation.yml; see that file for why there is a single dispatcher.
 # Triggers, the paths-ignore filter and concurrency are handled by the caller.
 on:
   workflow_call:
+  workflow_dispatch:
 
 jobs:
   algorithm-package:
     name: Algorithm Package (swift test)
     runs-on: macos-26
-    if: github.repository_owner == 'nightscout'
+    if: github.repository_owner == 'nightscout' || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Select Xcode version
@@ -67,7 +68,7 @@ jobs:
   test:
     name: Run Unit Tests
     runs-on: macos-26
-    if: github.repository_owner == 'nightscout'
+    if: github.repository_owner == 'nightscout' || github.event_name == 'workflow_dispatch'
 
     env:
       DESTINATION: "platform=iOS Simulator,name=iPhone 17,OS=26.2"
@@ -92,6 +93,14 @@ jobs:
 
       - name: Apply Simplified Chinese dependency localization
         run: python3 scripts/apply_zh_hans.py
+
+      - name: Test standalone device and background packages
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          set -e
+          for package in AiDEXKit BackgroundKeepAliveKit CGMSetupKit SiBionicsKit; do
+            swift test --package-path "$package" --scratch-path "$RUNNER_TEMP/trio-package-tests/$package"
+          done
 
       # Fingerprint dependency state (independent of app source) for the cache
       # key, so the restore hits on nearly every PR — app code churns, pins

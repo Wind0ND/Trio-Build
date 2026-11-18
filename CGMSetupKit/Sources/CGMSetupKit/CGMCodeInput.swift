@@ -56,11 +56,11 @@ public struct CGMCodeInput: View {
         }
         .sheet(isPresented: $cameraOpen) {
             NavigationStack {
-                PackageCamera(normalize: uniqueCode) { code in
+                PackageCamera(normalize: normalize) { code in
                     cameraOpen = false
                     if let code { onCode(code) } else { showsFailure = true }
                 }
-                .navigationTitle(Text("Scan Package Code", bundle: .module))
+                .navigationTitle(Text("Tap the Package Code", bundle: .module))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
@@ -95,7 +95,7 @@ public struct CGMCodeInput: View {
 
 @MainActor
 private struct PackageCamera: UIViewControllerRepresentable {
-    let normalize: ([String]) -> String?
+    let normalize: (String) -> String?
     let finish: (String?) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(normalize: normalize, finish: finish) }
@@ -129,24 +129,19 @@ private struct PackageCamera: UIViewControllerRepresentable {
 
     @MainActor
     final class Coordinator: NSObject, DataScannerViewControllerDelegate {
-        private let normalize: ([String]) -> String?
+        private let normalize: (String) -> String?
         private let finish: (String?) -> Void
         var finished = false
 
-        init(normalize: @escaping ([String]) -> String?, finish: @escaping (String?) -> Void) {
+        init(normalize: @escaping (String) -> String?, finish: @escaping (String?) -> Void) {
             self.normalize = normalize
             self.finish = finish
         }
 
-        func dataScanner(_ scanner: DataScannerViewController, didAdd _: [RecognizedItem], allItems: [RecognizedItem]) {
-            let values = allItems.compactMap { item -> String? in
-                guard case let .barcode(barcode) = item else { return nil }
-                return barcode.payloadStringValue
-            }
-            if let code = normalize(values) {
-                complete(code)
-                scanner.stopScanning()
-            }
+        func dataScanner(_ scanner: DataScannerViewController, didTapOn item: RecognizedItem) {
+            guard case let .barcode(barcode) = item, let payload = barcode.payloadStringValue else { return }
+            complete(normalize(payload))
+            scanner.stopScanning()
         }
 
         func dataScanner(_: DataScannerViewController, becameUnavailableWithError _: DataScannerViewController.ScanningUnavailable) {

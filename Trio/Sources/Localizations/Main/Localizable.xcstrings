@@ -1,6 +1,28 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Includes app version and feature events for scanning, pairing and background monitoring." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "包含应用版本，以及扫描、配对和后台监测的诊断事件。"
+          }
+        }
+      }
+    },
+    "Stabilizing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在稳定"
+          }
+        }
+      }
+    },
     "Glucose interruption threshold: %lld minutes" : {
       "localizations" : {
         "zh-Hans" : {
@@ -37,16 +59,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "诊断事件"
-          }
-        }
-      }
-    },
-    "Feature events only: scanning and pairing stages and outcomes. No glucose, treatments, identifiers, serial numbers or raw logs." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "仅包含功能事件，如扫描和配对阶段与结果。不含血糖、治疗数据、标识符、序列号或原始日志。"
           }
         }
       }

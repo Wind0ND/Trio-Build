@@ -27,6 +27,7 @@ import Testing
             ("scan", "started"),
             ("scan", "unavailable"),
             ("scan", "cancelled"),
+            ("scan", "timed_out"),
             ("match", "matched"),
             ("match", "not_matched"),
             ("match", "absent"),

@@ -22,4 +22,10 @@ final class CGMPackageCodeTests: XCTestCase {
         XCTAssertNil(CGMPackageCode.sibionicsIdentifier(from: "(10)ABCD802J"))
         XCTAssertNil(CGMPackageCode.sibionicsIdentifier(from: "ABCD 802J"))
     }
+
+    func testRejectsMalformedOrDuplicatePrintedFields() {
+        XCTAssertNil(CGMPackageCode.aiDEXSerial(from: "(01)X(17)Q(21)TEST123456"))
+        XCTAssertNil(CGMPackageCode.aiDEXSerial(from: "(11)260930(11)260931(21)TEST123456"))
+        XCTAssertNil(CGMPackageCode.aiDEXSerial(from: "(10)012345678901234567890(21)TEST123456"))
+    }
 }

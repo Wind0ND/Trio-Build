@@ -12,6 +12,7 @@ public final class AiDEXProbeViewModel: ObservableObject {
     private var session: AiDEXProbeSession?
     private var transport: (any AiDEXProbeTransport)?
     private var activeGeneration = UUID()
+    private var scanStartedAt: TimeInterval?
     private var reportedMatch = false
     private var reportedReading = false
     private var reportedNotMatched = false
@@ -34,6 +35,7 @@ public final class AiDEXProbeViewModel: ObservableObject {
         newSession.begin()
         session = newSession
         phase = .scanning
+        scanStartedAt = nil
         latest = nil
         now = Date()
         showsInvalidSerial = false
@@ -59,11 +61,16 @@ public final class AiDEXProbeViewModel: ObservableObject {
         finish(reason: reason)
     }
 
-    /// The view calls this once a second while visible. It only exists to
-    /// detect a selected sensor that stopped advertising.
+    /// The view calls this once a second while visible to check search and signal loss.
     public func tick() {
         guard isActive else { return }
         now = Date()
+        if phase == .scanning, let scanStartedAt,
+           ProcessInfo.processInfo.systemUptime - scanStartedAt >= 45
+        {
+            finish(reason: .notFound)
+            return
+        }
         guard var session, session.phase == .matched else { return }
         let disappeared = session.checkDisappearance(now: now)
         self.session = session
@@ -77,7 +84,7 @@ public final class AiDEXProbeViewModel: ObservableObject {
 
         switch event {
         case .scanningStarted:
-            break
+            scanStartedAt = ProcessInfo.processInfo.systemUptime
 
         case let .unavailable(reason):
             session.markUnavailable(reason)
@@ -128,7 +135,7 @@ public final class AiDEXProbeViewModel: ObservableObject {
             reportedNotMatched = true
             AiDEXDiagnosticEvent.record(.match, .notMatched)
         }
-        AiDEXDiagnosticEvent.record(.scan, .cancelled)
+        AiDEXDiagnosticEvent.record(.scan, reason == .notFound ? .timedOut : .cancelled)
 
         teardownTransport()
         session = nil

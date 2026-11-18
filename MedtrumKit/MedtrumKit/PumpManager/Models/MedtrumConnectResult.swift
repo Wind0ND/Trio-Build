@@ -3,6 +3,8 @@ public enum MedtrumConnectError: LocalizedError {
     case failedToDiscoverCharacteristics(localizedError: String)
     case failedToEnableNotify(localizedError: String)
     case failedToCompleteAuthorizationFlow(localizedError: String)
+    case authorizationTimedOut
+    case authorizationRejected(code: UInt16)
     case failedToFindDevice
     case failedToConnectToDevice
     case isBolussing
@@ -18,6 +20,10 @@ public enum MedtrumConnectError: LocalizedError {
             return localizedErr
         case let .failedToCompleteAuthorizationFlow(localizedErr):
             return localizedErr
+        case .authorizationTimedOut:
+            return MedtrumWriteError.timeout.errorDescription
+        case let .authorizationRejected(code):
+            return MedtrumWriteError.invalidResponse(code: code).errorDescription
         case .failedToConnectToDevice:
             return String(
                 localized: "Failed to connect to patch -> Timeout reached",
@@ -29,6 +35,14 @@ public enum MedtrumConnectError: LocalizedError {
             return String(localized: "Bolus issue. Patch is already bolussing", comment: "MedtrumError patch bolussing")
         case .isSuspended:
             return String(localized: "Bolus issue. Patch is suspended. Resume delivery", comment: "MedtrumError patch suspended")
+        }
+    }
+
+    init(authorizationError: MedtrumWriteError) {
+        switch authorizationError {
+        case .timeout: self = .authorizationTimedOut
+        case let .invalidResponse(code): self = .authorizationRejected(code: code)
+        default: self = .failedToCompleteAuthorizationFlow(localizedError: authorizationError.localizedDescription)
         }
     }
 }

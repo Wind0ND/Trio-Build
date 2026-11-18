@@ -92,7 +92,7 @@ import OttaiKit
             do {
                 let number = self.phone.trimmingCharacters(in: .whitespaces)
                 let id = try await OttaiCnLoginProvider.requestCode(phone: number)
-                OttaiWireTrace.shared.append("< requestId=\(id)")
+                OttaiWireTrace.shared.append("< smsCode request accepted")
                 self.requestId = id
                 self.codeSent = true
                 self.isBusy = false
@@ -120,11 +120,11 @@ import OttaiKit
             let number = self.phone.trimmingCharacters(in: .whitespaces)
             let code = self.smsCode.trimmingCharacters(in: .whitespaces)
             do {
-                self.logger.info("sms login start phone=\(number) requestId=\(requestId)")
-                OttaiWireTrace.shared.append("> smsLogin phone=\(number) code=\(code.count)ch")
+                self.logger.info("sms login started")
+                OttaiWireTrace.shared.append("> smsLogin")
                 try await self.cgmManager.loginCn(phone: number, requestId: requestId, code: code)
                 self.logger.info("sms login ok")
-                OttaiWireTrace.shared.append("< smsLogin ok account=\(number)")
+                OttaiWireTrace.shared.append("< smsLogin ok")
                 self.isBusy = false
                 self.smsCode = ""
                 self.onLoggedIn()

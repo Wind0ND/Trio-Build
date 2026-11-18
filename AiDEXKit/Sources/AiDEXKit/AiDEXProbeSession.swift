@@ -5,6 +5,7 @@ public enum AiDEXStopReason: Equatable, Sendable {
     case sceneInactive
     case viewClosed
     case disappeared
+    case notFound
 }
 
 public enum AiDEXUnavailableReason: Equatable, Sendable {

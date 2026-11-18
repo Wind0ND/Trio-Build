@@ -181,32 +181,12 @@
         }
       }
     },
-    "Account Diagnostics (copied to clipboard)" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "账号诊断（将复制到剪贴板）"
-          }
-        }
-      }
-    },
     "Checking sensor with Ottai…" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在向欧态核验传感器…"
-          }
-        }
-      }
-    },
-    "Diagnostics copied to the clipboard." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "诊断信息已复制到剪贴板。"
           }
         }
       }
@@ -2537,17 +2517,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在启动…"
-          }
-        }
-      }
-    },
-    "Reading the account…" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正在读取账户信息…"
           }
         }
       }

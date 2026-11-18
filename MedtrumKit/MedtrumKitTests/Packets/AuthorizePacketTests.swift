@@ -2,6 +2,18 @@
 import XCTest
 
 final class AuthorizePacketTests: XCTestCase {
+    func testConnectErrorKeepsAuthorizationCodeAndTimeout() {
+        for code in [UInt16(7), 32] {
+            guard case let .authorizationRejected(actualCode) = MedtrumConnectError(authorizationError: .invalidResponse(code: code)) else {
+                return XCTFail("Authorization error lost its response code")
+            }
+            XCTAssertEqual(actualCode, code)
+        }
+        guard case .authorizationTimedOut = MedtrumConnectError(authorizationError: .timeout) else {
+            return XCTFail("Authorization error lost its timeout classification")
+        }
+    }
+
     func testRequestGivenPacketWhenValuesSetThenReturnCorrectByteArray() throws {
         let input = AuthorizePacket(pumpSN: Data([217, 249, 118, 170]), sessionToken: Data([155, 2, 0, 0]))
 
