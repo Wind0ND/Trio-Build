@@ -1,4 +1,5 @@
 #if os(iOS)
+import CGMSetupKit
 import Combine
 import Foundation
 import SwiftUI
@@ -51,6 +52,9 @@ public struct AiDEXProbeView: View {
             }
 
             Section {
+                if !model.isActive {
+                    CGMCodeInput(normalize: CGMPackageCode.aiDEXSerial) { serial = $0 }
+                }
                 TextField(text: $serial) {
                     Text(verbatim: localized("Sensor serial"))
                 }
@@ -59,7 +63,7 @@ public struct AiDEXProbeView: View {
                 .disabled(model.isActive)
 
                 Text(verbatim: localized(
-                    "Enter the serial exactly as printed on the box. It stays in memory and is never saved or exported."
+                    "Scan the box code or enter the sensor serial. Check the serial before starting the search."
                 ))
                 .font(.footnote)
                 .foregroundColor(.secondary)
@@ -191,7 +195,7 @@ public struct AiDEXProbeView: View {
         case .idle:
             return localized("Enter the sensor serial from the box, then start a foreground scan.")
         case .scanning:
-            return localized("Scanning for the exact serial. Lookalike devices are ignored.")
+            return localized("Searching nearby for the sensor with this serial.")
         case .matched:
             guard let latest = model.latest else {
                 return localized("Sensor matched. Waiting for a valid advertisement.")

@@ -72,6 +72,10 @@ enum DiagnosticEventContract {
                 "checksum_mismatch",
                 "reading_unavailable"
             ]
+        ),
+        "sibionics": Feature(
+            stages: ["scan", "match", "connection", "service", "characteristic"],
+            outcomes: ["started", "matched", "succeeded", "unavailable", "timed_out", "failed", "stopped"]
         )
     ]
 

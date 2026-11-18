@@ -1,4 +1,5 @@
 import AiDEXKit
+import SiBionicsKit
 import SwiftUI
 
 struct ReportProblemView: View {
@@ -44,6 +45,10 @@ struct ReportProblemView: View {
 
                 NavigationLink(destination: AiDEXProbeView()) {
                     AiDEXProbeLinkRow()
+                }
+
+                NavigationLink(destination: GS1ProbeView()) {
+                    Label(GS1ProbeView.title, systemImage: "dot.radiowaves.left.and.right")
                 }
             }
             .listRowBackground(Color.chart)

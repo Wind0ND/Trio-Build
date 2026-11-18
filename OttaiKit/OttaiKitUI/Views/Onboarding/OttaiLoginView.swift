@@ -71,6 +71,13 @@ struct OttaiLoginView: View {
                         }
                     }
                     .cardBackground()
+                    Text(
+                        "If the sensor is already linked to an Ottai account, sign in with that account to add it to Trio.",
+                        bundle: .ottaiUI,
+                        comment: "Ottai existing sensor account guidance"
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
                 } else {
                     VStack(spacing: 0) {
                         fieldRow(icon: "envelope.fill") {

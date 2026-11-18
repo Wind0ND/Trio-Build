@@ -6,8 +6,8 @@ enabled CGM source, persistence, Nightscout, alerts or loop input.
 
 ## What it does
 
-- Accepts the sensor serial manually at runtime. The serial is held only by the
-  active view/session, is never persisted or exported, and is never logged.
+- Accepts the sensor serial from a box code, photo, or manual entry. The serial
+  stays in the active view and session.
 - Listens in the foreground for Bluetooth advertisements with an exact local
   name match after case/whitespace normalization and one of the observed
   prefixes: `AiDEX X-` or `X-`.
@@ -20,8 +20,7 @@ enabled CGM source, persistence, Nightscout, alerts or loop input.
   when the selected sensor stops advertising for 60 seconds.
 
 It does **not** connect over GATT, write, calibrate, activate, look up a sensor
-online, or infer support for other AiDEX models. There is no scanner; enter the
-serial from the box.
+online, or infer support for other AiDEX models.
 
 ## Protocol attribution
 

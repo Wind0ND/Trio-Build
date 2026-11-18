@@ -1,6 +1,26 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Scan the box code or enter the sensor serial. Check the serial before starting the search." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "扫描包装码，或手动输入传感器序列号。搜索前请核对序列号。"
+          }
+        }
+      }
+    },
+    "Searching nearby for the sensor with this serial." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在附近搜索与该序列号匹配的传感器。"
+          }
+        }
+      }
+    },
     "AiDEX Foreground Probe" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -111,17 +131,6 @@
         }
       }
     },
-    "Enter the serial exactly as printed on the box. It stays in memory and is never saved or exported." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请输入包装盒上印制的完整序列号。序列号仅保存在内存中，不会被保存或导出。"
-          }
-        }
-      }
-    },
     "Idle" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -206,17 +215,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "扫描中"
-          }
-        }
-      }
-    },
-    "Scanning for the exact serial. Lookalike devices are ignored." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正在按完整序列号扫描。相似设备会被忽略。"
           }
         }
       }

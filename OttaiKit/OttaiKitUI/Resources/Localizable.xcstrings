@@ -1,6 +1,26 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "If the sensor is already linked to an Ottai account, sign in with that account to add it to Trio." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果传感器已绑定欧态账号，请登录原绑定账号，再将它添加到 Trio。"
+          }
+        }
+      }
+    },
+    "If the sensor is asleep, hold the top of the iPhone near it to wake it with NFC." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果传感器处于休眠，将 iPhone 顶部靠近传感器，用 NFC 唤醒。"
+          }
+        }
+      }
+    },
     "NFC only wakes the sensor. Pairing still checks its Bluetooth address." : {
       "localizations" : {
         "zh-Hans" : {
@@ -147,16 +167,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重新搜索"
-          }
-        }
-      }
-    },
-    "If the sensor is asleep, wake it with NFC first." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "如果传感器处于休眠状态，请先用 NFC 唤醒。"
           }
         }
       }

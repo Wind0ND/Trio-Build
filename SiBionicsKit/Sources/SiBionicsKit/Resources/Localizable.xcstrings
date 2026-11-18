@@ -1,0 +1,193 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Sibionics GS1 Connection Test" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "硅基动感 GS1 连接测试"
+          }
+        }
+      }
+    },
+    "Use a spare or test sensor. This check connects briefly and looks for the GS1 Bluetooth service." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请使用备用或测试传感器。测试会短暂连接传感器，检查 GS1 蓝牙服务。"
+          }
+        }
+      }
+    },
+    "If another app is connected to the test sensor, close that app from the app switcher before starting." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果其他 App 正连接这枚测试传感器，请先从 App 切换器关闭那个 App。"
+          }
+        }
+      }
+    },
+    "Connection Code or Serial" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接码或序列号"
+          }
+        }
+      }
+    },
+    "Stop Test" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止测试"
+          }
+        }
+      }
+    },
+    "Test Bluetooth Connection" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测试蓝牙连接"
+          }
+        }
+      }
+    },
+    "Connection Status" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接状态"
+          }
+        }
+      }
+    },
+    "The diagnostics export records connection stages and outcomes. This test ends before glucose retrieval." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "诊断导出会记录连接阶段和结果。本次测试做到蓝牙服务检查为止。"
+          }
+        }
+      }
+    },
+    "Scan the package code or enter the code printed on the box." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "扫描包装码，或输入盒身印刷的代码。"
+          }
+        }
+      }
+    },
+    "Searching nearby for this sensor…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在搜索这枚传感器…"
+          }
+        }
+      }
+    },
+    "Sensor matched. Connecting…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已找到匹配的传感器，正在连接…"
+          }
+        }
+      }
+    },
+    "Connected. Checking Bluetooth services…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已连接，正在检查蓝牙服务…"
+          }
+        }
+      }
+    },
+    "GS1 service and data characteristic found. Test complete." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已找到 GS1 服务和数据特征，测试完成。"
+          }
+        }
+      }
+    },
+    "Bluetooth unavailable. Check Bluetooth and Trio’s permissions." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "蓝牙不可用，请检查蓝牙开关和 Trio 的蓝牙权限。"
+          }
+        }
+      }
+    },
+    "Sensor not found. Check the code and keep the sensor nearby." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未找到传感器。请核对代码，并让传感器靠近手机。"
+          }
+        }
+      }
+    },
+    "Connection or service check failed. Export diagnostics for details." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接或服务检查失败，可导出诊断查看原因。"
+          }
+        }
+      }
+    },
+    "Test stopped." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测试已停止。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

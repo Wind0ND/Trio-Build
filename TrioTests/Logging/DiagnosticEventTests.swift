@@ -49,6 +49,15 @@ import Testing
         #expect(store.allEvents.last?.count == DiagnosticEvent.maximumCount)
     }
 
+    @Test("GS1 connection results can enter the diagnostic store") func sibionicsDiagnostics() {
+        let store = DiagnosticEventStore(defaults: Self.defaults(), now: { Self.start })
+        #expect(store.record(feature: "sibionics", stage: "connection", outcome: "timed_out"))
+        #expect(store.record(feature: "sibionics", stage: "service", outcome: "succeeded"))
+        #expect(store.record(feature: "sibionics", stage: "characteristic", outcome: "failed"))
+        #expect(!store.record(feature: "sibionics", stage: "reading", outcome: "started"))
+        #expect(store.allEvents.count == 3)
+    }
+
     @Test("Bounded counters are clamped and free-form payloads cannot enter") func boundedCounters() {
         let store = DiagnosticEventStore(defaults: Self.defaults(), now: { Self.start })
         #expect(store.record(feature: "ottai", stage: "nfc", outcome: "started", attempt: -9, count: 1_000_000))

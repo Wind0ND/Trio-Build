@@ -15,9 +15,11 @@ let package = Package(
     products: [
         .library(name: "AiDEXKit", targets: ["AiDEXKit"])
     ],
+    dependencies: [.package(path: "../CGMSetupKit")],
     targets: [
         .target(
             name: "AiDEXKit",
+            dependencies: [.product(name: "CGMSetupKit", package: "CGMSetupKit")],
             resources: [
                 .process("Resources")
             ]

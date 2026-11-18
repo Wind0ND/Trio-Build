@@ -40,7 +40,7 @@ struct OttaiPairingView: View {
                                 comment: "pairing method body"
                             )
                             Text(verbatim: OttaiLocalizedString(
-                                "If the sensor is asleep, wake it with NFC first.",
+                                "If the sensor is asleep, hold the top of the iPhone near it to wake it with NFC.",
                                 comment: "pairing method nfc hint"
                             ))
                             .font(.footnote)
