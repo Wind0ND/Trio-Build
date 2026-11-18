@@ -1,6 +1,26 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Glucose interruption threshold: %lld minutes" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "血糖数据中断阈值：%lld 分钟"
+          }
+        }
+      }
+    },
+    "Trio schedules a glucose interruption reminder. In Smart mode, audio can start if Trio is running when readings become overdue. Always uses background audio and can increase battery use." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trio 会预排血糖数据中断提醒。智能模式下，如果读数超时且 Trio 仍在运行，可以启动音频保活。始终模式使用后台音频，可能增加耗电。"
+          }
+        }
+      }
+    },
     "Export Diagnostics" : {
       "localizations" : {
         "zh-Hans" : {
@@ -357272,17 +357292,6 @@
         }
       }
     },
-    "Start keep alive after %lld minutes without readings" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "连续 %lld 分钟未收到读数时启动保活"
-          }
-        }
-      }
-    },
     "Maximum keep alive: %lld minutes" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -357290,17 +357299,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "单次保活最长 %lld 分钟"
-          }
-        }
-      }
-    },
-    "Keep Trio running in the background so it can reconnect more quickly after CGM disconnects. Smart mode only starts when readings stop and can use more battery." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "让 Trio 在后台保持运行，以便动态血糖监测断连后更快重连。智能模式只在读数停止更新时启动，可能增加耗电。"
           }
         }
       }

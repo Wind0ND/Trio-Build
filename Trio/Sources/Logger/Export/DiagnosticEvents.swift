@@ -76,6 +76,10 @@ enum DiagnosticEventContract {
         "sibionics": Feature(
             stages: ["scan", "match", "connection", "service", "characteristic"],
             outcomes: ["started", "matched", "succeeded", "unavailable", "timed_out", "failed", "stopped"]
+        ),
+        "keep_alive": Feature(
+            stages: ["audio", "reminder", "data"],
+            outcomes: ["started", "stopped", "failed", "interrupted", "capped", "scheduled", "recovered"]
         )
     ]
 

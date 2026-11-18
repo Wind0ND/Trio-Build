@@ -1,3 +1,4 @@
+import BackgroundKeepAliveKit
 import Combine
 import CoreData
 import Foundation
@@ -426,6 +427,7 @@ extension CGMManager {
 extension BaseFetchGlucoseManager: SettingsObserver {
     /// Smooth glucose data when smoothing is turned on.
     func settingsDidChange(_: TrioSettings) {
+        Task { @MainActor in BackgroundKeepAlive.shared.settingsChanged() }
         let smoothingWasEnabled = shouldSmoothGlucose
         let smoothingIsEnabled = settingsManager.settings.smoothGlucose
         shouldSmoothGlucose = smoothingIsEnabled

@@ -58,6 +58,14 @@ import Testing
         #expect(store.allEvents.count == 3)
     }
 
+    @Test("Keep-alive diagnostic transitions are allowed") func keepAliveDiagnostics() {
+        let store = DiagnosticEventStore(defaults: Self.defaults(), now: { Self.start })
+        #expect(store.record(feature: "keep_alive", stage: "audio", outcome: "interrupted"))
+        #expect(store.record(feature: "keep_alive", stage: "reminder", outcome: "scheduled"))
+        #expect(!store.record(feature: "keep_alive", stage: "audio", outcome: "raw error"))
+        #expect(store.allEvents.count == 2)
+    }
+
     @Test("Bounded counters are clamped and free-form payloads cannot enter") func boundedCounters() {
         let store = DiagnosticEventStore(defaults: Self.defaults(), now: { Self.start })
         #expect(store.record(feature: "ottai", stage: "nfc", outcome: "started", attempt: -9, count: 1_000_000))

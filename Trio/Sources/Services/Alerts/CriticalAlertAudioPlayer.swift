@@ -1,5 +1,6 @@
 import AudioToolbox
 import AVFoundation
+import BackgroundKeepAliveKit
 import MediaPlayer
 import UIKit
 
@@ -55,7 +56,8 @@ final class CriticalAlertAudioPlayer {
     /// `.playback` audio session gives the app a privileged background state
     /// so the alarm plays even if the user has the screen locked.
     func play(soundNamed soundName: String = "critical.caf") {
-        stop()
+        BackgroundKeepAlive.shared.yieldAudioToAlert()
+        stop(releaseKeepAlive: false)
 
         startVibration()
         // Bounds vibration if the audio setup below fails; re-armed to the
@@ -118,6 +120,10 @@ final class CriticalAlertAudioPlayer {
 
     /// Stop playback if any. Safe to call when not playing.
     func stop() {
+        stop(releaseKeepAlive: true)
+    }
+
+    private func stop(releaseKeepAlive: Bool) {
         guard player != nil || stopTimer != nil || vibrationTimer != nil else { return }
         player?.stop()
         player = nil
@@ -127,6 +133,7 @@ final class CriticalAlertAudioPlayer {
         vibrationTimer = nil
         volumeBooster.restore()
         try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+        if releaseKeepAlive { BackgroundKeepAlive.shared.alertAudioDidEnd() }
         debug(.alerts, "Critical alert audio stopped")
     }
 }

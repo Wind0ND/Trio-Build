@@ -1,4 +1,5 @@
 import AVFAudio
+import BackgroundKeepAliveKit
 import Combine
 import CoreData
 import Foundation
@@ -39,12 +40,6 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
 
     var updatePublisher: AnyPublisher<Void, Never> {
         updateSubject.eraseToAnyPublisher()
-    }
-
-    /// Fans out the update and tells the keep-alive service that data is flowing again.
-    private func notifyGlucoseArrival() {
-        updateSubject.send()
-        BackgroundKeepAlive.shared.noteGlucoseArrival()
     }
 
     private enum Config {
@@ -256,6 +251,13 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
         } else {
             try storeGlucoseRegular(plausible, context: context)
         }
+
+        let now = Date()
+        if let latestSample = plausible.lazy.filter({
+            $0.mbg == nil && ($0.glucose ?? 0) > 0 && $0.dateString <= now
+        }).map(\.dateString).max() {
+            Task { @MainActor in BackgroundKeepAlive.shared.noteGlucoseSample(at: latestSample) }
+        }
     }
 
     private func storeGlucoseRegular(_ glucose: [BloodGlucose], context: NSManagedObjectContext) throws {
@@ -266,7 +268,7 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
 
         guard context.hasChanges else { return }
         try context.save()
-        notifyGlucoseArrival()
+        updateSubject.send()
     }
 
     private func storeGlucoseBatch(_ glucose: [BloodGlucose], context: NSManagedObjectContext) throws {
@@ -285,7 +287,7 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
             }
         )
         try context.execute(batchInsert)
-        notifyGlucoseArrival()
+        updateSubject.send()
     }
 
     private func configureGlucoseEntry(_ entry: GlucoseStored, with glucose: BloodGlucose) {
@@ -384,7 +386,7 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
                 try context.save()
 
                 // Glucose subscribers already listen to the update publisher, so call here to update glucose-related data.
-                self.notifyGlucoseArrival()
+                self.updateSubject.send()
             } catch let error as NSError {
                 warning(.storage, "Saving manual glucose failed", error: error)
             }

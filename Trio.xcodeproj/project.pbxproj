@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		A1DE00000000000000000003 /* AiDEXKit in Frameworks */ = {isa = PBXBuildFile; productRef = A1DE00000000000000000002 /* AiDEXKit */; };
 		51B100000000000000000003 /* SiBionicsKit in Frameworks */ = {isa = PBXBuildFile; productRef = 51B100000000000000000002 /* SiBionicsKit */; };
+		BACC00000000000000000003 /* BackgroundKeepAliveKit in Frameworks */ = {isa = PBXBuildFile; productRef = BACC00000000000000000002 /* BackgroundKeepAliveKit */; };
 		477F2885616B2839D22FF0A4 /* PumpStatusStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C7EA1FA38A1728182C949F4 /* PumpStatusStorageTests.swift */; };
 		3A627606ABC518974CC60B55 /* PumpStatusStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0E3EA2038BADFBCBC8801A4 /* PumpStatusStorage.swift */; };
 		4AB6E54D1659F6137A70BF74 /* PumpStatusStored+helper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EE4D8D4BA1BD69A89CA1C13 /* PumpStatusStored+helper.swift */; };
@@ -2431,6 +2432,7 @@
 				5E12FE112EBC0000000000B2 /* RoundWhiteDiscKit in Frameworks */,
 				A1DE00000000000000000003 /* AiDEXKit in Frameworks */,
 				51B100000000000000000003 /* SiBionicsKit in Frameworks */,
+				BACC00000000000000000003 /* BackgroundKeepAliveKit in Frameworks */,
 				3B4BA7782D8DBD690069D5B8 /* MinimedKit.framework in Frameworks */,
 				3B4BA7762D8DBD690069D5B8 /* LibreTransmitterUI.framework in Frameworks */,
 				3E54EF2C2E476DA40006F54D /* MedtrumKit.framework in Frameworks */,
@@ -5398,6 +5400,7 @@
 				5E12FE112EBC0000000000B1 /* RoundWhiteDiscKit */,
 				A1DE00000000000000000002 /* AiDEXKit */,
 				51B100000000000000000002 /* SiBionicsKit */,
+				BACC00000000000000000002 /* BackgroundKeepAliveKit */,
 			);
 			productName = Trio;
 			productReference = 388E595825AD948C0019842D /* Trio.app */;
@@ -5578,6 +5581,7 @@
 				5E12FE112EBC0000000000B0 /* XCLocalSwiftPackageReference "RoundWhiteDiscKit" */,
 				A1DE00000000000000000001 /* XCLocalSwiftPackageReference "AiDEXKit" */,
 				51B100000000000000000001 /* XCLocalSwiftPackageReference "SiBionicsKit" */,
+				BACC00000000000000000001 /* XCLocalSwiftPackageReference "BackgroundKeepAliveKit" */,
 			);
 			productRefGroup = 388E595925AD948C0019842D /* Products */;
 			projectDirPath = "";
@@ -7437,6 +7441,10 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
+		BACC00000000000000000001 /* XCLocalSwiftPackageReference "BackgroundKeepAliveKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = BackgroundKeepAliveKit;
+		};
 		51B100000000000000000001 /* XCLocalSwiftPackageReference "SiBionicsKit" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = SiBionicsKit;
@@ -7535,6 +7543,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		BACC00000000000000000002 /* BackgroundKeepAliveKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BACC00000000000000000001 /* XCLocalSwiftPackageReference "BackgroundKeepAliveKit" */;
+			productName = BackgroundKeepAliveKit;
+		};
 		51B100000000000000000002 /* SiBionicsKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 51B100000000000000000001 /* XCLocalSwiftPackageReference "SiBionicsKit" */;
