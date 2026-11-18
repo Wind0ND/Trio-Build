@@ -2,6 +2,67 @@ import Foundation
 @testable import OttaiKit
 import Testing
 
+@Suite("Ottai reconnect grid priority") struct OttaiReconnectGridRecoveryTests {
+    private let now = Date(timeIntervalSince1970: 1_800_001_200)
+
+    @Test("A long reconnect gap prioritizes the closest prior grid record") func selectsClosestGrid() {
+        let priority = OttaiReconnectGridRecovery.target(
+            latestLiveSequence: 124, lastGridSequence: 100, firstUsableSequence: 30,
+            lastSubmittedAt: now - 1_200, now: now
+        )
+        #expect(priority == 120)
+    }
+
+    @Test("An exact five-minute gap or live grid point uses the usual path") func keepsRegularPath() {
+        #expect(OttaiReconnectGridRecovery.target(
+            latestLiveSequence: 124, lastGridSequence: 100, firstUsableSequence: 30,
+            lastSubmittedAt: now - 300, now: now
+        ) == nil)
+        #expect(OttaiReconnectGridRecovery.target(
+            latestLiveSequence: 125, lastGridSequence: 100, firstUsableSequence: 30,
+            lastSubmittedAt: now - 1_200, now: now
+        ) == nil)
+    }
+
+    @Test("An older grid or a warmup point is never requested as a new priority point") func skipsUnavailableGrid() {
+        #expect(OttaiReconnectGridRecovery.target(
+            latestLiveSequence: 124, lastGridSequence: 125, firstUsableSequence: 30,
+            lastSubmittedAt: now - 600, now: now
+        ) == nil)
+        #expect(OttaiReconnectGridRecovery.target(
+            latestLiveSequence: 34, lastGridSequence: 25, firstUsableSequence: 31,
+            lastSubmittedAt: now - 600, now: now
+        ) == nil)
+    }
+
+    @Test("A grid at the receive watermark may still need submission") func rechecksReceivedGrid() {
+        #expect(OttaiReconnectGridRecovery.target(
+            latestLiveSequence: 124, lastGridSequence: 120, firstUsableSequence: 30,
+            lastSubmittedAt: now - 600, now: now
+        ) == 120)
+    }
+
+    @Test("The priority point must be current and newer than the last submission") func verifiesSampleTime() {
+        #expect(OttaiReconnectGridRecovery.isFresh(sampleDate: now - 120, newerThan: now - 600, now: now))
+        #expect(!OttaiReconnectGridRecovery.isFresh(sampleDate: now - 301, newerThan: now - 600, now: now))
+        #expect(!OttaiReconnectGridRecovery.isFresh(sampleDate: now - 120, newerThan: now - 120, now: now))
+        #expect(!OttaiReconnectGridRecovery.isFresh(sampleDate: now + 1, newerThan: now - 600, now: now))
+    }
+
+    @Test("Grid submission time is independent of sample time and resets with the sensor") func persistsSubmissionTime() throws {
+        var state = OttaiCGMManagerState()
+        state.latestForwardedToLoopAt = now - 120
+        state.lastGridSubmissionAt = now
+        var restored = try #require(OttaiCGMManagerState(rawValue: state.rawValue))
+        #expect(restored.latestForwardedToLoopAt == now - 120)
+        #expect(restored.lastGridSubmissionAt == now)
+        restored.resetSensorSession()
+        #expect(restored.latestForwardedToLoopAt == nil)
+        #expect(restored.lastGridSubmissionAt == nil)
+        #expect(OttaiCGMManagerState(rawValue: [:])?.lastGridSubmissionAt == nil)
+    }
+}
+
 @Suite("Ottai Wake Target Tests") struct OttaiWakeTargetTests {
     private static func candidate(_ mac: String, rssi: Int? = nil) -> OttaiSensorCandidate {
         OttaiSensorCandidate(mac: mac, rssi: rssi)

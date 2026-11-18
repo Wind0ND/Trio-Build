@@ -39,7 +39,8 @@ enum DiagnosticEventContract {
                 "activation",
                 "binding",
                 "completion",
-                "first_reading"
+                "first_reading",
+                "reconnect_grid"
             ],
             outcomes: [
                 "started",
@@ -52,7 +53,8 @@ enum DiagnosticEventContract {
                 "not_matched",
                 "present",
                 "absent",
-                "retried"
+                "retried",
+                "timed_out"
             ]
         ),
         "aidex": Feature(

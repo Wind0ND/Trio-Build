@@ -114,10 +114,10 @@ extension OttaiCGMManager {
         )
         if !isWarmupReading, !isExpiredReading { recordSample(sample) }
 
-        if sample.source == .realtime {
-            firePendingBackfill(newest: sample.sequence)
+        let previousGridSequence = state.lastGridSequence
+        if sample.source == .realtime, !checkPriorityGridOnLiveFrame {
+            firePendingBackfill(newest: sample.sequence, previousGridSequence: previousGridSequence)
         }
-
         var updated = state
 
         // Never move the freshness marker backwards for an old backfilled
@@ -227,6 +227,10 @@ extension OttaiCGMManager {
             return
         }
 
+        if sample.source == .realtime, checkPriorityGridOnLiveFrame {
+            firePendingBackfill(newest: sample.sequence, previousGridSequence: previousGridSequence)
+        }
+
         // The sensor pushes every minute; Loop doses on a 5-minute cadence.
         // Which readings get forwarded is decided entirely by the sensor's own
         // counter — every 5th record, live or backfilled, no wall-clock
@@ -242,6 +246,16 @@ extension OttaiCGMManager {
                 wasForwarded: false,
                 skipReason: "不在 5 分钟网格上"
             )
+            return
+        }
+
+        // The ordinary history walk may pass the point already submitted by
+        // the priority request. Leave the older cursor intact, but submit that
+        // exact sample only once.
+        if sample.source == .historicalBackfill,
+           let lastPriorityGrid, lastPriorityGrid.sequence == sample.sequence, lastPriorityGrid.date == sample.date
+        {
+            recordForwardingOutcome(forSequence: sample.sequence, wasForwarded: true, skipReason: nil)
             return
         }
 
@@ -277,11 +291,6 @@ extension OttaiCGMManager {
 
         var stamped = state
 
-        // Diagnostic only — nothing reads this to make a decision — but kept in
-        // sensor order like everything else.
-        if sample.date > (stamped.latestForwardedToLoopAt ?? .distantPast) {
-            stamped.latestForwardedToLoopAt = sample.date
-        }
         if sample.source != .historicalBackfill {
             stamped.latestSample = sample.withForwardingOutcome(wasForwarded: true, skipReason: nil)
         }
@@ -292,13 +301,12 @@ extension OttaiCGMManager {
         }
 
         if sample.source == .historicalBackfill {
-            pendingBackfillSamples.append(newSample)
+            if !submitPriorityGridIfReady(sample, newSample: newSample) {
+                pendingBackfillSamples.append(newSample)
+            }
         } else {
             flushPendingBackfill()
-            delegateQueue?.async { [weak self] in
-                guard let self else { return }
-                self.cgmManagerDelegate?.cgmManager(self, hasNew: .newData([newSample]))
-            }
+            submitGridSamples([newSample])
         }
     }
 
@@ -359,10 +367,22 @@ extension OttaiCGMManager {
         let batch = pendingBackfillSamples
         pendingBackfillSamples.removeAll()
         logger.debug("backfill: flushing \(batch.count) sample(s) to Loop in one batch")
-        delegateQueue?.async { [weak self] in
-            guard let self else { return }
-            self.cgmManagerDelegate?.cgmManager(self, hasNew: .newData(batch))
+        submitGridSamples(batch)
+    }
+
+    @MainActor @discardableResult func submitGridSamples(_ samples: [NewGlucoseSample]) -> Bool {
+        guard let delegateQueue, cgmManagerDelegate != nil, let newest = samples.map(\.date).max() else { return false }
+        if newest > (state.latestForwardedToLoopAt ?? .distantPast) {
+            var submitted = state
+            submitted.latestForwardedToLoopAt = newest
+            submitted.lastGridSubmissionAt = Date()
+            setState(submitted)
         }
+        delegateQueue.async { [weak self] in
+            guard let self else { return }
+            self.cgmManagerDelegate?.cgmManager(self, hasNew: .newData(samples))
+        }
+        return true
     }
 
     private static func mapTrend(_ trend: GlucoseSample.Trend) -> GlucoseTrend? {
@@ -426,15 +446,13 @@ extension OttaiCGMManager {
     }
 
     /// Requests whatever is missing between the newest record we hold and the
-    /// live one that just arrived. Returns whether a request went out, so the
-    /// caller knows older readings are still inbound.
-    @MainActor private func firePendingBackfill(newest: UInt16) {
-        // A gap opens two ways — a reconnect, or a frame lost mid-stream — and
-        // both look identical from here. `pendingBackfillFrom` only carries the
-        // tail of a gap too wide for one request; otherwise the ingest
-        // watermark is the newest record we hold.
-        guard let have = pendingBackfillFrom ?? state.lastGridSequence else { return }
-        pendingBackfillFrom = nil
+    /// live one that just arrived. A reconnect can submit a priority grid point
+    /// first while the older history cursor remains queued.
+    @MainActor private func firePendingBackfill(newest: UInt16, previousGridSequence: UInt16?) {
+        guard priorityGridSequence == nil else { return }
+        let checkPriority = checkPriorityGridOnLiveFrame
+        checkPriorityGridOnLiveFrame = false
+        guard let have = pendingBackfillFrom ?? previousGridSequence else { return }
         guard let monitor else {
             logger.debug("backfill: skipped, no live monitor (have=\(have), seq=\(newest))")
             return
@@ -443,15 +461,21 @@ extension OttaiCGMManager {
             logger.debug("backfill: skipped, no preheat duration for the current sensor (have=\(have), seq=\(newest))")
             return
         }
+        let firstUsable = Self.firstBackfillableSequence(preheatDuration: preheat)
+        if checkPriority, startPriorityGridRequest(newest: newest, have: have, firstUsableSequence: firstUsable, monitor: monitor) {
+            return
+        }
+
         let parseVersion = OttaiFrameParser.parseVersion(
             forDeviceVersion: state.sensors.current()?.deviceInfo.deviceVersion ?? ""
         )
         guard let range = Self.backfillRange(
             have: have,
             newest: newest,
-            firstRequestable: Self.firstBackfillableSequence(preheatDuration: preheat),
+            firstRequestable: firstUsable,
             maxCount: Self.maxBackfillRequestCount(parseVersion: parseVersion)
         ) else {
+            pendingBackfillFrom = nil
             logger.debug("backfill: nothing missing at seq=\(newest) (have=\(have))")
             return
         }
@@ -469,7 +493,9 @@ extension OttaiCGMManager {
                 self?.logger.debug("historical backfill request failed: \(String(describing: error)); hole stays queued")
 
                 Task { @MainActor in
-                    guard let self, self.pendingBackfillFrom == range.remaining else { return }
+                    guard let self, self.monitor === monitor, self.priorityGridSequence == nil,
+                          self.pendingBackfillFrom == range.remaining
+                    else { return }
                     self.pendingBackfillFrom = have
                 }
             }

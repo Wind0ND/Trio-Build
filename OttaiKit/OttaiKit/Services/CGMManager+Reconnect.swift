@@ -22,7 +22,12 @@ extension OttaiCGMManager {
         // delayed disconnect tail is ignored by the identity check in
         // handleMonitorDisconnect, so this can't tear down the new monitor.
         self.monitor?.disconnect()
+        finishPriorityGridRequest(.cancelled)
         self.monitor = monitor
+        checkPriorityGridOnLiveFrame = true
+        // Keep the cursor from before reconnect even if an unusable live
+        // frame reaches the grid watermark before the first valid frame.
+        pendingBackfillFrom = pendingBackfillFrom ?? state.lastGridSequence
         connectedAt = Date()
         firstConnectionFailed = false
 
@@ -56,8 +61,11 @@ extension OttaiCGMManager {
         // manager state is only ever mutated there. The frame stream is serial,
         // so the hops stay in record order.
         monitor.setHandlers(
-            onReading: { [weak self] sample in
-                Task { @MainActor in self?.ingest(sample) }
+            onReading: { [weak self, weak monitor] sample in
+                Task { @MainActor in
+                    guard let self, let monitor, self.monitor === monitor else { return }
+                    self.ingest(sample)
+                }
             },
             onDisconnect: { [weak self, weak monitor] in
                 guard let monitor else { return }
@@ -71,8 +79,11 @@ extension OttaiCGMManager {
                 guard let service = self?.telemetryService else { return }
                 Task { await service.enqueue(record) }
             },
-            onBackfillComplete: { [weak self] in
-                Task { @MainActor in self?.flushPendingBackfill() }
+            onBackfillComplete: { [weak self, weak monitor] in
+                Task { @MainActor in
+                    guard let self, let monitor, self.monitor === monitor else { return }
+                    self.flushPendingBackfill()
+                }
             },
             onNotifyInfo: { [weak self] orgHex in
                 guard let self, let service = self.telemetryService, let mac = self.state.mac else { return }
@@ -106,6 +117,7 @@ extension OttaiCGMManager {
         // A replaced monitor's stop() lets its stream tasks end with a delayed
         // disconnect tail; only the current monitor may tear things down.
         guard self.monitor === monitor else { return }
+        finishPriorityGridRequest(.cancelled)
         flushPendingBackfill()
         // Stop the outgoing monitor rather than only dropping the reference:
         // its stale watchdog otherwise keeps looping and forcing disconnects

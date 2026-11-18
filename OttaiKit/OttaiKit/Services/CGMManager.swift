@@ -93,6 +93,10 @@ open class OttaiCGMManager: CGMManager, @unchecked Sendable {
 
     var pendingBackfillFrom: UInt16?
     var pendingBackfillSamples: [NewGlucoseSample] = []
+    var checkPriorityGridOnLiveFrame = false
+    var priorityGridSequence: UInt16?
+    var priorityGridTask: Task<Void, Never>?
+    var lastPriorityGrid: (sequence: UInt16, date: Date)?
 
     /// Client-side data-plausibility engine. Lives manager-side so streaks survive
     /// BLE reconnects; only the latched `broken` verdict is persisted.
@@ -330,6 +334,9 @@ open class OttaiCGMManager: CGMManager, @unchecked Sendable {
         plausibilityGuard = OttaiPlausibilityGuard()
         pendingBackfillFrom = nil
         pendingBackfillSamples = []
+        checkPriorityGridOnLiveFrame = false
+        finishPriorityGridRequest(.cancelled)
+        lastPriorityGrid = nil
         if let mac = state.mac {
             let event = PersistedCgmEvent(date: Date(), type: .sensorEnd, deviceIdentifier: mac)
             delegateQueue?.async { [weak self] in

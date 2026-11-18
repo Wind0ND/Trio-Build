@@ -29,6 +29,7 @@ public enum OttaiDiagnosticEvent {
         case binding
         case completion
         case firstReading = "first_reading"
+        case reconnectGrid = "reconnect_grid"
     }
 
     public enum Outcome: String, Sendable {
@@ -43,6 +44,7 @@ public enum OttaiDiagnosticEvent {
         case present
         case absent
         case retried
+        case timedOut = "timed_out"
     }
 
     public static func record(

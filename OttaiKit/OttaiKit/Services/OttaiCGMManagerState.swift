@@ -37,6 +37,7 @@ public struct OttaiCGMManagerState: RawRepresentable, Equatable {
     public static let recentSamplesPersistenceCap = 12
 
     public var latestForwardedToLoopAt: Date?
+    var lastGridSubmissionAt: Date?
 
     public var sensorFault: OttaiSensorFault.Kind?
     public var sensorNeedsReplacement: Bool { sensorFault != nil }
@@ -57,6 +58,7 @@ public struct OttaiCGMManagerState: RawRepresentable, Equatable {
         latestSample = nil
         recentSamples = []
         latestForwardedToLoopAt = nil
+        lastGridSubmissionAt = nil
         sensorFault = nil
         telemetryQueue = []
     }
@@ -80,6 +82,7 @@ public struct OttaiCGMManagerState: RawRepresentable, Equatable {
             recentSamples = recentRaw.compactMap(GlucoseSample.init(rawValue:))
         }
         latestForwardedToLoopAt = rawValue["latestForwardedToLoopAt"] as? Date
+        lastGridSubmissionAt = rawValue["lastGridSubmissionAt"] as? Date
         if let kindTag = rawValue["sensorFaultKind"] as? String,
            let state = rawValue["sensorFaultState"] as? Int
         {
@@ -124,6 +127,7 @@ public struct OttaiCGMManagerState: RawRepresentable, Equatable {
             raw["recentSamples"] = recentSamples.prefix(Self.recentSamplesPersistenceCap).map(\.rawValue)
         }
         raw["latestForwardedToLoopAt"] = latestForwardedToLoopAt
+        raw["lastGridSubmissionAt"] = lastGridSubmissionAt
 
         switch sensorFault {
         case let .deviceStateObsolete(state):
