@@ -74,7 +74,7 @@ import Testing
     @Test("Exponential smoothing does not smooth manual glucose entries") func testExponentialSmoothingIgnoresManual() async throws {
         // GIVEN: Mixed manual + CGM values
         await createGlucoseSequence(values: [100, 105, 110, 115, 120].map(Int16.init), interval: 5 * 60, isManual: false)
-        await createGlucose(glucose: 130, smoothed: nil, isManual: true, date: Date().addingTimeInterval(6 * 5 * 60))
+        await createGlucose(glucose: 130, smoothed: nil, isManual: true, date: Date())
 
         // WHEN
         await fetchGlucoseManager.exponentialSmoothingGlucose(context: testContext)
@@ -123,22 +123,22 @@ import Testing
         "Exponential smoothing stops at gaps >= 12 minutes and only updates the most recent window"
     ) func testExponentialSmoothingGapStopsWindow() async throws {
         let now = Date()
+        let interval: TimeInterval = 5 * 60
+        let gapStart = now.addingTimeInterval(-2 * interval)
+        let olderStart = gapStart.addingTimeInterval(-15 * 60 - 9 * interval)
 
         var dates: [Date] = []
         var values: [Int16] = []
 
         // Older contiguous block (should remain untouched)
         for i in 0 ..< 10 {
-            dates.append(now.addingTimeInterval(Double(i) * 5 * 60))
+            dates.append(olderStart.addingTimeInterval(Double(i) * interval))
             values.append(Int16(100 + i * 5))
         }
 
-        // GAP (15 minutes)
-        let gapStart = now.addingTimeInterval(Double(10) * 5 * 60 + 15 * 60)
-
-        // Recent block (too small -> fallback applies only here)
+        // Recent block after a 15-minute gap (too small for normal smoothing).
         for i in 0 ..< 3 {
-            dates.append(gapStart.addingTimeInterval(Double(i) * 5 * 60))
+            dates.append(gapStart.addingTimeInterval(Double(i) * interval))
             values.append(Int16(200 + i * 5))
         }
 
@@ -365,8 +365,9 @@ import Testing
     }
 
     private func createGlucoseSequence(values: [Int16], interval: TimeInterval, isManual: Bool) async {
-        let now = Date()
-        let dates = values.indices.map { now.addingTimeInterval(Double($0) * interval) }
+        // End before now so startup's clock cleanup cannot delete the fixture.
+        let end = Date().addingTimeInterval(-60)
+        let dates = values.indices.map { end.addingTimeInterval(Double($0 - (values.count - 1)) * interval) }
         await createGlucoseSequence(values: values, dates: dates, isManual: isManual)
     }
 
