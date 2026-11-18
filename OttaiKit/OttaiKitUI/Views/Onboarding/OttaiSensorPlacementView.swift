@@ -38,8 +38,8 @@ struct OttaiSensorPlacementView: View {
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
     }
 
-    private func art(_ ottaiArt: [String], _ ottaiArt: [String]) -> [String] {
-        ottai ? ottaiArt : ottaiArt
+    private func art(_ ottaiArt: [String], _ applicatorArt: [String]) -> [String] {
+        ottai ? ottaiArt : applicatorArt
     }
 
     @ViewBuilder private func stepView(_ index: Int) -> some View {
