@@ -5,6 +5,16 @@ import XCTest
 final class PrivacyPolicyTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
 
+    func testDisplayUsesApprovedQuietPalette() {
+        let anchors: [(Double, UInt32)] = [
+            (2, 0x7B63A3), (3.5, 0x5375A9), (5, 0x508165),
+            (7, 0x7C834A), (10, 0xA16D40), (15, 0xAC5853)
+        ]
+        for (mmolL, hex) in anchors {
+            XCTAssertEqual(PrivacyPalette().color(mgDL: mmolL * 18), PrivacyColor(hex: hex))
+        }
+    }
+
     func testSixSlotsRemainChronologicalAndKeepGaps() {
         let state = PrivacyActivityState(readings: [
             .init(mgDL: 108, date: now), .init(mgDL: 90, date: now.addingTimeInterval(-300)),
