@@ -74,7 +74,8 @@ extension LiveActivityAttributes.ContentState {
         tempTarget: TempTargetData?,
         widgetItems: [LiveActivityAttributes.LiveActivityItem]?,
         privateDisplay: Bool = PrivacyPreference.displayEnabled,
-        privateCover: Data? = UserDefaults.standard.data(forKey: PrivacyPreference.coverKey)
+        privateCover: Data? = UserDefaults.standard.data(forKey: PrivacyPreference.coverKey),
+        privateRecoveredAt: Date? = nil
     ) {
         let glucose = bg.glucose
         let formattedBG = glucose.formatted(for: units)
@@ -153,7 +154,7 @@ extension LiveActivityAttributes.ContentState {
             privacy: privateDisplay ? PrivacyActivityState(
                 readings: chart.map { PrivacyReading(mgDL: Double($0.glucose), date: $0.date) },
                 now: Date(), palette: .stored(),
-                cover: privateCover
+                cover: privateCover, recoveredAt: privateRecoveredAt
             ) : nil,
             glucoseMeasuredAt: bg.date
         )

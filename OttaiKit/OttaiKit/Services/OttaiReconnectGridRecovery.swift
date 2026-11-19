@@ -1,6 +1,13 @@
 import Foundation
 @preconcurrency import LoopKit
 
+/// In-process presentation receipt, separate from exported diagnostics and the sample's measurement time.
+public enum OttaiGridRecoveryReceipt {
+    public static let notification = Notification.Name("com.trio.ottai.gridRecovery.submitted")
+    public static let measuredAtKey = "measuredAt"
+    public static let receivedAtKey = "receivedAt"
+}
+
 enum OttaiReconnectGridRecovery {
     static let interval: TimeInterval = TimeInterval(OttaiCGMManager.forwardGridStep) * 60
 
@@ -64,6 +71,10 @@ extension OttaiCGMManager {
             return false
         }
         lastPriorityGrid = (sample.sequence, sample.date)
+        Foundation.NotificationCenter.default.post(
+            name: OttaiGridRecoveryReceipt.notification, object: nil,
+            userInfo: [OttaiGridRecoveryReceipt.measuredAtKey: sample.date, OttaiGridRecoveryReceipt.receivedAtKey: Date()]
+        )
         finishPriorityGridRequest(.present)
         return true
     }

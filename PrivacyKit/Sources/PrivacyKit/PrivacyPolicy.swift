@@ -103,13 +103,21 @@ public struct PrivacyActivityState: Codable, Hashable, Sendable {
     public let heights: [Double?]
     public let color: PrivacyColor
     public let measuredAt: Date?
+    public let recoveredAt: Date?
     public private(set) var cover: Data?
 
-    public init(readings: [PrivacyReading], now: Date, palette: PrivacyPalette = .init(), cover: Data? = nil) {
+    public init(readings: [PrivacyReading], now: Date, palette: PrivacyPalette = .init(), cover: Data? = nil, recoveredAt: Date? = nil) {
         // A future or invalid reading cannot become the color/freshness anchor.
         let valid = readings.filter { $0.mgDL.isFinite && $0.mgDL > 0 && $0.mgDL <= 1000 && $0.date <= now }
             .sorted { $0.date > $1.date }
         measuredAt = valid.first?.date
+        // Only a validated current-grid receipt may extend presentation. Arbitrary old history is not freshened.
+        if let recoveredAt, let measuredAt, recoveredAt >= measuredAt, recoveredAt <= now,
+           recoveredAt.timeIntervalSince(measuredAt) <= 300 {
+            self.recoveredAt = recoveredAt
+        } else {
+            self.recoveredAt = nil
+        }
         color = palette.color(mgDL: valid.first?.mgDL)
         self.cover = cover.flatMap { $0.count <= 1200 ? $0 : nil }
         guard let latest = valid.first else {
@@ -126,7 +134,7 @@ public struct PrivacyActivityState: Codable, Hashable, Sendable {
     }
 
     // Five-minute readings get one minute of presentation grace; this never refreshes measurement age.
-    public var staleDate: Date { measuredAt?.addingTimeInterval(360) ?? .distantPast }
+    public var staleDate: Date { (recoveredAt ?? measuredAt)?.addingTimeInterval(360) ?? .distantPast }
     public func isStale(at now: Date) -> Bool { now >= staleDate }
 
     public func replacingCover(_ cover: Data?) -> Self {

@@ -6,6 +6,24 @@ import Testing
 @testable import Trio
 
 @Suite("Private Live Activity payload") struct PrivacyPresentationTests {
+    @Test("A current-grid recovery refreshes presentation but preserves the actual sample timestamp") func recoveredGridReceipt() {
+        let receivedAt = Date()
+        let measuredAt = receivedAt.addingTimeInterval(-240)
+        let reading = GlucoseData(glucose: 108, date: measuredAt, direction: nil)
+        let state = LiveActivityAttributes.ContentState(
+            new: reading, prev: nil, units: .mmolL, chart: [reading],
+            settings: TrioSettings(), determination: nil, iob: nil,
+            override: nil, tempTarget: nil, widgetItems: [], privateDisplay: true,
+            privateRecoveredAt: receivedAt
+        )
+        #expect(state.glucoseMeasuredAt == measuredAt)
+        #expect(state.privacy?.measuredAt == measuredAt)
+        #expect(state.privacy?.recoveredAt == receivedAt)
+        #expect(state.privacy?.staleDate == receivedAt.addingTimeInterval(360))
+        let fallback = LiveActivityAttributes.ContentState.privateFallback(previous: state, settings: TrioSettings())
+        #expect(fallback.privacy?.staleDate == state.privacy?.staleDate)
+    }
+
     @Test("Private alert content preserves the dependency's complete action list") func alertActions() {
         let content = LoopKit.Alert.Content(
             title: "Low Glucose", body: "Clinical details",

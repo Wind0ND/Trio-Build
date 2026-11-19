@@ -5,6 +5,7 @@ import Foundation
 import Swinject
 import UIKit
 import PrivacyKit
+import OttaiKit
 
 @available(iOS 16.2, *) private struct ActiveActivity {
     let activity: Activity<LiveActivityAttributes>
@@ -71,6 +72,7 @@ final class LiveActivityData: ObservableObject {
     private var currentActivity: ActiveActivity?
 
     private var data = LiveActivityData()
+    private var recoveredGridReceipt: (measuredAt: Date, receivedAt: Date)?
 
     /// A dispatch queue for handling Core Data change notifications.
     private let queue = DispatchQueue(label: "LiveActivityBridge.queue", qos: .userInitiated)
@@ -106,6 +108,19 @@ final class LiveActivityData: ObservableObject {
     private func setupNotifications() {
         let notificationCenter = Foundation.NotificationCenter.default
         notificationCenter.addObserver(self, selector: #selector(privacyChanged), name: PrivacyPreference.changed, object: nil)
+        notificationCenter.addObserver(
+            forName: OttaiGridRecoveryReceipt.notification, object: nil, queue: .main
+        ) { [weak self] notification in
+            guard let measuredAt = notification.userInfo?[OttaiGridRecoveryReceipt.measuredAtKey] as? Date,
+                  let receivedAt = notification.userInfo?[OttaiGridRecoveryReceipt.receivedAtKey] as? Date
+            else { return }
+            Task { @MainActor in
+                guard let self else { return }
+                // Match this receipt to its actual saved sample before granting display freshness.
+                self.recoveredGridReceipt = (measuredAt, receivedAt)
+                await self.pushCurrentContent()
+            }
+        }
         notificationCenter
             .addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil) { [weak self] _ in
                 Task { @MainActor in
@@ -426,6 +441,15 @@ final class LiveActivityData: ObservableObject {
             return
         }
 
+        let previousPrivacy = currentActivity?.activity.content.state.privacy
+            ?? Activity<LiveActivityAttributes>.activities.first?.content.state.privacy
+        var recoveredAt: Date?
+        if let receipt = recoveredGridReceipt, receipt.measuredAt == bg.date {
+            recoveredAt = receipt.receivedAt
+        } else if previousPrivacy?.measuredAt == bg.date {
+            // Reusing the same reading for a setting/algorithm update must retain, not restart, its deadline.
+            recoveredAt = previousPrivacy?.recoveredAt
+        }
         let content = LiveActivityAttributes.ContentState(
             new: bg,
             prev: prevGlucose,
@@ -436,7 +460,8 @@ final class LiveActivityData: ObservableObject {
             iob: data.iob,
             override: data.override,
             tempTarget: data.tempTarget,
-            widgetItems: data.widgetItems
+            widgetItems: data.widgetItems,
+            privateRecoveredAt: recoveredAt
         )
 
         await pushUpdate(content)

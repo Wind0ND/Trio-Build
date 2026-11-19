@@ -12,7 +12,7 @@ Privacy options start disabled. The app provides settings under Features → Pri
 
 Six five-minute slots are chronological and preserve gaps. Heights use a fixed 0–12 mmol/L scale with a visible minimum. The entire meter takes its color from the latest valid sample, using the approved deep-purple, blue, green, yellow-green, orange and red palette. Five editable boundaries default to 3, 4, 6, 8 and 12 mmol/L, with a short continuous blend around each boundary.
 
-Freshness uses the measurement timestamp. At six minutes without a new valid sample (five-minute cadence plus a one-minute presentation grace period), the waveform becomes an outline circle retaining the last color. ActivityKit stale rendering is system-scheduled and requires device verification.
+Normal freshness uses the measurement timestamp. At six minutes without a new valid sample (five-minute cadence plus a one-minute presentation grace period), the waveform becomes an outline circle retaining the last color. ActivityKit stale rendering is system-scheduled and requires device verification.
 
 Custom covers are downsampled, cropped and re-encoded without original metadata. Serialized thumbnails are bounded to 1,200 bytes. Private ActivityKit content omits the normal chart, forecasts, numeric reading, treatment values and labels. The app regression test checks the complete encoded state against ActivityKit's 4 KB limit.
 
@@ -55,3 +55,5 @@ The personal build uses the display name `hiro` in Config.xcconfig. Bundle IDs, 
 Private activities refresh stale content in place. When creation is required, they start with the sanitized current snapshot rather than briefly publishing an empty-ring placeholder. Public display behavior is retained. The measurement timestamp, collection and alarm freshness rules are not extended by this presentation grace period.
 
 Public TestFlight text lives in `fastlane/beta_metadata.json`; `scripts/check_beta_metadata.py` validates the two locales and screens for sensitive terminology/encoding errors before tests and signed builds. This personal distribution requires the file: both CI and direct Fastlane release fail if it is missing or invalid, rather than restoring upstream release notes. Preserve it and the release-lane override when merging upstream.
+
+A successful Ottai current-grid recovery has a separate in-process receipt. The existing driver still requires a newer valid sample no more than five minutes old. The host matches that receipt to the latest saved sample and grants six minutes of presentation from receipt, while preserving the real measurement time. Plain history batches, cover/settings changes and algorithm updates do not restart that clock. The optional receipt timestamp remains backward-compatible with old ActivityKit content and is not part of exported diagnostic events.

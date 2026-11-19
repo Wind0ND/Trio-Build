@@ -45,6 +45,40 @@ final class PrivacyPolicyTests: XCTestCase {
         XCTAssertEqual(high.heights[5], 1)
     }
 
+    func testRecentRecoveredGridGetsDisplayTimeWithoutChangingMeasurementTime() {
+        let measured = now.addingTimeInterval(-240)
+        let state = PrivacyActivityState(
+            readings: [.init(mgDL: 90, date: measured)], now: now, recoveredAt: now
+        )
+        XCTAssertEqual(state.measuredAt, measured)
+        XCTAssertEqual(state.recoveredAt, now)
+        XCTAssertEqual(state.staleDate, now.addingTimeInterval(360))
+        XCTAssertFalse(state.isStale(at: now.addingTimeInterval(359)))
+        XCTAssertTrue(state.isStale(at: now.addingTimeInterval(360)))
+        let changedCover = state.replacingCover(Data([1, 2, 3]))
+        XCTAssertEqual(changedCover.staleDate, state.staleDate)
+
+        let old = PrivacyActivityState(
+            readings: [.init(mgDL: 90, date: now.addingTimeInterval(-3600))], now: now, recoveredAt: now
+        )
+        XCTAssertNil(old.recoveredAt)
+        XCTAssertTrue(old.isStale(at: now))
+        let futureReceipt = PrivacyActivityState(
+            readings: [.init(mgDL: 90, date: measured)], now: now, recoveredAt: now.addingTimeInterval(1)
+        )
+        XCTAssertNil(futureReceipt.recoveredAt)
+    }
+
+    func testExistingSnapshotsWithoutRecoveryFieldStillDecode() throws {
+        let original = PrivacyActivityState(readings: [.init(mgDL: 90, date: now)], now: now)
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
+        json.removeValue(forKey: "recoveredAt")
+        let decoded = try JSONDecoder().decode(PrivacyActivityState.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertNil(decoded.recoveredAt)
+        XCTAssertEqual(decoded.measuredAt, original.measuredAt)
+        XCTAssertEqual(decoded.staleDate, original.staleDate)
+    }
+
     func testLinearHeightUsesTwelveAsTheDisplayCeiling() {
         for (mmolL, expected) in [(4.0, 1.0 / 3), (6.0, 0.5), (8.0, 2.0 / 3),
                                   (10.0, 5.0 / 6), (12.0, 1.0), (16.0, 1.0)] {
