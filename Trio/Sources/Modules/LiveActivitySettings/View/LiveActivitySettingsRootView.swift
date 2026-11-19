@@ -1,4 +1,5 @@
 import ActivityKit
+import PrivacyAppKit
 import SwiftUI
 import Swinject
 
@@ -29,6 +30,11 @@ extension LiveActivitySettings {
 
         var body: some View {
             List {
+                Section {
+                    NavigationLink(destination: PrivacySettingsView()) {
+                        Label(String(localized: "Privacy"), systemImage: "eye.slash")
+                    }
+                }.listRowBackground(Color.chart)
                 if !systemLiveActivitySetting {
                     Section(
                         header: Text("Display Live Data From Trio"),

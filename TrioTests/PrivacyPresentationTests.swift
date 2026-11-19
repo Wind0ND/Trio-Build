@@ -21,4 +21,21 @@ import Testing
         #expect(state.privacy?.measuredAt == now)
         #expect(try JSONEncoder().encode(state).count < 4096)
     }
+
+    @Test("Fallback removes the cover while retaining stale geometry and measurement time") func fallbackCoverRemoval() {
+        let now = Date().addingTimeInterval(-7 * 3600)
+        let reading = GlucoseData(glucose: 142, date: now, direction: nil)
+        let state = LiveActivityAttributes.ContentState(
+            new: reading, prev: nil, units: .mmolL, chart: [reading],
+            settings: TrioSettings(), determination: nil, iob: 3,
+            override: nil, tempTarget: nil, widgetItems: [],
+            privateDisplay: true, privateCover: Data([1, 2, 3])
+        )
+        let fallback = LiveActivityAttributes.ContentState.privateFallback(previous: state, settings: TrioSettings(), cover: nil)
+        #expect(fallback.privacy?.cover == nil)
+        #expect(fallback.privacy?.measuredAt == state.privacy?.measuredAt)
+        #expect(fallback.privacy?.heights == state.privacy?.heights)
+        #expect(fallback.privacy?.color == state.privacy?.color)
+        #expect(fallback.privacy?.isStale(at: Date()) == true)
+    }
 }

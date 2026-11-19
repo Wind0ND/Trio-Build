@@ -15,6 +15,7 @@ func privacyText(_ key: String) -> String {
     @Published private(set) var busy = false
     @Published var message: String?
     private var shield: UIWindow?
+    private weak var previousKeyWindow: UIWindow?
     private var pendingAction: (() -> Void)?
     private var context: LAContext?
     private var authenticationGeneration = 0
@@ -61,7 +62,7 @@ func privacyText(_ key: String) -> String {
         guard configured else { return }
         if !busy { isLocked = true }
         // Cover system snapshots synchronously, including sheets presented above the app root.
-        shield?.isHidden = false
+        showShield()
     }
 
     @objc private func enteredBackground() {
@@ -70,13 +71,28 @@ func privacyText(_ key: String) -> String {
         context?.invalidate()
         pendingAction = nil
         isLocked = true
-        shield?.isHidden = false
+        showShield()
     }
 
     @objc private func becameActive() { updateShield() }
 
     private func updateShield() {
-        shield?.isHidden = !configured || (!isLocked && UIApplication.shared.applicationState == .active)
+        if configured && (isLocked || UIApplication.shared.applicationState != .active) {
+            showShield()
+        } else if let shield, !shield.isHidden {
+            shield.isHidden = true
+            previousKeyWindow?.makeKey()
+        }
+    }
+
+    private func showShield() {
+        guard let shield else { return }
+        if shield.isHidden {
+            previousKeyWindow = shield.windowScene?.windows.first { $0.isKeyWindow && $0 !== shield }
+            previousKeyWindow?.endEditing(true)
+        }
+        shield.isHidden = false
+        if UIApplication.shared.applicationState == .active { shield.makeKey() }
     }
 
     private func completeUnlock() {

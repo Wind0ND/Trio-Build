@@ -21,27 +21,42 @@ enum TrioPrivacyAlert {
 /// An enumeration taken before a cancellation or new alert must never recreate an old alert.
 enum PrivacyNotificationLifecycle {
     private static let lock = NSRecursiveLock()
-    private static var generation: UInt64 = 0
+    private static var generations: [String: UInt64] = [:]
     private static var cancelled = Set<String>()
 
-    static var revision: UInt64 {
+    static var revision: [String: UInt64] {
         lock.lock()
         defer { lock.unlock() }
-        return generation
+        return generations
     }
 
     static func schedule(_ request: UNNotificationRequest, center: UNUserNotificationCenter, completion: @escaping (Error?) -> Void) {
         lock.lock()
         defer { lock.unlock() }
-        generation &+= 1
+        generations[request.identifier, default: 0] &+= 1
         cancelled.remove(request.identifier)
-        center.add(request, withCompletionHandler: completion)
+        var outgoing = request
+        if PrivacyPreference.alertsEnabled,
+           let slug = request.content.userInfo[AlertUserInfoKey.alertIdentifier.rawValue] as? String,
+           PrivacyGlucoseAlarm(identifier: slug) != nil,
+           let content = request.content.mutableCopy() as? UNMutableNotificationContent
+        {
+            content.title = PrivacyText.attention
+            content.subtitle = ""
+            content.body = ""
+            outgoing = UNNotificationRequest(identifier: request.identifier, content: content, trigger: request.trigger)
+        }
+        center.add(outgoing) { error in
+            completion(error)
+            // A privacy change can happen while notification delivery is in flight.
+            if error == nil, PrivacyPreference.alertsEnabled { TrioPrivacyCoordinator.reconcile() }
+        }
     }
 
     static func cancel(_ identifiers: [String], center: UNUserNotificationCenter) {
         lock.lock()
         defer { lock.unlock() }
-        generation &+= 1
+        for identifier in identifiers { generations[identifier, default: 0] &+= 1 }
         cancelled.formUnion(identifiers)
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
         center.removeDeliveredNotifications(withIdentifiers: identifiers)
@@ -50,14 +65,14 @@ enum PrivacyNotificationLifecycle {
     static func invalidate(_ identifiers: [String]) {
         lock.lock()
         defer { lock.unlock() }
-        generation &+= 1
+        for identifier in identifiers { generations[identifier, default: 0] &+= 1 }
         cancelled.formUnion(identifiers)
     }
 
     static func replace(_ request: UNNotificationRequest, revision: UInt64, center: UNUserNotificationCenter) {
         lock.lock()
         defer { lock.unlock() }
-        guard generation == revision, !cancelled.contains(request.identifier), PrivacyPreference.alertsEnabled else { return }
+        guard generations[request.identifier, default: 0] == revision, !cancelled.contains(request.identifier), PrivacyPreference.alertsEnabled else { return }
         center.add(request) { _ in
             lock.lock()
             defer { lock.unlock() }
@@ -79,6 +94,12 @@ final class TrioPrivacyCoordinator {
         observer = Foundation.NotificationCenter.default.addObserver(
             forName: PrivacyPreference.changed, object: nil, queue: .main
         ) { _ in
+            Self.reconcile()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { Self.reconcile() }
+        }
+    }
+
+    static func reconcile() {
             guard PrivacyPreference.alertsEnabled else { return }
             let center = UNUserNotificationCenter.current()
             let revision = PrivacyNotificationLifecycle.revision
@@ -102,7 +123,7 @@ final class TrioPrivacyCoordinator {
                     }
                     PrivacyNotificationLifecycle.replace(
                         UNNotificationRequest(identifier: request.identifier, content: content, trigger: trigger),
-                        revision: revision, center: center
+                        revision: revision[request.identifier, default: 0], center: center
                     )
                 }
             }
@@ -120,11 +141,10 @@ final class TrioPrivacyCoordinator {
                     content.sound = nil
                     PrivacyNotificationLifecycle.replace(
                         UNNotificationRequest(identifier: request.identifier, content: content, trigger: nil),
-                        revision: revision, center: center
+                        revision: revision[request.identifier, default: 0], center: center
                     )
                 }
             }
-        }
     }
 }
 

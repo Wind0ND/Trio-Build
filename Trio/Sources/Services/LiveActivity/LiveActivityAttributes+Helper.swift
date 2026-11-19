@@ -28,11 +28,13 @@ extension LiveActivityAttributes.SimpleViewStyle {
 
 extension LiveActivityAttributes.ContentState {
     /// Privacy must take effect even while Core Data is loading or has no recent samples.
-    static func privateFallback(previous: Self?, settings: TrioSettings) -> Self {
+    static func privateFallback(
+        previous: Self?, settings: TrioSettings,
+        cover: Data? = UserDefaults.standard.data(forKey: PrivacyPreference.coverKey)
+    ) -> Self {
         let readings = previous?.detailedViewState.chart.map {
             PrivacyReading(mgDL: NSDecimalNumber(decimal: $0.value).doubleValue, date: $0.date)
         } ?? []
-        let cover = UserDefaults.standard.data(forKey: PrivacyPreference.coverKey)
         let snapshot = previous?.privacy?.replacingCover(cover) ?? PrivacyActivityState(
             readings: readings, now: Date(), palette: .stored(),
             cover: cover

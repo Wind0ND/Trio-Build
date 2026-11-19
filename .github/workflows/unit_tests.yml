@@ -102,6 +102,14 @@ jobs:
             swift test --package-path "$package" --scratch-path "$RUNNER_TEMP/trio-package-tests/$package"
           done
 
+      - name: Build privacy iOS targets
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          swift build --package-path PrivacyKit \
+            --scratch-path "$RUNNER_TEMP/privacy-ios-build" \
+            --triple arm64-apple-ios17.0-simulator \
+            --sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)"
+
       # Fingerprint dependency state (independent of app source) for the cache
       # key, so the restore hits on nearly every PR — app code churns, pins
       # rarely do.
