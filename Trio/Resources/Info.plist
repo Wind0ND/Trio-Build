@@ -86,7 +86,7 @@
 	<key>NSContactsUsageDescription</key>
 	<string>Contact is used to create a Apple Watch complication</string>
 	<key>NSFaceIDUsageDescription</key>
-	<string>For authorized access to bolus</string>
+	<string>To confirm your identity before delivering a bolus or viewing private content.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Health App is used to store blood glucose, carbs and insulin</string>
 	<key>NSHealthUpdateUsageDescription</key>

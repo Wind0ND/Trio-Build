@@ -443,12 +443,18 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
                 let ids = requests
                     .filter { $0.content.interruptionLevel != .critical }
                     .map(\.identifier)
-                if !ids.isEmpty { center.removePendingNotificationRequests(withIdentifiers: ids) }
+                if !ids.isEmpty {
+                    PrivacyNotificationLifecycle.invalidate(ids)
+                    center.removePendingNotificationRequests(withIdentifiers: ids)
+                }
                 center.getDeliveredNotifications { delivered in
                     let ids = delivered
                         .filter { $0.request.content.interruptionLevel != .critical }
                         .map(\.request.identifier)
-                    if !ids.isEmpty { center.removeDeliveredNotifications(withIdentifiers: ids) }
+                    if !ids.isEmpty {
+                        PrivacyNotificationLifecycle.invalidate(ids)
+                        center.removeDeliveredNotifications(withIdentifiers: ids)
+                    }
                     continuation.resume()
                 }
             }
@@ -462,6 +468,7 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
                 .filter { $0.content.interruptionLevel != .critical }
                 .map(\.identifier)
             guard !ids.isEmpty else { return }
+            PrivacyNotificationLifecycle.invalidate(ids)
             center.removePendingNotificationRequests(withIdentifiers: ids)
         }
         center.getDeliveredNotifications { delivered in
@@ -469,6 +476,7 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
                 .filter { $0.request.content.interruptionLevel != .critical }
                 .map(\.request.identifier)
             guard !ids.isEmpty else { return }
+            PrivacyNotificationLifecycle.invalidate(ids)
             center.removeDeliveredNotifications(withIdentifiers: ids)
         }
     }

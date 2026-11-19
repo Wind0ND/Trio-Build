@@ -1,7 +1,9 @@
 import ActivityKit
 import Foundation
+import PrivacyKit
 import SwiftUI
 import WidgetKit
+import UIKit
 
 struct LiveActivityView: View {
     @Environment(\.colorScheme) var colorScheme
@@ -18,7 +20,17 @@ struct LiveActivityView: View {
     }
 
     var body: some View {
-        if isWatchOS, context.state.useDetailedViewWatchOS {
+        if let privacy = context.state.privacy {
+            let style = context.state.simpleViewStyle
+            HStack {
+                PrivacyCoverView(data: privacy.cover, size: isWatchOS ? 20 : 24)
+                Spacer()
+                PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()))
+            }
+            // Match the existing simple layout's line height and padding, keeping the meter small.
+            .frame(height: UIFontMetrics(forTextStyle: style.fontSize.uiTextStyle).scaledValue(for: style.fontSize.basePointSize) * 1.2)
+            .addLiveActivityModifiers(isWatchOS: isWatchOS, verticalPadding: style.fontSize.verticalPadding)
+        } else if isWatchOS, context.state.useDetailedViewWatchOS {
             VStack {
                 LiveActivityBGLabelWatchView(context: context, glucoseColor: glucoseColor)
                 LiveActivityChartView(context: context, additionalState: context.state.detailedViewState)

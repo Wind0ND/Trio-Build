@@ -81,6 +81,10 @@ enum DiagnosticEventContract {
             stages: ["scan", "match", "connection", "service", "characteristic"],
             outcomes: ["started", "matched", "succeeded", "unavailable", "timed_out", "failed", "stopped"]
         ),
+        "privacy": Feature(
+            stages: ["settings", "cover", "authentication", "lock"],
+            outcomes: ["changed", "succeeded", "failed", "reset", "enabled", "disabled"]
+        ),
         "keep_alive": Feature(
             stages: ["audio", "reminder", "data"],
             outcomes: ["started", "stopped", "failed", "interrupted", "capped", "scheduled", "recovered"]

@@ -1,6 +1,26 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Enable private activity": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开启隐式实时活动"
+          }
+        }
+      }
+    },
+    "Show a discreet waveform instead of glucose numbers.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用小声浪隐式显示血糖范围与趋势。"
+          }
+        }
+      }
+    },
     "Includes app version and feature events for scanning, pairing and background monitoring." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -42385,7 +42405,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用一个常数调整动态比率。默认值为 0.5。数值越大，血糖偏高或偏低时对 ISF 的修正幅度越大。最大修正幅度由 Autosens 上下限设置决定。使用 S 形函数时，建议从 0.4–0.5 的调节系数开始。对数公式的起始值尚无普遍共识，但对多数用户来说，0.5–0.8 更合适。"
+            "value" : "使用一个常数调整动态比率。默认值为 0.5。数值越大，血糖偏高或偏低时对 ISF 的修正幅度越大。最大修正幅度由自动敏感性评估上下限设置决定。使用 S 形函数时，建议从 0.4–0.5 的调节系数开始。对数公式的起始值尚无普遍共识，但对多数用户来说，0.5–0.8 更合适。"
           }
         },
         "zh-Hant" : {
@@ -42775,7 +42795,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此值会影响敏感性随血糖变化调整的速度，也会改变达到 Autosens 上下限时对应的血糖值。"
+            "value" : "此值会影响敏感性随血糖变化调整的速度，也会改变达到自动敏感性评估上下限时对应的血糖值。"
           }
         },
         "zh-Hant" : {
@@ -57704,7 +57724,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "自动敏感性调整（Autosens）根据观测到的胰岛素敏感性或抵抗程度调整胰岛素输注。"
+            "value" : "自动敏感性评估根据观测到的胰岛素敏感性或抵抗程度调整胰岛素输注。"
           }
         },
         "zh-Hant" : {
@@ -58362,7 +58382,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens"
+            "value" : "自动敏感性评估"
           }
         },
         "zh-Hant" : {
@@ -58492,7 +58512,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 会分析历史数据，估算本次闭环周期中的胰岛素敏感性或抵抗程度，并据此自动调整输注，以保持血糖稳定。"
+            "value" : "自动敏感性评估会分析历史数据，估算本次闭环周期中的胰岛素敏感性或抵抗程度，并据此自动调整输注，以保持血糖稳定。"
           }
         },
         "zh-Hant" : {
@@ -58622,7 +58642,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 可与超微量大剂量（SMB）等某些设置配合使用。动态 ISF 等其他设置会改变 Autosens 公式的一部分。启用前，请查看应用内的算法设置提示，了解这些设置可能带来的影响。"
+            "value" : "自动敏感性评估可与超微量大剂量（SMB）等某些设置配合使用。动态 ISF 等其他设置会改变自动敏感性评估公式的一部分。启用前，请查看应用内的算法设置提示，了解这些设置可能带来的影响。"
           }
         },
         "zh-Hant" : {
@@ -58752,7 +58772,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 的安全限制由上限和下限设置决定，用来避免过度调整。"
+            "value" : "自动敏感性评估的安全限制由上限和下限设置决定，用来避免过度调整。"
           }
         },
         "zh-Hant" : {
@@ -58883,7 +58903,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 上限"
+            "value" : "自动敏感性评估上限"
           }
         },
         "zh-Hant" : {
@@ -59013,7 +59033,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 上限用于设置 Autosens、动态 ISF 和 S 形公式可使用的最高 Autosens 比率。"
+            "value" : "自动敏感性评估上限用于设置自动敏感性评估、动态 ISF 和 S 形公式可使用的最高敏感性调整系数。"
           }
         },
         "zh-Hant" : {
@@ -59143,7 +59163,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 上限用于设置 Autosens、动态 ISF 和 S 形公式可使用的最高敏感性比率。"
+            "value" : "自动敏感性评估上限用于设置自动敏感性评估、动态 ISF 和 S 形公式可使用的最高敏感性调整系数。"
           }
         },
         "zh-Hant" : {
@@ -59274,7 +59294,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 上限"
+            "value" : "自动敏感性评估上限"
           }
         },
         "zh-Hant" : {
@@ -59405,7 +59425,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 下限"
+            "value" : "自动敏感性评估下限"
           }
         },
         "zh-Hant" : {
@@ -59535,7 +59555,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 下限用于设置 Autosens、动态 ISF 和 S 形公式可使用的最低 Autosens 比率。"
+            "value" : "自动敏感性评估下限用于设置自动敏感性评估、动态 ISF 和 S 形公式可使用的最低敏感性调整系数。"
           }
         },
         "zh-Hant" : {
@@ -59665,7 +59685,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 下限用于设置 Autosens、动态 ISF 和 S 形公式可使用的最低敏感性比率。"
+            "value" : "自动敏感性评估下限用于设置自动敏感性评估、动态 ISF 和 S 形公式可使用的最低敏感性调整系数。"
           }
         },
         "zh-Hant" : {
@@ -59796,7 +59816,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 下限"
+            "value" : "自动敏感性评估下限"
           }
         },
         "zh-Hant" : {
@@ -59926,7 +59946,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 会调整胰岛素敏感系数（ISF）、基础输注速率和血糖目标。它不考虑碳水化合物，而是根据血糖数据中的变化规律评估胰岛素的作用并做出调整。"
+            "value" : "自动敏感性评估会调整胰岛素敏感系数（ISF）、基础输注速率和血糖目标。它不考虑碳水化合物，而是根据血糖数据中的变化规律评估胰岛素的作用并做出调整。"
           }
         },
         "zh-Hant" : {
@@ -60056,7 +60076,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 比率"
+            "value" : "敏感性调整系数"
           }
         },
         "zh-Hant" : {
@@ -60186,7 +60206,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 比率 =\n（每日总剂量（TDD）的加权平均值）/（TDD 的 10 天平均值）"
+            "value" : "敏感性调整系数 =\n（每日总剂量（TDD）的加权平均值）/（TDD 的 10 天平均值）"
           }
         },
         "zh-Hant" : {
@@ -60316,7 +60336,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 将从回退时间点重新学习您的胰岛素敏感性，最长可能需要 6 小时。"
+            "value" : "自动敏感性评估将从回退时间点重新学习您的胰岛素敏感性，最长可能需要 6 小时。"
           }
         },
         "zh-Hant" : {
@@ -60454,7 +60474,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens"
+            "value" : "自动敏感性评估"
           }
         },
         "zh-Hant" : {
@@ -73206,7 +73226,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每次闭环周期都重新计算胰岛素敏感系数（ISF）。新的 ISF 根据当前血糖、每日胰岛素总剂量（TDD，过去 24 小时的全部胰岛素输注量）和个人调节系数计算。建议使用 S 形函数时从 0.5 开始，未使用时从 0.8 开始。\n\n动态 ISF 和碳水化合物比率（CR）的调整都受 Autosens 上下限限制。"
+            "value" : "每次闭环周期都重新计算胰岛素敏感系数（ISF）。新的 ISF 根据当前血糖、每日胰岛素总剂量（TDD，过去 24 小时的全部胰岛素输注量）和个人调节系数计算。建议使用 S 形函数时从 0.5 开始，未使用时从 0.8 开始。\n\n动态 ISF 和碳水化合物比率（CR）的调整都受自动敏感性评估上下限限制。"
           }
         },
         "zh-Hant" : {
@@ -73338,7 +73358,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每次闭环都重新计算 ISF。新的 ISF 根据当前血糖、每日胰岛素总剂量（TDD，过去 24 小时或加权平均值）和调节系数（默认 1）计算。\n\n动态 ISF 和 CR 比率受 Autosens 上下限限制。\n\n动态比率取代 autosens.ratio：新 ISF = 静态 ISF / 动态比率，\n动态比率 = profile.sens * adjustmentFactor * tdd * Math.log(BG/insulinFactor+1) / 1800，\ninsulinFactor = 120 - InsulinPeakTimeInMinutes"
+            "value" : "每次闭环都重新计算 ISF。新的 ISF 根据当前血糖、每日胰岛素总剂量（TDD，过去 24 小时或加权平均值）和调节系数（默认 1）计算。\n\n动态 ISF 和 CR 比率受自动敏感性评估上下限限制。\n\n动态比率取代敏感性调整系数：新 ISF = 静态 ISF / 动态比率，\n动态比率 = profile.sens * adjustmentFactor * tdd * Math.log(BG/insulinFactor+1) / 1800，\ninsulinFactor = 120 - InsulinPeakTimeInMinutes"
           }
         },
         "zh-Hant" : {
@@ -109068,7 +109088,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "默认关闭。开启后，当 Autosens 检测到胰岛素抵抗时，降低血糖目标。"
+            "value" : "默认关闭。开启后，当自动敏感性评估检测到胰岛素抵抗时，降低血糖目标。"
           }
         },
         "zh-Hant" : {
@@ -123913,7 +123933,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "动态 ISF 以动态比值替换 Autosens 比值，决定每次闭环运行时如何调整配置中的胰岛素敏感系数（ISF），并通过 Autosens 上下限设置限制调整幅度。它可响应一天内的胰岛素需求变化，使输注剂量更精确。"
+            "value" : "动态 ISF 以动态比值替换敏感性调整系数，决定每次闭环运行时如何调整配置中的胰岛素敏感系数（ISF），并通过自动敏感性评估上下限设置限制调整幅度。它可响应一天内的胰岛素需求变化，使输注剂量更精确。"
           }
         },
         "zh-Hant" : {
@@ -124832,7 +124852,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用动态比值代替 Autosens 比值，动态调整胰岛素敏感性。"
+            "value" : "使用动态比值代替敏感性调整系数，动态调整胰岛素敏感性。"
           }
         },
         "zh-Hant" : {
@@ -131067,7 +131087,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "开启“调整基础输注”后，标准 Autosens 比值的计算会由此功能替代，其计算方式如下："
+            "value" : "开启“调整基础输注”后，标准敏感性调整系数的计算会由此功能替代，其计算方式如下："
           }
         },
         "zh-Hant" : {
@@ -170005,7 +170025,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "半基础输注运动目标为 %1$@ %2$@ 时，临时目标 %3$@ %4$@ 对应的 Autosens 比值为 1.09，临时目标 %5$@ %6$@ 对应的比值为 1.33。"
+            "value" : "半基础输注运动目标为 %1$@ %2$@ 时，临时目标 %3$@ %4$@ 对应的敏感性调整系数为 1.09，临时目标 %5$@ %6$@ 对应的比值为 1.33。"
           }
         },
         "zh-Hant" : {
@@ -170141,7 +170161,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "半基础输注运动目标为 %1$@ %2$@ 时，临时目标 %3$@ %4$@ 对应的 Autosens 比值为 0.75，临时目标 %5$@ %6$@ 对应的比值为 0.6。"
+            "value" : "半基础输注运动目标为 %1$@ %2$@ 时，临时目标 %3$@ %4$@ 对应的敏感性调整系数为 0.75，临时目标 %5$@ %6$@ 对应的比值为 0.6。"
           }
         },
         "zh-Hant" : {
@@ -173829,7 +173849,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请注意：Autosens 下限和上限对临时目标的影响不同。Autosens 上限限制胰岛素剂量的增加幅度，而 Autosens 下限不会取消减少胰岛素剂量时 15% 的最低限制。"
+            "value" : "请注意：自动敏感性评估下限和上限对临时目标的影响不同。自动敏感性评估上限限制胰岛素剂量的增加幅度，而自动敏感性评估下限不会取消减少胰岛素剂量时 15% 的最低限制。"
           }
         },
         "zh-Hant" : {
@@ -175147,7 +175167,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "调高此值可加快 ISF 的调整，但也会改变 ISF 达到 Autosens 上下限时对应的血糖值。调低此值会减慢 ISF 的调整，也同样会改变达到上下限时对应的血糖值。可用 TrioDocs.org 提供的 Desmos 图形优化各项动态设置。"
+            "value" : "调高此值可加快 ISF 的调整，但也会改变 ISF 达到自动敏感性评估上下限时对应的血糖值。调低此值会减慢 ISF 的调整，也同样会改变达到上下限时对应的血糖值。可用 TrioDocs.org 提供的 Desmos 图形优化各项动态设置。"
           }
         },
         "zh-Hant" : {
@@ -175805,7 +175825,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "单独调整计算出的动态比值。默认值为 0.5。此值越高，高血糖或低血糖时对 ISF/CR 的修正幅度越大。修正上下限由 Autosens 下限和上限设置决定。\n\n使用 S 形函数时，建议从 0.4–0.5 的调整因子起步。\n\n对数公式的初始值尚无共识，但对大多数成人而言，可考虑从 0.8 左右起步。建议年轻用户使用对数公式时从更低的值起步，以免治疗调整过于激进。"
+            "value" : "单独调整计算出的动态比值。默认值为 0.5。此值越高，高血糖或低血糖时对 ISF/CR 的修正幅度越大。修正上下限由自动敏感性评估下限和上限设置决定。\n\n使用 S 形函数时，建议从 0.4–0.5 的调整因子起步。\n\n对数公式的初始值尚无共识，但对大多数成人而言，可考虑从 0.8 左右起步。建议年轻用户使用对数公式时从更低的值起步，以免治疗调整过于激进。"
           }
         },
         "zh-Hant" : {
@@ -181785,7 +181805,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "为确保胰岛素输注安全，不建议将 Autosens 上限设为高于 150%。"
+            "value" : "为确保胰岛素输注安全，不建议将自动敏感性评估上限设为高于 150%。"
           }
         },
         "zh-Hant" : {
@@ -196141,7 +196161,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 比值的下限。"
+            "value" : "敏感性调整系数的下限。"
           }
         },
         "zh-Hant" : {
@@ -196401,7 +196421,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 比值大于 1 时，降低血糖目标。"
+            "value" : "敏感性调整系数大于 1 时，降低血糖目标。"
           }
         },
         "zh-Hant" : {
@@ -206842,7 +206862,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "mg/dl。Autosens.max 限制最大端点"
+            "value" : "mg/dl。自动敏感性评估上限 限制最大端点"
           }
         },
         "zh-Hant" : {
@@ -213339,7 +213359,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新的基础输注配置 =\n（当前基础输注配置）×（Autosens 比值）"
+            "value" : "新的基础输注配置 =\n（当前基础输注配置）×（敏感性调整系数）"
           }
         },
         "zh-Hant" : {
@@ -249039,7 +249059,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "泵回卷会重置 Autosens 比率。"
+            "value" : "泵回卷会重置敏感性调整系数。"
           }
         },
         "zh-Hant" : {
@@ -251521,7 +251541,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 比率小于 1 时提高血糖目标。"
+            "value" : "敏感性调整系数小于 1 时提高血糖目标。"
           }
         },
         "zh-Hant" : {
@@ -260340,7 +260360,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "泵回卷时重置 Autosens"
+            "value" : "泵回卷时重置自动敏感性评估"
           }
         },
         "zh-Hant" : {
@@ -277212,7 +277232,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "S 形曲线调整系数同时影响胰岛素敏感系数（ISF）的变化速度，以及达到所设 Autosens 上下限的速度。增大该系数会加快 ISF 的变化，并缩小 Autosens 上下限之间对应的血糖值范围。"
+            "value" : "S 形曲线调整系数同时影响胰岛素敏感系数（ISF）的变化速度，以及达到所设自动敏感性评估上下限的速度。增大该系数会加快 ISF 的变化，并缩小自动敏感性评估上下限之间对应的血糖值范围。"
           }
         },
         "zh-Hant" : {
@@ -299090,7 +299110,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 比率用于计算基础输注速率、胰岛素敏感系数（ISF）和碳水比（CR）的调整幅度。"
+            "value" : "敏感性调整系数用于计算基础输注速率、胰岛素敏感系数（ISF）和碳水比（CR）的调整幅度。"
           }
         },
         "zh-Hant" : {
@@ -299873,7 +299893,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "曲线的陡峭程度受调整系数影响。Autosens 的上下限决定比率调整的范围，也可能影响 S 形曲线的陡峭程度。"
+            "value" : "曲线的陡峭程度受调整系数影响。自动敏感性评估的上下限决定比率调整的范围，也可能影响 S 形曲线的陡峭程度。"
           }
         },
         "zh-Hant" : {
@@ -303814,7 +303834,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 安全范围的另一端，限制基础输注可调低的幅度，以及胰岛素敏感系数（ISF）和血糖目标可调高的幅度。"
+            "value" : "自动敏感性评估安全范围的另一端，限制基础输注可调低的幅度，以及胰岛素敏感系数（ISF）和血糖目标可调高的幅度。"
           }
         },
         "zh-Hant" : {
@@ -304594,7 +304614,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "S 形曲线调整系数（AF）可控制 S 形动态胰岛素敏感系数对血糖变化的响应速度，以及触及 Autosens 上、下限时对应的血糖值。"
+            "value" : "S 形曲线调整系数（AF）可控制 S 形动态胰岛素敏感系数对血糖变化的响应速度，以及触及自动敏感性评估上、下限时对应的血糖值。"
           }
         },
         "zh-Hant" : {
@@ -307730,7 +307750,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "出现这种差别，是因为运动等情况所需的胰岛素降幅，通常远大于 Autosens 在日常活动中检测到的降幅。"
+            "value" : "出现这种差别，是因为运动等情况所需的胰岛素降幅，通常远大于自动敏感性评估在日常活动中检测到的降幅。"
           }
         },
         "zh-Hant" : {
@@ -308664,7 +308684,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "只有「算法设置」>「Autosens」>「Autosens 上限」高于 100% 时，才能启用此功能。"
+            "value" : "只有「算法设置」>「自动敏感性评估」>「自动敏感性评估上限」高于 100% 时，才能启用此功能。"
           }
         },
         "zh-Hant" : {
@@ -308924,7 +308944,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "泵回卷通常意味着更换了输注部位，因此此功能会将 Autosens 比率恢复为中性值。"
+            "value" : "泵回卷通常意味着更换了输注部位，因此此功能会将敏感性调整系数恢复为中性值。"
           }
         },
         "zh-Hant" : {
@@ -309460,7 +309480,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此功能默认启用。它假设泵回卷可能意味着更换了输注部位，因此将 Autosens 比率恢复为中性值。Autosens 会从回卷时开始重新学习敏感性，这可能需要最多 6 小时。如果泵回卷通常与你更换输注部位无关，可以考虑关闭。"
+            "value" : "此功能默认启用。它假设泵回卷可能意味着更换了输注部位，因此将敏感性调整系数恢复为中性值。自动敏感性评估会从回卷时开始重新学习敏感性，这可能需要最多 6 小时。如果泵回卷通常与你更换输注部位无关，可以考虑关闭。"
           }
         },
         "zh-Hant" : {
@@ -310248,7 +310268,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "这是 Autosens（及自动调优）的系数上限，将 Autosens 比率的上调幅度限制在最多 20%。它进而限制 Autosens 能将基础输注调高多少、将 ISF 调低多少，以及将血糖目标设得多低。"
+            "value" : "这是自动敏感性评估（及自动调优）的系数上限，将敏感性调整系数的上调幅度限制在最多 20%。它进而限制自动敏感性评估能将基础输注调高多少、将 ISF 调低多少，以及将血糖目标设得多低。"
           }
         },
         "zh-Hant" : {
@@ -313425,7 +313445,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此设置可让系统响应更灵敏，但其影响仍受 Autosens 上下限约束。"
+            "value" : "此设置可让系统响应更灵敏，但其影响仍受自动敏感性评估上下限约束。"
           }
         },
         "zh-Hant" : {
@@ -337820,7 +337840,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 比率上限。"
+            "value" : "敏感性调整系数上限。"
           }
         },
         "zh-Hant" : {
@@ -338751,7 +338771,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用 S 形函数计算胰岛素敏感系数（ISF），并在启用相应功能时计算碳水比（CR），取代默认的对数公式。此功能要求在设置中启用动态 ISF。\n\n「调整」设置控制曲线斜率（纵轴：动态比率；横轴：血糖）。数值越低，斜率越小，调整越温和。\n\nautosens.min/max 同时决定动态比率的上下限以及调整幅度。如果 AF 表示曲线斜率，那么 autosens.min/max 就决定曲线在纵轴（动态比率）上的范围。无论如何设置这两个值，曲线始终呈 S 形，因此它们对动态 ISF 的计算结果影响很大。设置 autosens.max 时请避免过高。配置中的 ISF 设置恰当时，通常不需要将其设为高于 1.5。\n\n使用 S 形函数时，不建议将 Autosens.max 设为高于 1.5。"
+            "value" : "使用 S 形函数计算胰岛素敏感系数（ISF），并在启用相应功能时计算碳水比（CR），取代默认的对数公式。此功能要求在设置中启用动态 ISF。\n\n「调整」设置控制曲线斜率（纵轴：动态比率；横轴：血糖）。数值越低，斜率越小，调整越温和。\n\n自动敏感性评估上下限 同时决定动态比率的上下限以及调整幅度。如果 AF 表示曲线斜率，那么自动敏感性评估上下限 就决定曲线在纵轴（动态比率）上的范围。无论如何设置这两个值，曲线始终呈 S 形，因此它们对动态 ISF 的计算结果影响很大。设置自动敏感性评估上限 时请避免过高。配置中的 ISF 设置恰当时，通常不需要将其设为高于 1.5。\n\n使用 S 形函数时，不建议将自动敏感性评估上限 设为高于 1.5。"
           }
         },
         "zh-Hant" : {
@@ -349687,7 +349707,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "启用后，手动设置高于 %1$@ %2$@ 的临时目标，会降低调整胰岛素敏感系数（ISF）和基础输注时使用的 Autosens 比率，使总输注量减少。降幅随所设临时目标变化：目标越高，使用的 Autosens 比率越低。"
+            "value" : "启用后，手动设置高于 %1$@ %2$@ 的临时目标，会降低调整胰岛素敏感系数（ISF）和基础输注时使用的敏感性调整系数，使总输注量减少。降幅随所设临时目标变化：目标越高，使用的敏感性调整系数越低。"
           }
         },
         "zh-Hant" : {
@@ -349823,7 +349843,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "启用后，设置低于 %1$@ %2$@ 的临时目标，会提高调整胰岛素敏感系数（ISF）和基础输注时使用的 Autosens 比率，使总输注量增加。升幅随所设临时目标变化：目标越低，使用的 Autosens 比率越高。此功能要求「算法设置」>「Autosens」>「Autosens 上限」高于 100%%。"
+            "value" : "启用后，设置低于 %1$@ %2$@ 的临时目标，会提高调整胰岛素敏感系数（ISF）和基础输注时使用的敏感性调整系数，使总输注量增加。升幅随所设临时目标变化：目标越低，使用的敏感性调整系数越高。此功能要求「算法设置」>「自动敏感性评估」>「自动敏感性评估上限」高于 100%%。"
           }
         },
         "zh-Hant" : {
@@ -350091,7 +350111,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "设为 true 时，如果 Autosens 检测到胰岛素敏感性升高，则提高血糖目标"
+            "value" : "设为 true 时，如果自动敏感性评估检测到胰岛素敏感性升高，则提高血糖目标"
           }
         },
         "zh-Hant" : {
@@ -352880,7 +352900,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "主要可通过调整 Autosens 上限、Autosens 下限和调整系数，改变动态胰岛素敏感系数（ISF）的调整幅度。血糖目标、配置中的 ISF、胰岛素达峰时间及每日胰岛素总量的加权平均值等，也会影响动态 ISF 的响应。"
+            "value" : "主要可通过调整自动敏感性评估上限、自动敏感性评估下限和调整系数，改变动态胰岛素敏感系数（ISF）的调整幅度。血糖目标、配置中的 ISF、胰岛素达峰时间及每日胰岛素总量的加权平均值等，也会影响动态 ISF 的响应。"
           }
         },
         "zh-Hant" : {
@@ -357862,7 +357882,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens／动态调整上限："
+            "value" : "自动敏感性评估／动态调整上限："
           }
         }
       }
@@ -357981,7 +358001,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autosens 比率："
+            "value" : "敏感性调整系数："
           }
         }
       }

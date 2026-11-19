@@ -1,0 +1,516 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "4-digit PIN": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4 位 PIN"
+          }
+        }
+      }
+    },
+    "After device-owner authentication, the app PIN or pattern will be removed. You can configure a new one in Privacy settings.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过手机机主身份验证后，会清除应用的 PIN 或图案。您可以在隐私设置中重新设置。"
+          }
+        }
+      }
+    },
+    "Allow Face ID or Touch ID": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允许面容 ID 或触控 ID"
+          }
+        }
+      }
+    },
+    "Authentication was not completed.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "身份验证未完成。"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消"
+          }
+        }
+      }
+    },
+    "Change PIN or pattern": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更改 PIN 或图案"
+          }
+        }
+      }
+    },
+    "Choose from Photos": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从相册选择"
+          }
+        }
+      }
+    },
+    "Color ranges": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "颜色分段"
+          }
+        }
+      }
+    },
+    "Color ranges saved.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "颜色分段已保存。"
+          }
+        }
+      }
+    },
+    "Content locked": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "内容已锁定"
+          }
+        }
+      }
+    },
+    "Cover": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "封面"
+          }
+        }
+      }
+    },
+    "Delete": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除"
+          }
+        }
+      }
+    },
+    "Display ranges are independent of alarm thresholds. Bar heights use a fixed 0–15 mmol/L scale. Missing readings leave an empty slot. After five minutes without a new reading, a ring keeps the last color.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示分段与警报阈值分别设置。声浪高度按固定的 0～15 mmol/L 刻度换算，缺测保留空位。超过五分钟没有新读数时显示空心圆，并保留最后读数的颜色。"
+          }
+        }
+      }
+    },
+    "Draw a pattern through at least four dots. The trace is hidden.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请连接至少四个点绘制图案，绘制轨迹会隐藏。"
+          }
+        }
+      }
+    },
+    "Draw your unlock pattern.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请绘制解锁图案。"
+          }
+        }
+      }
+    },
+    "Enable private activity": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开启隐式实时活动"
+          }
+        }
+      }
+    },
+    "Enter a new code.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请设置新的 PIN 或图案。"
+          }
+        }
+      }
+    },
+    "Enter five increasing boundaries between 1 and 30, separated by at least 0.5 mmol/L.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入五个依次递增的分段上限，范围为 1～30，相邻值至少相差 0.5 mmol/L。"
+          }
+        }
+      }
+    },
+    "Enter your 4-digit PIN.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入 4 位 PIN。"
+          }
+        }
+      }
+    },
+    "Forgot PIN or pattern?": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "忘记 PIN 或图案？"
+          }
+        }
+      }
+    },
+    "Lock now": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立即锁定"
+          }
+        }
+      }
+    },
+    "PIN entry": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIN 输入"
+          }
+        }
+      }
+    },
+    "Pattern": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "图案"
+          }
+        }
+      }
+    },
+    "Privacy": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐私"
+          }
+        }
+      }
+    },
+    "Private Live Activity": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐式实时活动"
+          }
+        }
+      }
+    },
+    "Private activities show a cover and six small bars. Public glucose alerts say Attention. The existing alert sounds and schedules still apply.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐式实时活动显示封面和六条小声浪。公开血糖警报统一显示“注意”，声音和提醒时机沿用现有设置。"
+          }
+        }
+      }
+    },
+    "Private alert wording": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "警报隐私文案"
+          }
+        }
+      }
+    },
+    "Red represents values above the final boundary.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高于最后一个分段上限时使用红色。"
+          }
+        }
+      }
+    },
+    "Repeat the code to confirm.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请再次输入确认。"
+          }
+        }
+      }
+    },
+    "Reset the viewing lock.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重设查看锁。"
+          }
+        }
+      }
+    },
+    "Reset the viewing lock?": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重设查看锁？"
+          }
+        }
+      }
+    },
+    "Save color ranges": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存颜色分段"
+          }
+        }
+      }
+    },
+    "Set up viewing lock": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置查看锁"
+          }
+        }
+      }
+    },
+    "Show full activity": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "恢复完整实时活动"
+          }
+        }
+      }
+    },
+    "System alarms already ringing keep their original title until stopped. Enable alert privacy before an alarm starts.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已经响起的系统闹钟会保留原标题直至停止。请提前开启警报隐私。"
+          }
+        }
+      }
+    },
+    "The code did not match. Try again.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIN 或图案不正确，请重试。"
+          }
+        }
+      }
+    },
+    "The codes did not match. Start again.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "两次输入不一致，请重新设置。"
+          }
+        }
+      }
+    },
+    "The cover could not be loaded. Choose another image.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取封面，请选择其他图片。"
+          }
+        }
+      }
+    },
+    "The viewing lock could not be read. Use device authentication to reset it.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取查看锁，请通过手机身份验证重设。"
+          }
+        }
+      }
+    },
+    "The viewing lock could not be saved.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法保存查看锁设置。"
+          }
+        }
+      }
+    },
+    "The viewing lock covers the app when you leave it. Glucose collection, loop operation and alarms run independently. A forgotten code can be reset after iPhone device-owner authentication.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "离开应用后，查看锁会遮住应用内容。血糖采集、闭环和警报独立运行。忘记 PIN 或图案时，可通过 iPhone 机主身份验证重设。"
+          }
+        }
+      }
+    },
+    "Try again in %d seconds.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请在 %d 秒后重试。"
+          }
+        }
+      }
+    },
+    "Turn off viewing lock": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭查看锁"
+          }
+        }
+      }
+    },
+    "Unlock method": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解锁方式"
+          }
+        }
+      }
+    },
+    "Unlock private content.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解锁私人内容。"
+          }
+        }
+      }
+    },
+    "Upper boundary": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分段上限"
+          }
+        }
+      }
+    },
+    "Use Face ID or Touch ID": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用面容 ID 或触控 ID"
+          }
+        }
+      }
+    },
+    "Use abstract cover": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用抽象封面"
+          }
+        }
+      }
+    },
+    "Use at least four dots. The trace is hidden.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请连接至少四个点，绘制轨迹会隐藏。"
+          }
+        }
+      }
+    },
+    "Verify with device passcode": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过手机身份验证"
+          }
+        }
+      }
+    },
+    "Viewing lock": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看锁"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

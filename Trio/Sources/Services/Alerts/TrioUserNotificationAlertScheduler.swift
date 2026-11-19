@@ -20,7 +20,7 @@ final class TrioUserNotificationAlertScheduler {
     /// overlap into one very loud alarm.
     func schedule(_ alert: Alert, muted: Bool, soundURL: URL?, silenced: Bool = false) {
         let request = makeRequest(alert: alert, muted: muted, soundURL: soundURL, silenced: silenced)
-        notificationCenter.add(request) { error in
+        PrivacyNotificationLifecycle.schedule(request, center: notificationCenter) { error in
             if let error = error {
                 warning(.alerts, "Scheduling alert notification \(alert.identifier.value) failed", error: error)
             }
@@ -28,14 +28,14 @@ final class TrioUserNotificationAlertScheduler {
     }
 
     func unschedule(identifier: Alert.Identifier) {
-        notificationCenter.removePendingNotificationRequests(withIdentifiers: [identifier.value])
-        notificationCenter.removeDeliveredNotifications(withIdentifiers: [identifier.value])
+        PrivacyNotificationLifecycle.cancel([identifier.value], center: notificationCenter)
     }
 
     private func makeRequest(alert: Alert, muted: Bool, soundURL: URL?, silenced: Bool) -> UNNotificationRequest {
         let content = UNMutableNotificationContent()
-        content.title = alert.backgroundContent.title
-        content.body = alert.backgroundContent.body
+        let presentation = TrioPrivacyAlert.content(alert.backgroundContent, for: alert) ?? alert.backgroundContent
+        content.title = presentation.title
+        content.body = presentation.body
         content.threadIdentifier = alert.identifier.managerIdentifier
         content.userInfo = [
             AlertUserInfoKey.managerIdentifier.rawValue: alert.identifier.managerIdentifier,

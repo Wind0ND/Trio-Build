@@ -98,7 +98,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           set -e
-          for package in AiDEXKit BackgroundKeepAliveKit CGMSetupKit SiBionicsKit; do
+          for package in AiDEXKit BackgroundKeepAliveKit CGMSetupKit SiBionicsKit PrivacyKit; do
             swift test --package-path "$package" --scratch-path "$RUNNER_TEMP/trio-package-tests/$package"
           done
 

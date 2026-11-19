@@ -5,6 +5,7 @@
 //  Created by Deniz Cengiz on 26.07.24.
 //
 import BackgroundKeepAliveKit
+import PrivacyAppKit
 import Foundation
 import SwiftUI
 import Swinject
@@ -37,6 +38,9 @@ struct FeatureSettingsView: BaseView {
             Section(
                 header: Text("Trio Personalization"),
                 content: {
+                    NavigationLink(destination: PrivacySettingsView()) {
+                        Label(String(localized: "Privacy"), systemImage: "eye.slash")
+                    }
                     Text("User Interface").navigationLink(to: .userInterfaceSettings, from: self)
                     Text("App Icons").navigationLink(to: .iconConfig, from: self)
                 }

@@ -1,6 +1,7 @@
 import CryptoKit
 import Foundation
 import LoopKit
+import PrivacyKit
 
 #if canImport(AlarmKit)
     import ActivityKit
@@ -79,11 +80,11 @@ final class CriticalAlertAlarmScheduler {
             )
             let presentation = AlarmPresentation(
                 alert: AlarmPresentation.Alert(
-                    title: LocalizedStringResource(stringLiteral: alert.backgroundContent.title),
+                    title: LocalizedStringResource(stringLiteral: TrioPrivacyAlert.content(alert.backgroundContent, for: alert)?.title ?? alert.backgroundContent.title),
                     stopButton: stopButton
                 )
             )
-            let attributes = AlarmAttributes<EmptyAlarmMetadata>(presentation: presentation, tintColor: .red)
+            let attributes = AlarmAttributes<EmptyAlarmMetadata>(presentation: presentation, tintColor: TrioPrivacyAlert.kind(alert)?.color.swiftUIColor ?? .red)
 
             // Alert-only (no countdownDuration) so no Widget Extension / Live
             // Activity is required. `AlertSound.named` resolves the same way

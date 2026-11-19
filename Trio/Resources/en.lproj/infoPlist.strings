@@ -5,7 +5,7 @@
 "NSBluetoothPeripheralUsageDescription" = "Bluetooth is used to communicate with insulin pump and continuous glucose monitor devices";
 
 /* Privacy - Face ID Usage Description */
-"NSFaceIDUsageDescription" = "To confirm your identity before delivering a bolus.";
+"NSFaceIDUsageDescription" = "To confirm your identity before delivering a bolus or viewing private content.";
 
 /* Privacy - NFC Scan Usage Description */
 "NFCReaderUsageDescription" = "Trio uses NFC to scan Libre sensors and wake compatible Ottai sensors.";

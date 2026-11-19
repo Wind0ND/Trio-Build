@@ -1,4 +1,5 @@
 import SwiftUI
+import PrivacyAppKit
 import UIKit
 
 // MARK: - Device pickers
@@ -168,7 +169,7 @@ extension Home.RootView {
 
             if let eventualBG = state.enactedAndNonEnactedDeterminations.first?.eventualBG {
                 let eventualGlucose = eventualBG as Decimal
-                HStack {
+                HStack(spacing: 4) {
                     Image(systemName: "arrow.right.circle")
                         .font(.callout)
                         .fontWeight(.bold)
@@ -177,21 +178,23 @@ extension Home.RootView {
                         .font(.callout)
                         .fontWeight(.bold)
                         .fontDesign(.rounded)
+                    PrivacyQuickButton()
                 }
-                .accessibilityElement(children: .ignore)
+                .accessibilityElement(children: .contain)
                 .accessibilityLabel(Text("Eventual glucose"))
                 .accessibilityValue(Text(
                     eventualGlucose.formatted(for: state.units)
                         + " " + state.units.spokenValue
                 ))
             } else {
-                HStack {
+                HStack(spacing: 4) {
                     Image(systemName: "arrow.right.circle")
                         .font(.callout).fontWeight(.bold)
                     Text("--")
                         .font(.callout).fontWeight(.bold).fontDesign(.rounded)
+                    PrivacyQuickButton()
                 }
-                .accessibilityElement(children: .ignore)
+                .accessibilityElement(children: .contain)
                 .accessibilityLabel(Text("Eventual glucose"))
                 .accessibilityValue(Text(verbatim: "--"))
             }

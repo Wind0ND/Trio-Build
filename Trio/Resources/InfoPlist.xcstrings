@@ -997,7 +997,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "For authorized access to bolus"
+            "value" : "To confirm your identity before delivering a bolus or viewing private content."
           }
         },
         "es" : {
@@ -1093,7 +1093,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "验证身份后才可进行大剂量输注。"
+            "value" : "用于在输注大剂量或查看私人内容前确认您的身份。"
           }
         },
         "zh-Hant" : {

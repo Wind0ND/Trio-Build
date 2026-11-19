@@ -2,6 +2,7 @@ import Combine
 import Foundation
 import LoopKit
 import SwiftUI
+import PrivacyKit
 
 protocol TrioModalAlertResponder: AnyObject {
     func handleAcknowledgement(identifier: LoopKit.Alert.Identifier)
@@ -199,6 +200,7 @@ struct TrioAlertBanner: View {
     /// is nil) tap.
     let onSnooze: (TimeInterval) -> Void
 
+    @AppStorage(PrivacyPreference.alertsKey) private var privateAlerts = false
     @State private var presentedAt = Date()
     @State private var dragOffset: CGSize = .zero
 
@@ -213,7 +215,10 @@ struct TrioAlertBanner: View {
         return false
     }
 
-    private var content: LoopKit.Alert.Content? { alert.foregroundContent }
+    private var content: LoopKit.Alert.Content? {
+        _ = privateAlerts
+        return TrioPrivacyAlert.content(alert.foregroundContent, for: alert)
+    }
 
     private var symbolName: String {
         switch alert.interruptionLevel {
@@ -224,6 +229,7 @@ struct TrioAlertBanner: View {
     }
 
     private var accent: Color {
+        if privateAlerts, let kind = TrioPrivacyAlert.kind(alert) { return kind.color.swiftUIColor }
         switch alert.interruptionLevel {
         case .critical: return .red
         case .timeSensitive: return .orange

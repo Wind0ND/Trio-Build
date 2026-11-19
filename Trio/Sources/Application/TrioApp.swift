@@ -1,4 +1,5 @@
 import BackgroundKeepAliveKit
+import PrivacyAppKit
 import BackgroundTasks
 import CoreData
 import Foundation
@@ -130,6 +131,8 @@ extension Notification.Name {
     }
 
     init() {
+        _ = PrivacyLockController.shared
+        _ = TrioPrivacyCoordinator.shared
         // Before any service or device manager exists: pairing diagnostics must
         // survive a relaunch even when registration never completes.
         DiagnosticEventStore.shared.startObserving()
@@ -388,6 +391,7 @@ extension Notification.Name {
             // Global upper bound on Dynamic Type: keep accessibility scaling but stop before the
             // extreme sizes that shatter dense layouts. Fragile screens cap tighter (see Home, Statistics).
             .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+            .privacyViewingShield()
             .onReceive(Foundation.NotificationCenter.default.publisher(for: .onboardingCompleted)) { _ in
                 Task { @MainActor in
                     self.showOnboardingCompletedSplash = true

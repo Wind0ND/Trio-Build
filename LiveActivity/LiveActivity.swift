@@ -1,4 +1,5 @@
 import ActivityKit
+import PrivacyKit
 import SwiftUI
 import WidgetKit
 
@@ -9,42 +10,66 @@ struct LiveActivity: Widget {
                 .addIsWatchOS()
         } dynamicIsland: { context in
             let hasStaticColorScheme = context.state.glucoseColorScheme == "staticColor"
-            let glucoseColor = context.state.glucoseColor
+            let glucoseColor = context.state.privacy?.color.swiftUIColor ?? context.state.glucoseColor
 
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
+                    if let privacy = context.state.privacy {
+                        PrivacyCoverView(data: privacy.cover, size: 24)
+                    } else {
                     LiveActivityExpandedLeadingView(
                         context: context,
                         glucoseColor: glucoseColor
                     )
+                    }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
+                    if let privacy = context.state.privacy {
+                        PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()))
+                    } else {
                     LiveActivityExpandedTrailingView(
                         context: context,
                         glucoseColor: hasStaticColorScheme ? .primary : glucoseColor
                     )
+                    }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
+                    if context.state.privacy == nil {
                     LiveActivityExpandedBottomView(context: context)
+                    }
                 }
                 DynamicIslandExpandedRegion(.center) {
+                    if context.state.privacy == nil {
                     LiveActivityExpandedCenterView(context: context)
+                    }
                 }
             } compactLeading: {
+                if let privacy = context.state.privacy {
+                    PrivacyCoverView(data: privacy.cover, size: 18)
+                } else {
                 LiveActivityCompactLeadingView(
                     context: context,
                     glucoseColor: glucoseColor
                 )
+                }
             } compactTrailing: {
+                if let privacy = context.state.privacy {
+                    PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()))
+                } else {
                 LiveActivityCompactTrailingView(
                     context: context,
                     glucoseColor: hasStaticColorScheme ? .primary : glucoseColor
                 )
+                }
             } minimal: {
+                if let privacy = context.state.privacy {
+                    PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()))
+                } else {
                 LiveActivityMinimalView(
                     context: context,
                     glucoseColor: glucoseColor
                 )
+                }
             }
             .widgetURL(URL(string: "Trio://"))
             .keylineTint(glucoseColor)

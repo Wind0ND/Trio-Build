@@ -4,6 +4,7 @@ import CoreData
 import Foundation
 import Swinject
 import UIKit
+import PrivacyKit
 
 @available(iOS 16.2, *) private struct ActiveActivity {
     let activity: Activity<LiveActivityAttributes>
@@ -104,6 +105,7 @@ final class LiveActivityData: ObservableObject {
     /// Sets up application notifications that trigger live activity updates when the app state changes.
     private func setupNotifications() {
         let notificationCenter = Foundation.NotificationCenter.default
+        notificationCenter.addObserver(self, selector: #selector(privacyChanged), name: PrivacyPreference.changed, object: nil)
         notificationCenter
             .addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil) { [weak self] _ in
                 Task { @MainActor in
@@ -122,6 +124,10 @@ final class LiveActivityData: ObservableObject {
             name: .liveActivityOrderDidChange,
             object: nil
         )
+    }
+
+    @objc private func privacyChanged() {
+        Task { @MainActor in await self.pushCurrentContent() }
     }
 
     /// Called when the app settings change.
@@ -235,6 +241,8 @@ final class LiveActivityData: ObservableObject {
     ///
     /// - Parameter state: The new content state to push to the live activity.
     @MainActor private func pushUpdate(_ state: LiveActivityAttributes.ContentState) async {
+        // Reject an older queued update after the user switches display mode.
+        guard (state.privacy != nil) == PrivacyPreference.displayEnabled else { return }
         if !settings.useLiveActivity || !systemEnabled {
             await endActivity()
             return
@@ -270,7 +278,7 @@ final class LiveActivityData: ObservableObject {
             } else {
                 let content = ActivityContent(
                     state: state,
-                    staleDate: min(state.date ?? Date.now, Date.now).addingTimeInterval(360)
+                    staleDate: state.privacy?.staleDate ?? min(state.glucoseMeasuredAt ?? state.date ?? Date.now, Date.now).addingTimeInterval(300)
                 )
                 // Before the update, check if currentActivity is still valid
                 if let stillCurrent = self.currentActivity, stillCurrent.activity.id == currentActivity.activity.id {
@@ -321,7 +329,11 @@ final class LiveActivityData: ObservableObject {
                                 forecastLines: [],
                                 forecastDisplayType: ForecastDisplayType.cone.rawValue
                             ),
-                            isInitialState: true
+                            isInitialState: true,
+                            privacy: PrivacyPreference.displayEnabled ? PrivacyActivityState(
+                                readings: [], now: Date(),
+                                cover: UserDefaults.standard.data(forKey: PrivacyPreference.coverKey)
+                            ) : nil
                         ),
                     staleDate: Date.now.addingTimeInterval(60)
                 )
@@ -337,7 +349,7 @@ final class LiveActivityData: ObservableObject {
                 // Update the newly created activity with actual data
                 let updateContent = ActivityContent(
                     state: state,
-                    staleDate: Date.now.addingTimeInterval(5 * 60)
+                    staleDate: state.privacy?.staleDate ?? min(state.glucoseMeasuredAt ?? state.date ?? Date.now, Date.now).addingTimeInterval(300)
                 )
                 await activity.update(updateContent)
                 debug(.liveActivity, "Set initial content for Live Activity \(activity.id)")
@@ -395,12 +407,16 @@ final class LiveActivityData: ObservableObject {
 @available(iOS 16.2, *) extension LiveActivityManager {
     @MainActor func pushCurrentContent() async {
         guard let glucose = data.glucoseFromPersistence, let bg = glucose.first else {
+            if PrivacyPreference.displayEnabled {
+                let previous = currentActivity?.activity.content.state ?? Activity<LiveActivityAttributes>.activities.first?.content.state
+                await pushUpdate(.privateFallback(previous: previous, settings: settings))
+            }
             debug(.liveActivity, "Live Activity not updated, no glucose available")
             return
         }
         let prevGlucose = data.glucoseFromPersistence?.dropFirst().first
 
-        guard let determination = data.determination else {
+        guard data.determination != nil || PrivacyPreference.displayEnabled else {
             debug(.liveActivity, "Live Activity not updated, no determination available")
             return
         }
@@ -411,7 +427,7 @@ final class LiveActivityData: ObservableObject {
             units: settings.units,
             chart: glucose,
             settings: settings,
-            determination: determination,
+            determination: data.determination,
             iob: data.iob,
             override: data.override,
             tempTarget: data.tempTarget,

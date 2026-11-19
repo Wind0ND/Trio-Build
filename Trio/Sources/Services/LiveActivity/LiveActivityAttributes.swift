@@ -1,5 +1,6 @@
 import ActivityKit
 import Foundation
+import PrivacyKit
 
 struct LiveActivityAttributes: ActivityAttributes {
     enum LiveActivityItem: String, Hashable, Codable, Equatable {
@@ -44,6 +45,8 @@ struct LiveActivityAttributes: ActivityAttributes {
 
         /// true for the first state that is set on the activity
         let isInitialState: Bool
+        var privacy: PrivacyActivityState? = nil
+        var glucoseMeasuredAt: Date? = nil
     }
 
     struct ContentAdditionalState: Codable, Hashable {

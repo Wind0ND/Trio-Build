@@ -1,4 +1,5 @@
 import Foundation
+import PrivacyKit
 
 extension UserDefaults {
     private enum Keys {
@@ -26,6 +27,31 @@ extension LiveActivityAttributes.SimpleViewStyle {
 }
 
 extension LiveActivityAttributes.ContentState {
+    /// Privacy must take effect even while Core Data is loading or has no recent samples.
+    static func privateFallback(previous: Self?, settings: TrioSettings) -> Self {
+        let readings = previous?.detailedViewState.chart.map {
+            PrivacyReading(mgDL: NSDecimalNumber(decimal: $0.value).doubleValue, date: $0.date)
+        } ?? []
+        let cover = UserDefaults.standard.data(forKey: PrivacyPreference.coverKey)
+        let snapshot = previous?.privacy?.replacingCover(cover) ?? PrivacyActivityState(
+            readings: readings, now: Date(), palette: .stored(),
+            cover: cover
+        )
+        let empty = LiveActivityAttributes.ContentAdditionalState(
+            chart: [], rotationDegrees: 0, cob: 0, iob: 0, tdd: 0,
+            isOverrideActive: false, overrideName: "", overrideDate: .distantPast, overrideDuration: 0, overrideTarget: 0,
+            isTempTargetActive: false, tempTargetName: "", tempTargetDate: .distantPast, tempTargetDuration: 0, tempTargetTarget: 0,
+            widgetItems: [], minForecast: [], maxForecast: [], forecastLines: [], forecastDisplayType: ""
+        )
+        return Self(
+            unit: "", bg: "", glucose: nil, direction: nil, change: "", date: nil,
+            highGlucose: 180, lowGlucose: 70, target: 100, glucoseColorScheme: "",
+            useDetailedViewIOS: false, useDetailedViewWatchOS: false,
+            simpleViewStyle: .init(settings: settings), detailedViewState: empty,
+            isInitialState: false, privacy: snapshot, glucoseMeasuredAt: snapshot.measuredAt
+        )
+    }
+
     static func calculateChange(chart: [GlucoseData], units: GlucoseUnits) -> String {
         guard chart.count >= 2 else { return "" }
 
@@ -44,7 +70,9 @@ extension LiveActivityAttributes.ContentState {
         iob: Decimal?,
         override: OverrideData?,
         tempTarget: TempTargetData?,
-        widgetItems: [LiveActivityAttributes.LiveActivityItem]?
+        widgetItems: [LiveActivityAttributes.LiveActivityItem]?,
+        privateDisplay: Bool = PrivacyPreference.displayEnabled,
+        privateCover: Data? = UserDefaults.standard.data(forKey: PrivacyPreference.coverKey)
     ) {
         let glucose = bg.glucose
         let formattedBG = glucose.formatted(for: units)
@@ -77,27 +105,27 @@ extension LiveActivityAttributes.ContentState {
         let change = Self.calculateChange(chart: chart, units: units)
 
         let detailedState = LiveActivityAttributes.ContentAdditionalState(
-            chart: chart.map { LiveActivityAttributes.ChartItem(value: Decimal($0.glucose), date: $0.date) },
-            rotationDegrees: rotationDegrees,
-            cob: Decimal(determination?.cob ?? 0),
-            iob: iob ?? 0 as Decimal,
-            tdd: determination?.tdd ?? 0 as Decimal,
-            isOverrideActive: override?.isActive ?? false,
-            overrideName: override?.overrideName ?? "Override",
+            chart: privateDisplay ? [] : chart.map { LiveActivityAttributes.ChartItem(value: Decimal($0.glucose), date: $0.date) },
+            rotationDegrees: privateDisplay ? 0 : rotationDegrees,
+            cob: privateDisplay ? 0 : Decimal(determination?.cob ?? 0),
+            iob: privateDisplay ? 0 : (iob ?? 0 as Decimal),
+            tdd: privateDisplay ? 0 : (determination?.tdd ?? 0 as Decimal),
+            isOverrideActive: privateDisplay ? false : (override?.isActive ?? false),
+            overrideName: privateDisplay ? "" : (override?.overrideName ?? "Override"),
             overrideDate: override?.date ?? Date(),
-            overrideDuration: override?.duration ?? 0,
-            overrideTarget: override?.target ?? 0,
-            isTempTargetActive: tempTarget?.isActive ?? false,
-            tempTargetName: tempTarget?.tempTargetName ?? "Temp Target",
+            overrideDuration: privateDisplay ? 0 : (override?.duration ?? 0),
+            overrideTarget: privateDisplay ? 0 : (override?.target ?? 0),
+            isTempTargetActive: privateDisplay ? false : (tempTarget?.isActive ?? false),
+            tempTargetName: privateDisplay ? "" : (tempTarget?.tempTargetName ?? "Temp Target"),
             tempTargetDate: tempTarget?.date ?? Date(),
-            tempTargetDuration: tempTarget?.duration ?? 0,
-            tempTargetTarget: tempTarget?.target ?? 0,
+            tempTargetDuration: privateDisplay ? 0 : (tempTarget?.duration ?? 0),
+            tempTargetTarget: privateDisplay ? 0 : (tempTarget?.target ?? 0),
             widgetItems: widgetItems ?? [], // set empty array here to silence compiler; this can never be nil
-            minForecast: settings.displayGlucoseForecasts && settings.forecastDisplayType == .cone
+            minForecast: !privateDisplay && settings.displayGlucoseForecasts && settings.forecastDisplayType == .cone
                 ? (determination?.minForecast ?? []) : [],
-            maxForecast: settings.displayGlucoseForecasts && settings.forecastDisplayType == .cone
+            maxForecast: !privateDisplay && settings.displayGlucoseForecasts && settings.forecastDisplayType == .cone
                 ? (determination?.maxForecast ?? []) : [],
-            forecastLines: settings.displayGlucoseForecasts && settings.forecastDisplayType == .lines
+            forecastLines: !privateDisplay && settings.displayGlucoseForecasts && settings.forecastDisplayType == .lines
                 ? (determination?.forecastLines ?? [])
                 .map { LiveActivityAttributes.ForecastLine(type: $0.type, values: $0.values) }
                 : [],
@@ -105,21 +133,27 @@ extension LiveActivityAttributes.ContentState {
         )
 
         self.init(
-            unit: settings.units.rawValue,
-            bg: formattedBG,
-            glucose: Decimal(glucose),
-            direction: trendString,
-            change: change,
-            date: determination?.date ?? nil,
+            unit: privateDisplay ? "" : settings.units.rawValue,
+            bg: privateDisplay ? "" : formattedBG,
+            glucose: privateDisplay ? nil : Decimal(glucose),
+            direction: privateDisplay ? nil : trendString,
+            change: privateDisplay ? "" : change,
+            date: determination?.date,
             highGlucose: settings.high,
             lowGlucose: settings.low,
-            target: determination?.target ?? 100 as Decimal,
+            target: privateDisplay ? 100 : (determination?.target ?? 100 as Decimal),
             glucoseColorScheme: settings.glucoseColorScheme.rawValue,
             useDetailedViewIOS: settings.lockScreenView == .detailed,
             useDetailedViewWatchOS: settings.smartStackView == .detailed,
             simpleViewStyle: LiveActivityAttributes.SimpleViewStyle(settings: settings),
             detailedViewState: detailedState,
-            isInitialState: false
+            isInitialState: false,
+            privacy: privateDisplay ? PrivacyActivityState(
+                readings: chart.map { PrivacyReading(mgDL: Double($0.glucose), date: $0.date) },
+                now: Date(), palette: .stored(),
+                cover: privateCover
+            ) : nil,
+            glucoseMeasuredAt: bg.date
         )
     }
 }
