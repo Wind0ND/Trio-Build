@@ -11,6 +11,7 @@ import Foundation
 
 extension OttaiCGMManager {
     @MainActor func ingest(_ sample: GlucoseSample) {
+        if sample.source == .realtime { OttaiDiagnosticEvent.recordPipeline(.transport, .received) }
         // A live reading is proof the sensor is running. A fault latched from a
         // pre-stream cmd-state readout must not outlive it, or the sensor stays
         // "uninitialized" forever and every later reading is dropped on the
@@ -115,9 +116,6 @@ extension OttaiCGMManager {
         if !isWarmupReading, !isExpiredReading { recordSample(sample) }
 
         let previousGridSequence = state.lastGridSequence
-        if sample.source == .realtime, !checkPriorityGridOnLiveFrame {
-            firePendingBackfill(newest: sample.sequence, previousGridSequence: previousGridSequence)
-        }
         var updated = state
 
         // Never move the freshness marker backwards for an old backfilled
@@ -227,7 +225,9 @@ extension OttaiCGMManager {
             return
         }
 
-        if sample.source == .realtime, checkPriorityGridOnLiveFrame {
+        if sample.source == .realtime {
+            // A still-connected link can miss a grid point too. Each valid live wake may repair it.
+            Foundation.NotificationCenter.default.post(name: .init("com.trio.cgm.sourceActivity"), object: nil)
             firePendingBackfill(newest: sample.sequence, previousGridSequence: previousGridSequence)
         }
 
@@ -382,6 +382,7 @@ extension OttaiCGMManager {
             guard let self else { return }
             self.cgmManagerDelegate?.cgmManager(self, hasNew: .newData(samples))
         }
+        OttaiDiagnosticEvent.recordPipeline(.forwarding, .submitted)
         return true
     }
 
@@ -450,7 +451,6 @@ extension OttaiCGMManager {
     /// first while the older history cursor remains queued.
     @MainActor private func firePendingBackfill(newest: UInt16, previousGridSequence: UInt16?) {
         guard priorityGridSequence == nil else { return }
-        let checkPriority = checkPriorityGridOnLiveFrame
         checkPriorityGridOnLiveFrame = false
         guard let have = pendingBackfillFrom ?? previousGridSequence else { return }
         guard let monitor else {
@@ -462,7 +462,7 @@ extension OttaiCGMManager {
             return
         }
         let firstUsable = Self.firstBackfillableSequence(preheatDuration: preheat)
-        if checkPriority, startPriorityGridRequest(newest: newest, have: have, firstUsableSequence: firstUsable, monitor: monitor) {
+        if startPriorityGridRequest(newest: newest, have: have, firstUsableSequence: firstUsable, monitor: monitor) {
             return
         }
 

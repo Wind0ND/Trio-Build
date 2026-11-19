@@ -8,6 +8,8 @@ public enum PrivacyPreference {
     public static let coverKey = "privacy.cover.thumbnail"
     public static let biometricsKey = "privacy.lock.biometrics"
     public static let patternTraceKey = "privacy.lock.patternTrace"
+    public static let paletteKey = "privacy.display.palette"
+    public static let meterStyleKey = "privacy.display.meterStyle"
 
     public static var displayEnabled: Bool { UserDefaults.standard.bool(forKey: displayKey) }
     public static var alertsEnabled: Bool { UserDefaults.standard.bool(forKey: alertsKey) }
@@ -44,8 +46,7 @@ public struct PrivacyColor: Codable, Hashable, Sendable {
     public static let palette: [Self] = [0x6D28D9, 0x3B82F6, 0x22C55E, 0xB8DB55, 0xFB923C, 0xEF4444]
         .map(Self.init(hex:))
     // Public activity presentation has its own quieter colors; alarm accents stay unchanged.
-    public static let displayPalette: [Self] = [0x7B63A3, 0x5375A9, 0x508165, 0x7C834A, 0xA16D40, 0xAC5853]
-        .map(Self.init(hex:))
+    public static let displayPalette = PrivacyPalettePreset.quiet.colors
     public static let unknown = Self(hex: 0x9CA3AF)
 
     public func blended(with other: Self, amount: Double) -> Self {
@@ -61,9 +62,11 @@ public struct PrivacyColor: Codable, Hashable, Sendable {
 public struct PrivacyPalette: Sendable {
     public static let defaultBoundaries: [Double] = [3, 4, 6, 8, 12]
     public let boundaries: [Double]
+    public let preset: PrivacyPalettePreset
 
-    public init(boundaries: [Double] = defaultBoundaries) {
+    public init(boundaries: [Double] = defaultBoundaries, preset: PrivacyPalettePreset = .quiet) {
         self.boundaries = Self.isValid(boundaries) ? boundaries : Self.defaultBoundaries
+        self.preset = preset
     }
 
     public static func isValid(_ values: [Double]) -> Bool {
@@ -72,23 +75,27 @@ public struct PrivacyPalette: Sendable {
     }
 
     public static func stored(in defaults: UserDefaults = .standard) -> Self {
-        Self(boundaries: defaults.array(forKey: PrivacyPreference.boundariesKey) as? [Double] ?? defaultBoundaries)
+        Self(
+            boundaries: defaults.array(forKey: PrivacyPreference.boundariesKey) as? [Double] ?? defaultBoundaries,
+            preset: defaults.string(forKey: PrivacyPreference.paletteKey).flatMap(PrivacyPalettePreset.init(rawValue:)) ?? .quiet
+        )
     }
 
     public func color(mgDL: Double?) -> PrivacyColor {
         guard let mgDL, mgDL.isFinite, mgDL > 0 else { return .unknown }
         let value = mgDL / 18
+        let colors = preset.colors
         for (index, boundary) in boundaries.enumerated() {
             let halfWidth = 0.15
             if abs(value - boundary) < halfWidth {
-                return PrivacyColor.displayPalette[index].blended(
-                    with: PrivacyColor.displayPalette[index + 1],
+                return colors[index].blended(
+                    with: colors[index + 1],
                     amount: (value - boundary + halfWidth) / (2 * halfWidth)
                 )
             }
-            if value < boundary { return PrivacyColor.displayPalette[index] }
+            if value < boundary { return colors[index] }
         }
-        return PrivacyColor.displayPalette[5]
+        return colors[5]
     }
 }
 
@@ -108,8 +115,11 @@ public struct PrivacyActivityState: Codable, Hashable, Sendable {
     public let measuredAt: Date?
     public let recoveredAt: Date?
     public private(set) var cover: Data?
+    // Optional string keeps old snapshots decodable and unknown future styles harmless.
+    public private(set) var meterStyle: String?
 
-    public init(readings: [PrivacyReading], now: Date, palette: PrivacyPalette = .init(), cover: Data? = nil, recoveredAt: Date? = nil) {
+    public init(readings: [PrivacyReading], now: Date, palette: PrivacyPalette = .init(), cover: Data? = nil, recoveredAt: Date? = nil, meterStyle: PrivacyMeterStyle = .history) {
+        self.meterStyle = meterStyle == .history ? nil : meterStyle.rawValue
         // A future or invalid reading cannot become the color/freshness anchor.
         let valid = readings.filter { $0.mgDL.isFinite && $0.mgDL > 0 && $0.mgDL <= 1000 && $0.date <= now }
             .sorted { $0.date > $1.date }
@@ -143,6 +153,18 @@ public struct PrivacyActivityState: Codable, Hashable, Sendable {
     public func replacingCover(_ cover: Data?) -> Self {
         var copy = self
         copy.cover = cover.flatMap { $0.count <= 1200 ? $0 : nil }
+        return copy
+    }
+
+    /// Display-only arrangement: retain the six real history slots in the snapshot.
+    public var waveformHeights: [Double?] {
+        guard meterStyle == PrivacyMeterStyle.referenceFive.rawValue else { return heights }
+        return Array(heights.suffix(5)) + [PrivacyMeterStyle.referenceHeight]
+    }
+
+    public func replacingMeterStyle(_ style: PrivacyMeterStyle) -> Self {
+        var copy = self
+        copy.meterStyle = style == .history ? nil : style.rawValue
         return copy
     }
 }

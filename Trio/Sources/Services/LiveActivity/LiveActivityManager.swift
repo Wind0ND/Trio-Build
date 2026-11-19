@@ -73,6 +73,7 @@ final class LiveActivityData: ObservableObject {
 
     private var data = LiveActivityData()
     private var recoveredGridReceipt: (measuredAt: Date, receivedAt: Date)?
+    private var lastPublicationEvent = Date.distantPast
 
     /// A dispatch queue for handling Core Data change notifications.
     private let queue = DispatchQueue(label: "LiveActivityBridge.queue", qos: .userInitiated)
@@ -300,6 +301,7 @@ final class LiveActivityData: ObservableObject {
                 if let stillCurrent = self.currentActivity, stillCurrent.activity.id == currentActivity.activity.id {
                     debug(.liveActivity, "Updating Live Activity \(stillCurrent.activity.id)")
                     await stillCurrent.activity.update(content)
+                    recordPublication()
                 } else {
                     debug(.liveActivity, "Update skipped, activity changed during push")
                 }
@@ -364,6 +366,7 @@ final class LiveActivityData: ObservableObject {
                     pushType: nil
                 )
                 currentActivity = ActiveActivity(activity: activity)
+                recordPublication()
                 info(.liveActivity, "Started Live Activity \(activity.id)")
 
                 // Update the newly created activity with actual data
@@ -465,5 +468,11 @@ final class LiveActivityData: ObservableObject {
         )
 
         await pushUpdate(content)
+    }
+
+    @MainActor private func recordPublication() {
+        guard Date().timeIntervalSince(lastPublicationEvent) >= 300 else { return }
+        lastPublicationEvent = Date()
+        DiagnosticEventStore.shared.record(feature: "privacy", stage: "activity", outcome: "published")
     }
 }

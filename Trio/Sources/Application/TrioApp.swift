@@ -1,5 +1,6 @@
 import BackgroundKeepAliveKit
 import PrivacyAppKit
+import PrivacyKit
 import BackgroundTasks
 import CoreData
 import Foundation
@@ -208,7 +209,17 @@ extension Notification.Name {
                     if let settingsManager = resolver.resolve(SettingsManager.self) {
                         BackgroundKeepAlive.shared.configure(
                             initialSample: resolver.resolve(GlucoseStorage.self)?.lastGlucoseDate(),
-                            hasSource: { settingsManager.settings.cgm != .none && settingsManager.settings.cgm != .simulator }
+                            hasSource: { settingsManager.settings.cgm != .none && settingsManager.settings.cgm != .simulator },
+                            refresh: { completion in
+                                guard let manager = resolver.resolve(FetchGlucoseManager.self)?.cgmManager else { completion(); return }
+                                manager.fetchNewDataIfNeeded { _ in
+                                    Task { @MainActor in
+                                        await resolver.resolve(LiveActivityManager.self)?.pushCurrentContent()
+                                        completion()
+                                    }
+                                }
+                            },
+                            privateReminderTitle: { PrivacyPreference.alertsEnabled ? PrivacyText.attention : nil }
                         )
                         BackgroundKeepAlive.shared.setBackground(scenePhase == .background)
                     }

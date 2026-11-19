@@ -30,6 +30,7 @@ public enum OttaiDiagnosticEvent {
         case completion
         case firstReading = "first_reading"
         case reconnectGrid = "reconnect_grid"
+        case transport, forwarding
     }
 
     public enum Outcome: String, Sendable {
@@ -45,6 +46,7 @@ public enum OttaiDiagnosticEvent {
         case absent
         case retried
         case timedOut = "timed_out"
+        case received, submitted
     }
 
     public static func record(
@@ -63,5 +65,13 @@ public enum OttaiDiagnosticEvent {
         if let attempt { userInfo["attempt"] = min(max(attempt, 0), 999) }
         if let count { userInfo["count"] = min(max(count, 0), 9999) }
         NotificationCenter.default.post(name: notificationName, object: nil, userInfo: userInfo)
+    }
+
+    @MainActor private static var pipelineDates: [Stage: Date] = [:]
+    @MainActor public static func recordPipeline(_ stage: Stage, _ outcome: Outcome) {
+        let now = Date()
+        if let previous = pipelineDates[stage], now.timeIntervalSince(previous) < 300 { return }
+        pipelineDates[stage] = now
+        record(stage, outcome)
     }
 }

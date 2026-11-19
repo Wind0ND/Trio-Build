@@ -71,6 +71,17 @@
         }
       }
     },
+    "Color palette": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配色方案"
+          }
+        }
+      }
+    },
     "Color ranges": {
       "localizations": {
         "zh-Hans": {
@@ -117,6 +128,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "删除"
+          }
+        }
+      }
+    },
+    "Display appearance": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示外观"
           }
         }
       }
@@ -201,6 +223,17 @@
         }
       }
     },
+    "Five readings and reference": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近五次读数＋标桩"
+          }
+        }
+      }
+    },
     "Forgot PIN or pattern?": {
       "localizations": {
         "zh-Hans": {
@@ -227,6 +260,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "立即锁定"
+          }
+        }
+      }
+    },
+    "Muted mist": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "低饱和雾感"
           }
         }
       }
@@ -287,6 +331,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "警报隐私文案"
+          }
+        }
+      }
+    },
+    "Quiet dark": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更暗融入"
           }
         }
       }
@@ -371,6 +426,28 @@
         }
       }
     },
+    "Six recent readings": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近六次读数"
+          }
+        }
+      }
+    },
+    "Soft balanced": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "柔和均衡"
+          }
+        }
+      }
+    },
     "System alarms already ringing keep their original title until stopped. Enable alert privacy before an alarm starts.": {
       "localizations": {
         "zh-Hans": {
@@ -417,6 +494,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法读取或下载照片，请检查网络连接后重试。"
+          }
+        }
+      }
+    },
+    "The reference style shows the latest five readings, followed by a fixed 5 mmol/L marker at 41.7% height. The entire group, including the marker, uses the latest reading's color.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标桩样式显示最近五次读数，最右侧为固定 5 mmol/L 的标桩，高度为满格的 41.7%。整组声浪及标桩均使用最新读数对应的颜色。"
           }
         }
       }
@@ -567,6 +655,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "查看锁"
+          }
+        }
+      }
+    },
+    "Waveform style": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "声浪样式"
           }
         }
       }

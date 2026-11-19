@@ -1,0 +1,193 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Alarm has audio priority": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "警报优先使用声音"
+          }
+        }
+      }
+    },
+    "App in foreground": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用正在前台运行"
+          }
+        }
+      }
+    },
+    "Audio fallback running": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音频辅助正在运行"
+          }
+        }
+      }
+    },
+    "Audio interrupted; awaiting a wake opportunity": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音频已中断，等待系统唤醒机会"
+          }
+        }
+      }
+    },
+    "Audio recovery limit reached": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音频恢复已达到时限"
+          }
+        }
+      }
+    },
+    "Audio unavailable; Bluetooth recovery remains enabled": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音频暂不可用，蓝牙恢复仍保持启用"
+          }
+        }
+      }
+    },
+    "Automatic protection": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动守护"
+          }
+        }
+      }
+    },
+    "Automatic protection starts when the app enters the background, before readings become overdue. Bluetooth events drive recovery; audio is an optional fallback and may be interrupted by video or calls. It can increase battery use. iOS controls background execution.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动守护在应用退入后台时提前启动，不再等待读数超时。蓝牙事件负责唤醒和恢复，音频仅作辅助，可能被视频或通话中断，并会增加耗电。后台运行仍受 iOS 调度限制。"
+          }
+        }
+      }
+    },
+    "Background protection": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "后台守护"
+          }
+        }
+      }
+    },
+    "Continuous audio fallback": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "持续音频辅助"
+          }
+        }
+      }
+    },
+    "Current protection": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前守护状态"
+          }
+        }
+      }
+    },
+    "Disabled": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已关闭"
+          }
+        }
+      }
+    },
+    "Interruption threshold: %lld minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连续 %lld 分钟无新读数时提醒"
+          }
+        }
+      }
+    },
+    "No active source": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有启用的数据源"
+          }
+        }
+      }
+    },
+    "Off": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭"
+          }
+        }
+      }
+    },
+    "Protection mode": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "守护模式"
+          }
+        }
+      }
+    },
+    "Recovery audio limit: %lld minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "断流后的音频辅助最长 %lld 分钟"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

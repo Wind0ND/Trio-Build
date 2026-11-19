@@ -13,6 +13,18 @@ import Testing
 
     private static let start = Date(timeIntervalSince1970: 1_800_000_000)
 
+    @Test("Background pipeline phases export through the common bounded contract") func backgroundPipelineEvents() {
+        let store = DiagnosticEventStore(defaults: Self.defaults(), now: { Self.start })
+        for (feature, stage, outcome) in [
+            ("ottai", "transport", "received"), ("ottai", "forwarding", "submitted"),
+            ("keep_alive", "data", "stored"), ("keep_alive", "data", "overdue"),
+            ("keep_alive", "recovery", "requested"), ("keep_alive", "recovery", "timed_out"),
+            ("privacy", "activity", "published")
+        ] { #expect(store.record(feature: feature, stage: stage, outcome: outcome)) }
+        #expect(store.allEvents.count == 7)
+        #expect(!store.record(feature: "keep_alive", stage: "data", outcome: "4.6 mmol/L"))
+    }
+
     @Test("Only registered feature/stage/outcome triples are accepted") func allowlist() {
         let store = DiagnosticEventStore(defaults: Self.defaults(), now: { Self.start })
         #expect(!store.record(feature: "ottai", stage: "nfc", outcome: "raw-error"))

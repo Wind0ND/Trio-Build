@@ -10,6 +10,8 @@ public struct PrivacySettingsView: View {
     @AppStorage(PrivacyPreference.alertsKey) private var privateAlerts = false
     @AppStorage(PrivacyPreference.biometricsKey) private var biometrics = false
     @AppStorage(PrivacyPreference.patternTraceKey) private var patternTrace = false
+    @AppStorage(PrivacyPreference.paletteKey) private var palette = PrivacyPalettePreset.quiet.rawValue
+    @AppStorage(PrivacyPreference.meterStyleKey) private var meterStyle = PrivacyMeterStyle.history.rawValue
     @State private var showSetup = false
     @State private var method: PrivacyLockMethod = .pin
     @State private var selectedPhoto: PhotosPickerItem?
@@ -53,10 +55,28 @@ public struct PrivacySettingsView: View {
                     }
                 }
             }
+            Section(privacyText("Display appearance")) {
+                Picker(privacyText("Color palette"), selection: protectedChoice($palette)) {
+                    Text(privacyText("Quiet dark")).tag(PrivacyPalettePreset.quiet.rawValue)
+                    Text(privacyText("Soft balanced")).tag(PrivacyPalettePreset.balanced.rawValue)
+                    Text(privacyText("Muted mist")).tag(PrivacyPalettePreset.mist.rawValue)
+                }
+                HStack {
+                    ForEach(0 ..< 6, id: \.self) { index in
+                        Circle().fill(selectedColors[index].swiftUIColor).frame(width: 18, height: 18)
+                    }
+                }.accessibilityHidden(true)
+                Picker(privacyText("Waveform style"), selection: protectedChoice($meterStyle)) {
+                    Text(privacyText("Six recent readings")).tag(PrivacyMeterStyle.history.rawValue)
+                    Text(privacyText("Five readings and reference")).tag(PrivacyMeterStyle.referenceFive.rawValue)
+                }
+                Text(privacyText("The reference style shows the latest five readings, followed by a fixed 5 mmol/L marker at 41.7% height. The entire group, including the marker, uses the latest reading's color."))
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
             Section(privacyText("Color ranges")) {
                 ForEach(0 ..< 5, id: \.self) { index in
                     HStack {
-                        Circle().fill(PrivacyColor.displayPalette[index].swiftUIColor).frame(width: 12, height: 12)
+                        Circle().fill(selectedColors[index].swiftUIColor).frame(width: 12, height: 12)
                         Text(privacyText("Upper boundary"))
                         TextField("mmol/L", text: $boundaryText[index]).keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
@@ -64,7 +84,7 @@ public struct PrivacySettingsView: View {
                     }
                 }
                 HStack {
-                    Circle().fill(PrivacyColor.displayPalette[5].swiftUIColor).frame(width: 12, height: 12)
+                    Circle().fill(selectedColors[5].swiftUIColor).frame(width: 12, height: 12)
                     Text(privacyText("Red represents values above the final boundary."))
                 }
                 Button(privacyText("Save color ranges"), action: saveBoundaries)
@@ -100,6 +120,20 @@ public struct PrivacySettingsView: View {
     }
 
     private func protected(_ binding: Binding<Bool>) -> Binding<Bool> {
+        Binding(get: { binding.wrappedValue }, set: { value in
+            lock.requireAuthentication {
+                binding.wrappedValue = value
+                PrivacyPreference.record(stage: "settings", outcome: "changed")
+                PrivacyPreference.notifyChanged()
+            }
+        })
+    }
+
+    private var selectedColors: [PrivacyColor] {
+        (PrivacyPalettePreset(rawValue: palette) ?? .quiet).colors
+    }
+
+    private func protectedChoice(_ binding: Binding<String>) -> Binding<String> {
         Binding(get: { binding.wrappedValue }, set: { value in
             lock.requireAuthentication {
                 binding.wrappedValue = value

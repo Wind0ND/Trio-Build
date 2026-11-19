@@ -310,6 +310,7 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
         // Start background task
         var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
         backgroundTaskID = startBackgroundTask(withName: "Glucose Store and Heartbeat Decision")
+        defer { endBackgroundTaskSafely(&backgroundTaskID, taskName: "Glucose Store and Heartbeat Decision") }
 
         // Check if sensor emitted calibrations
         let calibrations = glucose.filter { $0.mbg != nil }
@@ -319,7 +320,6 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
         }
 
         guard newGlucose.isNotEmpty else {
-            endBackgroundTaskSafely(&backgroundTaskID, taskName: "Glucose Store and Heartbeat Decision")
             return
         }
 
@@ -343,7 +343,6 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
         }
 
         guard filtered.isNotEmpty else {
-            endBackgroundTaskSafely(&backgroundTaskID, taskName: "Glucose Store and Heartbeat Decision")
             return
         }
         debug(.cgm, "Storing \(filtered.count) new glucose readings")
@@ -366,7 +365,6 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
 
         TelemetryClient.shared.checkAndSendIfOverdueInBackground()
 
-        endBackgroundTaskSafely(&backgroundTaskID, taskName: "Glucose Store and Heartbeat Decision")
     }
 
     func sourceInfo() -> [String: Any]? {

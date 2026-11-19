@@ -21,6 +21,8 @@ struct KeepAlivePolicy {
 
     private(set) var latestSample: Date?
     private var monitoringSince: Date?
+    private var lastRefresh: Date?
+    private var recoveryUptime: TimeInterval?
 
     mutating func beginMonitoring(at date: Date) {
         if monitoringSince == nil { monitoringSince = date }
@@ -28,6 +30,8 @@ struct KeepAlivePolicy {
 
     mutating func endMonitoring() {
         monitoringSince = nil
+        recoveryUptime = nil
+        lastRefresh = nil
     }
 
     @discardableResult
@@ -46,9 +50,20 @@ struct KeepAlivePolicy {
         deadline(interval: interval).map { $0 <= now } ?? false
     }
 
-    // Decision boundary extracted from the existing coordinator for regression coverage.
+    // Protection starts while the process is still running, not after a sleeping timer expires.
     func wantsAudio(configuration: Configuration, now: Date, background: Bool, blocked: Bool, capped: Bool) -> Bool {
-        guard background, !blocked, !capped, configuration.mode != .off else { return false }
-        return configuration.mode == .always || isStale(now: now, interval: configuration.stallInterval)
+        background && !blocked && configuration.mode != .off && (configuration.mode == .always || !capped)
+    }
+
+    mutating func reserveRefresh(now: Date) -> Bool {
+        if let lastRefresh, now >= lastRefresh, now.timeIntervalSince(lastRefresh) < 60 { return false }
+        lastRefresh = now
+        return true
+    }
+
+    mutating func recoveryCapped(stale: Bool, uptime: TimeInterval, limit: TimeInterval) -> Bool {
+        guard stale else { recoveryUptime = nil; return false }
+        if recoveryUptime == nil || uptime < (recoveryUptime ?? uptime) { recoveryUptime = uptime }
+        return uptime - (recoveryUptime ?? uptime) >= limit
     }
 }

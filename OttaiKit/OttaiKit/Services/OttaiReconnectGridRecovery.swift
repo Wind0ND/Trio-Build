@@ -33,15 +33,27 @@ enum OttaiReconnectGridRecovery {
     }
 }
 
+/// One attempt per target per minute; a new grid target can recover immediately.
+struct OttaiGridRecoveryThrottle {
+    private var previous: (target: UInt16, date: Date)?
+
+    mutating func reserve(target: UInt16, now: Date) -> Bool {
+        if let previous, previous.target == target,
+           now >= previous.date, now.timeIntervalSince(previous.date) < 60 { return false }
+        previous = (target, now)
+        return true
+    }
+}
+
 extension OttaiCGMManager {
     @MainActor func startPriorityGridRequest(newest: UInt16, have: UInt16, firstUsableSequence: UInt16, monitor: OttaiSensorMonitor) -> Bool {
-        guard let sequence = OttaiReconnectGridRecovery.target(
+        guard priorityGridSequence == nil, let sequence = OttaiReconnectGridRecovery.target(
             latestLiveSequence: newest,
             lastGridSequence: have,
             firstUsableSequence: firstUsableSequence,
             lastSubmittedAt: state.lastGridSubmissionAt ?? state.latestForwardedToLoopAt,
             now: Date()
-        ) else { return false }
+        ), gridRecoveryThrottle.reserve(target: sequence, now: Date()) else { return false }
 
         pendingBackfillFrom = have
         priorityGridSequence = sequence

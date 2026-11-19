@@ -16,7 +16,8 @@ import UIKit
         }, now: now)
         for presentation in [PrivacyMeterPresentation.standard, .compact, .minimal] {
             for width in [12.0, 14, 16] {
-                let columns = try renderedCenterRow(state: state, stale: false, width: width, presentation: presentation)
+                for style in PrivacyMeterStyle.allCases {
+                let columns = try renderedCenterRow(state: state.replacingMeterStyle(style), stale: false, width: width, presentation: presentation)
                 var runs = 0
                 var previous = false
                 for active in columns {
@@ -24,6 +25,7 @@ import UIKit
                     previous = active
                 }
                 #expect(runs == 6, "All six chronological bars should fit a \(width)pt region")
+                }
             }
         }
     }

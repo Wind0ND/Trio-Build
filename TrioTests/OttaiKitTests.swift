@@ -5,6 +5,14 @@ import Testing
 @Suite("Ottai reconnect grid priority") struct OttaiReconnectGridRecoveryTests {
     private let now = Date(timeIntervalSince1970: 1_800_001_200)
 
+    @Test("The same connected-grid target is rate limited while a newer target can recover") func connectedRecoveryThrottle() {
+        var throttle = OttaiGridRecoveryThrottle()
+        #expect(throttle.reserve(target: 120, now: now))
+        #expect(!throttle.reserve(target: 120, now: now + 59))
+        #expect(throttle.reserve(target: 120, now: now + 60))
+        #expect(throttle.reserve(target: 125, now: now + 61))
+    }
+
     @Test("A long reconnect gap prioritizes the closest prior grid record") func selectsClosestGrid() {
         let priority = OttaiReconnectGridRecovery.target(
             latestLiveSequence: 124, lastGridSequence: 100, firstUsableSequence: 30,

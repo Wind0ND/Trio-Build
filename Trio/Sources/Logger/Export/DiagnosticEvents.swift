@@ -40,7 +40,7 @@ enum DiagnosticEventContract {
                 "binding",
                 "completion",
                 "first_reading",
-                "reconnect_grid"
+                "reconnect_grid", "transport", "forwarding"
             ],
             outcomes: [
                 "started",
@@ -54,7 +54,7 @@ enum DiagnosticEventContract {
                 "present",
                 "absent",
                 "retried",
-                "timed_out"
+                "timed_out", "received", "submitted"
             ]
         ),
         "aidex": Feature(
@@ -82,12 +82,12 @@ enum DiagnosticEventContract {
             outcomes: ["started", "matched", "succeeded", "unavailable", "timed_out", "failed", "stopped"]
         ),
         "privacy": Feature(
-            stages: ["settings", "cover", "authentication", "lock"],
-            outcomes: ["changed", "succeeded", "failed", "reset", "enabled", "disabled"]
+            stages: ["settings", "cover", "authentication", "lock", "activity"],
+            outcomes: ["changed", "succeeded", "failed", "reset", "enabled", "disabled", "published"]
         ),
         "keep_alive": Feature(
-            stages: ["audio", "reminder", "data"],
-            outcomes: ["started", "stopped", "failed", "interrupted", "capped", "scheduled", "recovered"]
+            stages: ["audio", "reminder", "data", "source", "lifecycle", "recovery"],
+            outcomes: ["started", "stopped", "failed", "interrupted", "capped", "scheduled", "recovered", "received", "stored", "background", "foreground", "requested", "completed", "timed_out", "reset", "overdue"]
         )
     ]
 

@@ -2,11 +2,15 @@
 import AVFoundation
 import Foundation
 import UserNotifications
+import UIKit
+import Combine
 
-/// Coordinates an optional audio fallback and a system-owned CGM freshness reminder.
+/// Event-driven protection, bounded source recovery and a system-owned freshness reminder.
 @MainActor
-public final class BackgroundKeepAlive {
+public final class BackgroundKeepAlive: ObservableObject {
     public static let shared = BackgroundKeepAlive()
+    public enum Status: String { case disabled, noSource, foreground, protecting, interrupted, alert, limited, failed }
+    @Published public private(set) var status: Status = .foreground
 
     public enum SettingsKey {
         public static let mode = "backgroundKeepAlive.mode"
@@ -14,8 +18,14 @@ public final class BackgroundKeepAlive {
         public static let maxSessionMinutes = "backgroundKeepAlive.maxSessionMinutes"
     }
 
-    private enum Stage: String { case audio, reminder, data }
-    private enum Outcome: String { case started, stopped, failed, interrupted, capped, scheduled, recovered }
+    private enum Stage: String { case audio, reminder, data, source, lifecycle, recovery }
+    private enum Outcome: String {
+        case started, stopped, failed, interrupted, capped, scheduled, recovered, received, stored
+        case background, foreground, requested, completed, timedOut = "timed_out", reset, overdue
+    }
+
+    public static let sourceActivity = Notification.Name("com.trio.cgm.sourceActivity")
+    public typealias RefreshHandler = (@escaping @Sendable () -> Void) -> Void
 
     private static let reminderID = "background-keep-alive-stall"
     private static let acknowledgedDeadlineKey = "backgroundKeepAlive.lastScheduledDeadline"
@@ -24,21 +34,27 @@ public final class BackgroundKeepAlive {
     private let defaults = UserDefaults.standard
     private var policy = KeepAlivePolicy()
     private var hasSource: (() -> Bool)?
+    private var refresh: RefreshHandler?
+    private var privateReminderTitle: (() -> String?)?
     private var background = false
     private var playing = false
     private var alertOwnsAudio = false
     private var interrupted = false
-    private var smartStarted: TimeInterval?
     private var capReported = false
     private var audioRetryAfter: TimeInterval = 0
     private var check: Task<Void, Never>?
     private var reminderDeadline: Date?
     private var reminderOutcome: Outcome?
     private var clearedReminder = false
-    private var interruptionObserver: NSObjectProtocol?
+    private var observers: [NSObjectProtocol] = []
+    private var recentEvents: [Stage: (Outcome, Date)] = [:]
+    private var refreshToken: UUID?
+    private var refreshLease: UIBackgroundTaskIdentifier = .invalid
+    private var refreshTimeout: Task<Void, Never>?
+    private var reminderIsPrivate: Bool?
 
     private init() {
-        interruptionObserver = NotificationCenter.default.addObserver(
+        observers.append(NotificationCenter.default.addObserver(
             forName: AVAudioSession.interruptionNotification, object: nil, queue: .main
         ) { [weak self] note in
             guard let rawType = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt else { return }
@@ -46,17 +62,40 @@ public final class BackgroundKeepAlive {
             Task { @MainActor [weak self] in
                 self?.handleInterruption(type: rawType, options: rawOptions)
             }
+        })
+        for name in [AVAudioSession.mediaServicesWereResetNotification, Notification.Name.AVAudioEngineConfigurationChange] {
+            observers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
+                let engineID = (note.object as? AVAudioEngine).map(ObjectIdentifier.init)
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    if name == Notification.Name.AVAudioEngineConfigurationChange,
+                       engineID != self.audio.engineIdentifier || self.audio.isRunning || self.alertOwnsAudio { return }
+                    self.audio.reset()
+                    self.playing = false
+                    self.record(.audio, .reset)
+                    self.reevaluate()
+                }
+            })
         }
+        observers.append(NotificationCenter.default.addObserver(forName: Self.sourceActivity, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.noteSourceActivity() }
+        })
+        observers.append(NotificationCenter.default.addObserver(forName: .init("com.trio.privacy.changed"), object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.settingsChanged() }
+        })
     }
 
-    public func configure(initialSample: Date?, hasSource: @escaping () -> Bool) {
+    public func configure(initialSample: Date?, hasSource: @escaping () -> Bool, refresh: RefreshHandler? = nil, privateReminderTitle: (() -> String?)? = nil) {
         self.hasSource = hasSource
+        self.refresh = refresh
+        self.privateReminderTitle = privateReminderTitle
         if let initialSample { policy.accept(initialSample, now: Date()) }
         notifications.removePendingNotificationRequests(withIdentifiers: ["background-keep-alive-expired"])
         reevaluate()
     }
 
     public func setBackground(_ value: Bool) {
+        if value != background { record(.lifecycle, value ? .background : .foreground) }
         background = value
         if !value { interrupted = false }
         reevaluate()
@@ -64,14 +103,22 @@ public final class BackgroundKeepAlive {
 
     public func settingsChanged() { reevaluate() }
 
+    public func noteSourceActivity() {
+        guard hasSource?() == true else { return }
+        record(.source, .received)
+        // Resume only on an actual wake opportunity after competing audio has ended.
+        if interrupted, !AVAudioSession.sharedInstance().isOtherAudioPlaying { interrupted = false }
+        reevaluate()
+    }
+
     public func noteGlucoseSample(at timestamp: Date) {
         let now = Date()
         let configuration = configuration
         let interval = configuration.stallInterval
         let wasStale = policy.isStale(now: now, interval: interval)
         guard policy.accept(timestamp, now: now) else { return }
+        record(.data, .stored)
         if !policy.isStale(now: now, interval: interval) {
-            smartStarted = nil
             capReported = false
             if wasStale, configuration.mode != .off, hasSource?() == true {
                 record(.data, .recovered)
@@ -106,9 +153,11 @@ public final class BackgroundKeepAlive {
         check = nil
         let configuration = configuration
         guard configuration.mode != .off, hasSource() else {
+            status = configuration.mode == .off ? .disabled : .noSource
             policy.endMonitoring()
             clearReminder()
             stopAudio(.stopped)
+            finishRefresh(.stopped)
             return
         }
 
@@ -117,27 +166,28 @@ public final class BackgroundKeepAlive {
         let deadline = policy.deadline(interval: configuration.stallInterval)
         if let deadline { scheduleReminder(for: deadline, now: now, interval: configuration.stallInterval) }
 
-        guard background, !alertOwnsAudio, !interrupted else {
-            stopAudio(.stopped)
-            return
-        }
-
         let uptime = ProcessInfo.processInfo.systemUptime
+        let stale = policy.isStale(now: now, interval: configuration.stallInterval)
+        if stale { record(.data, .overdue); requestRefresh(now: now) }
+        var capped = false
         if configuration.mode == .smart {
-            guard let deadline else { return }
-            if deadline > now {
-                stopAudio(.stopped)
-                armCheck(after: deadline.timeIntervalSince(now))
-                return
-            }
-            if let smartStarted, uptime - smartStarted >= configuration.capInterval {
-                stopAudio(.stopped, report: false)
+            capped = policy.recoveryCapped(stale: stale && background, uptime: uptime, limit: configuration.capInterval)
+            if !stale { capReported = false }
+            if capped {
                 if !capReported {
                     capReported = true
                     record(.audio, .capped)
                 }
-                return
             }
+        }
+
+        guard policy.wantsAudio(configuration: configuration, now: now, background: background,
+                                blocked: alertOwnsAudio || interrupted, capped: capped) else {
+            status = !background ? .foreground : (alertOwnsAudio ? .alert : (interrupted ? .interrupted : .limited))
+            stopAudio(.stopped)
+            // Timers are only opportunistic; Bluetooth wakes and foreground events also reevaluate.
+            if background { armCheck(after: 60) }
+            return
         }
 
         guard uptime >= audioRetryAfter else {
@@ -147,6 +197,7 @@ public final class BackgroundKeepAlive {
         if !audio.isRunning {
             audio.stop()
             guard audio.start() else {
+                status = .failed
                 if audioRetryAfter == 0 { record(.audio, .failed) }
                 playing = false
                 audioRetryAfter = uptime + 60
@@ -157,14 +208,45 @@ public final class BackgroundKeepAlive {
             audioRetryAfter = 0
             record(.audio, .started)
         }
+        status = .protecting
 
-        if configuration.mode == .smart {
-            let start = smartStarted ?? uptime
-            smartStarted = start
-            armCheck(after: min(60, max(1, configuration.capInterval - (uptime - start))))
-        } else {
-            armCheck(after: 60)
+        armCheck(after: 60)
+    }
+
+    private func requestRefresh(now: Date) {
+        guard let refresh, refreshToken == nil, policy.reserveRefresh(now: now) else { return }
+        let token = UUID()
+        refreshToken = token
+        record(.recovery, .requested)
+        refreshLease = UIApplication.shared.beginBackgroundTask(withName: "CGM recovery and presentation") { [weak self] in
+            Task { @MainActor [weak self] in
+                guard self?.refreshToken == token else { return }
+                self?.finishRefresh(.timedOut)
+            }
         }
+        refreshTimeout = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(20)) } catch { return }
+            guard self?.refreshToken == token else { return }
+            self?.finishRefresh(.timedOut)
+        }
+        refresh { [weak self] in
+            Task { @MainActor [weak self] in
+                guard self?.refreshToken == token else { return }
+                self?.finishRefresh(.completed)
+            }
+        }
+    }
+
+    private func finishRefresh(_ outcome: Outcome) {
+        guard refreshToken != nil else { return }
+        refreshToken = nil
+        refreshTimeout?.cancel()
+        refreshTimeout = nil
+        if refreshLease != .invalid {
+            UIApplication.shared.endBackgroundTask(refreshLease)
+            refreshLease = .invalid
+        }
+        record(.recovery, outcome)
     }
 
     private func armCheck(after delay: TimeInterval) {
@@ -177,6 +259,13 @@ public final class BackgroundKeepAlive {
     }
 
     private func scheduleReminder(for deadline: Date, now: Date, interval: TimeInterval) {
+        let privateTitle = privateReminderTitle?()
+        let isPrivate = privateTitle != nil
+        if let previous = reminderIsPrivate, previous != isPrivate {
+            reminderDeadline = nil
+            defaults.removeObject(forKey: Self.acknowledgedDeadlineKey)
+        }
+        reminderIsPrivate = isPrivate
         if let current = reminderDeadline, current == deadline || (current <= now && deadline <= now) { return }
         if reminderDeadline == nil, deadline <= now,
            defaults.object(forKey: Self.acknowledgedDeadlineKey) as? Date == deadline
@@ -191,6 +280,7 @@ public final class BackgroundKeepAlive {
         let minutes = Int(interval / 60)
         content.title = String(localized: "Glucose Data Interrupted", bundle: .main)
         content.body = String(localized: "No new glucose readings for \(minutes) minutes. Open Trio and check the CGM connection.", bundle: .main)
+        if let privateTitle { content.title = privateTitle; content.body = "" }
         content.sound = .default
         content.interruptionLevel = .timeSensitive
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, deadline.timeIntervalSince(now)), repeats: false)
@@ -238,12 +328,16 @@ public final class BackgroundKeepAlive {
             reevaluate()
         case .ended:
             interrupted = !AVAudioSession.InterruptionOptions(rawValue: options).contains(.shouldResume)
+                && AVAudioSession.sharedInstance().isOtherAudioPlaying
             reevaluate()
         default: break
         }
     }
 
     private func record(_ stage: Stage, _ outcome: Outcome) {
+        let now = Date()
+        if let (previous, date) = recentEvents[stage], previous == outcome, now.timeIntervalSince(date) < 300 { return }
+        recentEvents[stage] = (outcome, now)
         NotificationCenter.default.post(name: .init("com.trio.diagnostics.event"), object: nil, userInfo: [
             "schema": 1, "feature": "keep_alive", "stage": stage.rawValue, "outcome": outcome.rawValue
         ])

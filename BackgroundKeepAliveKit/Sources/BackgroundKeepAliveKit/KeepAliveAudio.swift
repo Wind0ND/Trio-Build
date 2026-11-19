@@ -3,11 +3,17 @@ import AVFoundation
 
 @MainActor
 final class KeepAliveAudio {
-    private let engine = AVAudioEngine()
+    private var engine = AVAudioEngine()
     private var node: AVAudioSourceNode?
     private var sessionActive = false
 
     var isRunning: Bool { engine.isRunning }
+    var engineIdentifier: ObjectIdentifier { ObjectIdentifier(engine) }
+
+    func reset() {
+        stop()
+        engine = AVAudioEngine()
+    }
 
     func start() -> Bool {
         guard !isRunning, let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1) else { return isRunning }

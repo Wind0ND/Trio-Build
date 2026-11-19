@@ -1,0 +1,13 @@
+# Background protection
+
+Independent module for protection policy, audio lifecycle, bounded source-refresh leases, settings UI and Chinese strings. Existing off/smart/always preference keys are retained. `smart` now means proactive automatic protection, not waiting for a stale-reading timer before starting.
+
+Automatic audio fallback is attempted immediately on entering background with a selected real source. Healthy stored readings keep it available. Stale background recovery is capped using monotonic uptime; fresh data, foreground interaction or switching off ends that recovery episode. Continuous mode is the explicit uncapped audio option. Audio mixes with other apps and yields to alarms. Interruptions, own-engine configuration changes and media-service resets are handled; audio status is visible, never assumed equivalent to healthy glucose delivery.
+
+Core Bluetooth background callbacks and state restoration remain primary. `com.trio.cgm.sourceActivity` indicates an actual valid live wake, not a stored sample. It can retry protection after competing audio ends and trigger recovery when stored samples are overdue. It never advances sample freshness. A throttled host refresh has a finite system background-task lease, completion token and20s timeout; `completed` means the request ended, not that fresh data arrived. Only accepted measurement timestamps decide recovery.
+
+Default diagnostic export uses the common allowlisted `keep_alive` feature (audio/reminder/data/source/lifecycle/recovery). Repeated identical successful events are limited to once per5min. It contains no glucose values, sensor IDs, raw errors or audio-app identities. System interruption reminders use neutral titles when host alert privacy is enabled; original sound behavior remains.
+
+iOS controls execution, Bluetooth relaunch and audio privileges. Neither silent audio nor an in-process timer guarantees indefinite running or revival after a user force-quit. Video, calls, radio loss, memory pressure and actual sensor/decoder faults still need physical-device testing. Apple references: Core Bluetooth background processing guide; TN3115; AVAudioSession interruption handling. In iOS26, an instantiated CBManager plus an existing Live Activity can receive additional Bluetooth background privileges; this is not a general-purpose permanent-execution entitlement.
+
+Host integration: configure source-present check, refresh callback and optional private reminder title in TrioApp; feed actual stored sample timestamps from GlucoseStorage. The feature screen only embeds KeepAliveSettingsSection. Ottai handles missed-grid repair in its own module, after every reading-validity gate, without changing sample values or measurement times.

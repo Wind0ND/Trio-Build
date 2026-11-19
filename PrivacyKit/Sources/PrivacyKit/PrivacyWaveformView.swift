@@ -47,12 +47,12 @@ public struct PrivacyWaveformView: View {
     }
 
     public var body: some View {
-        PrivacyMeterLayout(heights: state.heights, height: height, presentation: presentation) {
+        PrivacyMeterLayout(heights: state.waveformHeights, height: height, presentation: presentation) {
             if stale || state.measuredAt == nil {
                 Circle().strokeBorder(lineWidth: 1.5)
             } else {
                 ForEach(0 ..< 6, id: \.self) { index in
-                    let value = state.heights.indices.contains(index) ? state.heights[index] : nil
+                    let value = state.waveformHeights.indices.contains(index) ? state.waveformHeights[index] : nil
                     Capsule().fill(value == nil ? Color.secondary.opacity(0.25) : state.color.swiftUIColor)
                 }
             }

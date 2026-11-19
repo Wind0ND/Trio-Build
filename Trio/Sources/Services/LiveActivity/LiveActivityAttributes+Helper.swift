@@ -35,9 +35,9 @@ extension LiveActivityAttributes.ContentState {
         let readings = previous?.detailedViewState.chart.map {
             PrivacyReading(mgDL: NSDecimalNumber(decimal: $0.value).doubleValue, date: $0.date)
         } ?? []
-        let snapshot = previous?.privacy?.replacingCover(cover) ?? PrivacyActivityState(
+        let snapshot = previous?.privacy?.replacingCover(cover).replacingMeterStyle(.stored()) ?? PrivacyActivityState(
             readings: readings, now: Date(), palette: .stored(),
-            cover: cover
+            cover: cover, meterStyle: .stored()
         )
         let empty = LiveActivityAttributes.ContentAdditionalState(
             chart: [], rotationDegrees: 0, cob: 0, iob: 0, tdd: 0,
@@ -154,7 +154,7 @@ extension LiveActivityAttributes.ContentState {
             privacy: privateDisplay ? PrivacyActivityState(
                 readings: chart.map { PrivacyReading(mgDL: Double($0.glucose), date: $0.date) },
                 now: Date(), palette: .stored(),
-                cover: privateCover, recoveredAt: privateRecoveredAt
+                cover: privateCover, recoveredAt: privateRecoveredAt, meterStyle: .stored()
             ) : nil,
             glucoseMeasuredAt: bg.date
         )
