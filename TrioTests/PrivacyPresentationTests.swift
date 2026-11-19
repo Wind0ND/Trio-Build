@@ -30,12 +30,18 @@ import UIKit
 
     @Test("The overdue ring keeps the same center in narrow regions") @MainActor
     func centeredOverdueRing() throws {
-        let state = PrivacyActivityState(readings: [], now: Date())
+        let now = Date()
+        let state = PrivacyActivityState(readings: (0 ..< 6).map {
+            PrivacyReading(mgDL: 108, date: now.addingTimeInterval(-Double($0) * 300))
+        }, now: now)
         for width in [12.0, 14, 16] {
             let columns = try renderedCenterRow(state: state, stale: true, width: width, presentation: .minimal)
             let first = try #require(columns.firstIndex(of: true))
             let last = try #require(columns.lastIndex(of: true))
             #expect(abs(Double(first + last) / 2 - Double(columns.count - 1) / 2) <= 1)
+            #expect(columns[columns.count / 2] == false)
+            let runs = columns.indices.filter { columns[$0] && ($0 == 0 || !columns[$0 - 1]) }.count
+            #expect(runs == 2, "An overdue reading must render a hollow ring instead of bars or a filled disk")
         }
     }
 
@@ -71,9 +77,13 @@ import UIKit
         #expect(Icon_.resolvedIcon(named: nil) == .primary)
         #expect(Icon_.resolvedIcon(named: "removed-or-unknown-icon") == .primary)
         #expect(Icon_.resolvedIcon(named: Icon_.primaryAssetName) == .primary)
-        for name in ["trioBlack", "catWithPod", "catWithPodWhiteBG", "hiroSleepCat", "hiroRoundCat", "hiroShiba", "hiroSpaniel", "hiroCorgi"] {
+        let metadata = Bundle.main.object(forInfoDictionaryKey: "CFBundleIcons") as? [String: Any]
+        let alternatives = metadata?["CFBundleAlternateIcons"] as? [String: Any] ?? [:]
+        let expected = ["trioBlack", "trioWhiteShadow", "trioColorBG", "trioWhite", "trioCircledNoBackground", "trio3D", "diabeetus", "catWithPod", "catWithPodWhiteBG", "hiroSleepCat", "hiroRoundCat", "hiroShiba", "hiroSpaniel", "hiroCorgi"]
+        for name in expected {
             #expect(icons.contains { $0.assetName == name })
             #expect(UIImage(named: name) != nil)
+            #expect(name == Icon_.primaryAssetName || alternatives[name] != nil, "Alternate icon must be registered, not only available as a preview")
         }
     }
 

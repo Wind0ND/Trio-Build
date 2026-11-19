@@ -66,4 +66,3 @@ A successful Ottai current-grid recovery has a separate in-process receipt. The 
 The host supplies matching 22pt compact alignment boxes (20pt artwork) and 28pt expanded alignment boxes (24pt artwork). Private layouts use system content margins; public layouts retain their existing overrides. ActivityKit still determines which side an activity occupies and how multiple activities share the island.
 
 Independent checks: manually dispatch `privacy_kit_tests.yml` for package tests and iOS package compilation; the complete app test workflow additionally renders narrow waveforms to pixels, verifies six visible bars and checks the overdue ring center. Physical camera masks and simultaneous activities still require device testing.
-
