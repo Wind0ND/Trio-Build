@@ -7,11 +7,16 @@ import Testing
 
     @Test("The same connected-grid target is rate limited while a newer target can recover") func connectedRecoveryThrottle() {
         var throttle = OttaiGridRecoveryThrottle()
-        #expect(throttle.reserve(target: 120, now: now))
-        #expect(!throttle.reserve(target: 120, now: now + 59))
-        #expect(throttle.reserve(target: 120, now: now + 60))
-        #expect(!throttle.reserve(target: 120, now: now + 120))
-        #expect(throttle.reserve(target: 125, now: now + 61))
+        let first = throttle.reserve(target: 120, now: now)
+        let early = throttle.reserve(target: 120, now: now + 59)
+        let retry = throttle.reserve(target: 120, now: now + 60)
+        let exhausted = throttle.reserve(target: 120, now: now + 120)
+        let next = throttle.reserve(target: 125, now: now + 121)
+        #expect(first)
+        #expect(!early)
+        #expect(retry)
+        #expect(!exhausted)
+        #expect(next)
     }
 
     @Test("A rejected connected grid frame cannot discard the earlier history cursor") func connectedFaultPreservesHistory() {
