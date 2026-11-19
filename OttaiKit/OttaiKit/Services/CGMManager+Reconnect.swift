@@ -24,7 +24,6 @@ extension OttaiCGMManager {
         self.monitor?.disconnect()
         finishPriorityGridRequest(.cancelled)
         self.monitor = monitor
-        checkPriorityGridOnLiveFrame = true
         // Keep the cursor from before reconnect even if an unusable live
         // frame reaches the grid watermark before the first valid frame.
         pendingBackfillFrom = pendingBackfillFrom ?? state.lastGridSequence

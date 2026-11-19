@@ -10,7 +10,17 @@ import Testing
         #expect(throttle.reserve(target: 120, now: now))
         #expect(!throttle.reserve(target: 120, now: now + 59))
         #expect(throttle.reserve(target: 120, now: now + 60))
+        #expect(!throttle.reserve(target: 120, now: now + 120))
         #expect(throttle.reserve(target: 125, now: now + 61))
+    }
+
+    @Test("A rejected connected grid frame cannot discard the earlier history cursor") func connectedFaultPreservesHistory() {
+        let pending = OttaiReconnectGridRecovery.preservedCursor(pending: nil, previousGrid: 100)
+        #expect(pending == 100) // Invalid120 may advance the receive watermark, never this cursor.
+        let next = OttaiReconnectGridRecovery.preservedCursor(pending: pending, previousGrid: 120)
+        #expect(next == 100) // Valid121 must still request105/110/115.
+        #expect(OttaiReconnectGridRecovery.preservedCursor(pending: 80, previousGrid: 100) == 80)
+        #expect(OttaiReconnectGridRecovery.preservedCursor(pending: nil, previousGrid: nil) == nil)
     }
 
     @Test("A long reconnect gap prioritizes the closest prior grid record") func selectsClosestGrid() {

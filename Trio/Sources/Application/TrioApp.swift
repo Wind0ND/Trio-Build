@@ -210,12 +210,13 @@ extension Notification.Name {
                         BackgroundKeepAlive.shared.configure(
                             initialSample: resolver.resolve(GlucoseStorage.self)?.lastGlucoseDate(),
                             hasSource: { settingsManager.settings.cgm != .none && settingsManager.settings.cgm != .simulator },
-                            refresh: { completion in
-                                guard let manager = resolver.resolve(FetchGlucoseManager.self)?.cgmManager else { completion(); return }
-                                manager.fetchNewDataIfNeeded { _ in
+                            refresh: { request in
+                                guard let manager = resolver.resolve(FetchGlucoseManager.self) else { request.complete(false); return }
+                                manager.requestRecovery { success in
                                     Task { @MainActor in
-                                        await resolver.resolve(LiveActivityManager.self)?.pushCurrentContent()
-                                        completion()
+                                        guard request.isCurrent() else { return }
+                                        await resolver.resolve(LiveActivityManager.self)?.refreshCurrentContent(isAuthorized: request.isCurrent)
+                                        request.complete(success)
                                     }
                                 }
                             },

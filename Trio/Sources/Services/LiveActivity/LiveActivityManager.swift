@@ -219,7 +219,7 @@ final class LiveActivityData: ObservableObject {
     }
 
     /// Sets up the array of glucose data from persistent storage and triggers an update to the live activity.
-    private func loadGlucose() async {
+    @MainActor private func loadGlucose() async {
         do {
             data.glucoseFromPersistence = try await fetchAndMapGlucose()
         } catch {
@@ -428,6 +428,13 @@ final class LiveActivityData: ObservableObject {
 }
 
 @available(iOS 16.2, *) extension LiveActivityManager {
+    @MainActor func refreshCurrentContent(isAuthorized: @MainActor () -> Bool) async {
+        guard isAuthorized() else { return }
+        await loadGlucose()
+        guard isAuthorized() else { return }
+        await pushCurrentContent()
+    }
+
     @MainActor func pushCurrentContent() async {
         guard let glucose = data.glucoseFromPersistence, let bg = glucose.first else {
             if PrivacyPreference.displayEnabled {

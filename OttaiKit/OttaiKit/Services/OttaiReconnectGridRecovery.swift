@@ -11,6 +11,10 @@ public enum OttaiGridRecoveryReceipt {
 enum OttaiReconnectGridRecovery {
     static let interval: TimeInterval = TimeInterval(OttaiCGMManager.forwardGridStep) * 60
 
+    static func preservedCursor(pending: UInt16?, previousGrid: UInt16?) -> UInt16? {
+        [pending, previousGrid].compactMap { $0 }.min()
+    }
+
     static func target(
         latestLiveSequence: UInt16,
         lastGridSequence: UInt16,
@@ -36,10 +40,13 @@ enum OttaiReconnectGridRecovery {
 /// One attempt per target per minute; a new grid target can recover immediately.
 struct OttaiGridRecoveryThrottle {
     private var previous: (target: UInt16, date: Date)?
+    private var attempts = 0
 
     mutating func reserve(target: UInt16, now: Date) -> Bool {
-        if let previous, previous.target == target,
-           now >= previous.date, now.timeIntervalSince(previous.date) < 60 { return false }
+        if let previous, previous.target == target {
+            guard attempts < 2, now < previous.date || now.timeIntervalSince(previous.date) >= 60 else { return false }
+        } else { attempts = 0 }
+        attempts += 1
         previous = (target, now)
         return true
     }

@@ -117,12 +117,17 @@ public struct PrivacyActivityState: Codable, Hashable, Sendable {
     public private(set) var cover: Data?
     // Optional string keeps old snapshots decodable and unknown future styles harmless.
     public private(set) var meterStyle: String?
+    private let recentHeights: [Double]?
 
     public init(readings: [PrivacyReading], now: Date, palette: PrivacyPalette = .init(), cover: Data? = nil, recoveredAt: Date? = nil, meterStyle: PrivacyMeterStyle = .history) {
         self.meterStyle = meterStyle == .history ? nil : meterStyle.rawValue
         // A future or invalid reading cannot become the color/freshness anchor.
         let valid = readings.filter { $0.mgDL.isFinite && $0.mgDL > 0 && $0.mgDL <= 1000 && $0.date <= now }
             .sorted { $0.date > $1.date }
+        var seenDates = Set<Date>()
+        recentHeights = valid.filter { seenDates.insert($0.date).inserted }.prefix(5).reversed().map {
+            min(1, max(0.12, $0.mgDL / (12 * 18)))
+        }
         measuredAt = valid.first?.date
         // Only a validated current-grid receipt may extend presentation. Arbitrary old history is not freshened.
         if let recoveredAt, let measuredAt, recoveredAt >= measuredAt, recoveredAt <= now,
@@ -159,7 +164,8 @@ public struct PrivacyActivityState: Codable, Hashable, Sendable {
     /// Display-only arrangement: retain the six real history slots in the snapshot.
     public var waveformHeights: [Double?] {
         guard meterStyle == PrivacyMeterStyle.referenceFive.rawValue else { return heights }
-        return Array(heights.suffix(5)) + [PrivacyMeterStyle.referenceHeight]
+        let recent = Array((recentHeights ?? heights.compactMap { $0 }).suffix(5))
+        return Array(repeating: nil, count: 5 - recent.count) + recent.map(Optional.some) + [PrivacyMeterStyle.referenceHeight]
     }
 
     public func replacingMeterStyle(_ style: PrivacyMeterStyle) -> Self {

@@ -1,16 +1,18 @@
 import Foundation
 
-// Extracted interruption boundary; the next regression fixes ownership of an active interruption.
+// Only an interruption-ended event can release active system ownership.
 struct KeepAliveInterruptionState {
-    private(set) var blocked = false
-    mutating func began() { blocked = true }
-    mutating func ended(shouldResume: Bool, otherAudio: Bool) { blocked = !shouldResume && otherAudio }
-    mutating func wake(otherAudio: Bool) { if !otherAudio { blocked = false } }
+    private var active = false
+    private var awaitingResume = false
+    var blocked: Bool { active || awaitingResume }
+    mutating func began() { active = true; awaitingResume = false }
+    mutating func ended(shouldResume: Bool, otherAudio: Bool) { active = false; awaitingResume = !shouldResume && otherAudio }
+    mutating func wake(otherAudio: Bool) { if !active && !otherAudio { awaitingResume = false } }
 }
 
 struct KeepAliveReminderPolicy {
     static func shouldNotify(deadline: Date, now: Date, acknowledged: Date?, privacyChanged: Bool) -> Bool {
-        privacyChanged || !(deadline <= now && acknowledged == deadline)
+        !(deadline <= now && acknowledged == deadline)
     }
 }
 

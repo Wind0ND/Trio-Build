@@ -93,7 +93,6 @@ open class OttaiCGMManager: CGMManager, @unchecked Sendable {
 
     var pendingBackfillFrom: UInt16?
     var pendingBackfillSamples: [NewGlucoseSample] = []
-    var checkPriorityGridOnLiveFrame = false
     var priorityGridSequence: UInt16?
     var priorityGridTask: Task<Void, Never>?
     var lastPriorityGrid: (sequence: UInt16, date: Date)?
@@ -335,7 +334,6 @@ open class OttaiCGMManager: CGMManager, @unchecked Sendable {
         plausibilityGuard = OttaiPlausibilityGuard()
         pendingBackfillFrom = nil
         pendingBackfillSamples = []
-        checkPriorityGridOnLiveFrame = false
         finishPriorityGridRequest(.cancelled)
         lastPriorityGrid = nil
         gridRecoveryThrottle = .init()

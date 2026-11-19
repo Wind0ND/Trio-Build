@@ -13,6 +13,7 @@ protocol FetchGlucoseManager: SourceInfoProvider {
     func deleteGlucoseSource() async
     func removeCalibrations()
     func newGlucoseFromCgmManager(newGlucose: [BloodGlucose])
+    func requestRecovery(completion: @escaping @Sendable (Bool) -> Void)
     /// Notes to Nightscout a sensor state without reliable glucose, once per
     /// state; see `CGMSensorStateLog`. Call on every reading.
     func reportCGMSensorObservation(_ observation: CGMSensorObservation)
@@ -32,6 +33,7 @@ protocol FetchGlucoseManager: SourceInfoProvider {
 }
 
 extension FetchGlucoseManager {
+    func requestRecovery(completion: @escaping @Sendable (Bool) -> Void) { completion(false) }
     func updateGlucoseSource(cgmGlucoseSourceType: CGMType, cgmGlucosePluginId: String) {
         updateGlucoseSource(cgmGlucoseSourceType: cgmGlucoseSourceType, cgmGlucosePluginId: cgmGlucosePluginId, newManager: nil)
     }
@@ -135,6 +137,33 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
         timer.resume()
 
         broadcaster.register(SettingsObserver.self, observer: self)
+    }
+
+    /// Uses the same source and serialized storage path for plugins, xDrip and Nightscout.
+    func requestRecovery(completion: @escaping @Sendable (Bool) -> Void) {
+        processQueue.async { [weak self] in
+            guard let self, let source = self.glucoseSource else { completion(false); return }
+            source.fetch(nil)
+                .prefix(1)
+                .timeout(15, scheduler: self.processQueue)
+                .replaceEmpty(with: [])
+                .receive(on: self.processQueue)
+                .sink { glucose in
+                    self.glucoseStoreAndHeartLock.wait()
+                    let syncDate = self.glucoseStorage.syncDate()
+                    Task {
+                        defer { self.glucoseStoreAndHeartLock.signal() }
+                        do {
+                            try await self.glucoseStoreAndHeartDecision(syncDate: syncDate, glucose: glucose)
+                            completion(true)
+                        } catch {
+                            warning(.cgm, "Recovery storage failed", error: error)
+                            completion(false)
+                        }
+                    }
+                }
+                .store(in: &self.lifetime)
+        }
     }
 
     /// Store new glucose readings from the CGM manager

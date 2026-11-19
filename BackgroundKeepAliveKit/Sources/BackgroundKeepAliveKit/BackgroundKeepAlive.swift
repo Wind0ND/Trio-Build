@@ -25,7 +25,11 @@ public final class BackgroundKeepAlive: ObservableObject {
     }
 
     public static let sourceActivity = Notification.Name("com.trio.cgm.sourceActivity")
-    public typealias RefreshHandler = (@escaping @Sendable () -> Void) -> Void
+    public struct RefreshRequest: Sendable {
+        public let isCurrent: @MainActor @Sendable () -> Bool
+        public let complete: @Sendable (Bool) -> Void
+    }
+    public typealias RefreshHandler = (RefreshRequest) -> Void
 
     private static let reminderID = "background-keep-alive-stall"
     private static let acknowledgedDeadlineKey = "backgroundKeepAlive.lastScheduledDeadline"
@@ -39,7 +43,7 @@ public final class BackgroundKeepAlive: ObservableObject {
     private var background = false
     private var playing = false
     private var alertOwnsAudio = false
-    private var interrupted = false
+    private var interruption = KeepAliveInterruptionState()
     private var capReported = false
     private var audioRetryAfter: TimeInterval = 0
     private var check: Task<Void, Never>?
@@ -97,7 +101,6 @@ public final class BackgroundKeepAlive: ObservableObject {
     public func setBackground(_ value: Bool) {
         if value != background { record(.lifecycle, value ? .background : .foreground) }
         background = value
-        if !value { interrupted = false }
         reevaluate()
     }
 
@@ -106,8 +109,6 @@ public final class BackgroundKeepAlive: ObservableObject {
     public func noteSourceActivity() {
         guard hasSource?() == true else { return }
         record(.source, .received)
-        // Resume only on an actual wake opportunity after competing audio has ended.
-        if interrupted, !AVAudioSession.sharedInstance().isOtherAudioPlaying { interrupted = false }
         reevaluate()
     }
 
@@ -149,6 +150,7 @@ public final class BackgroundKeepAlive: ObservableObject {
 
     private func reevaluate() {
         guard let hasSource else { return }
+        interruption.wake(otherAudio: AVAudioSession.sharedInstance().isOtherAudioPlaying)
         check?.cancel()
         check = nil
         let configuration = configuration
@@ -182,8 +184,8 @@ public final class BackgroundKeepAlive: ObservableObject {
         }
 
         guard policy.wantsAudio(configuration: configuration, now: now, background: background,
-                                blocked: alertOwnsAudio || interrupted, capped: capped) else {
-            status = !background ? .foreground : (alertOwnsAudio ? .alert : (interrupted ? .interrupted : .limited))
+                                blocked: alertOwnsAudio || interruption.blocked, capped: capped) else {
+            status = !background ? .foreground : (alertOwnsAudio ? .alert : (interruption.blocked ? .interrupted : .limited))
             stopAudio(.stopped)
             // Timers are only opportunistic; Bluetooth wakes and foreground events also reevaluate.
             if background { armCheck(after: 60) }
@@ -229,12 +231,16 @@ public final class BackgroundKeepAlive: ObservableObject {
             guard self?.refreshToken == token else { return }
             self?.finishRefresh(.timedOut)
         }
-        refresh { [weak self] in
-            Task { @MainActor [weak self] in
-                guard self?.refreshToken == token else { return }
-                self?.finishRefresh(.completed)
+        let request = RefreshRequest(
+            isCurrent: { [weak self] in self?.refreshToken == token },
+            complete: { [weak self] success in
+                Task { @MainActor [weak self] in
+                    guard self?.refreshToken == token else { return }
+                    self?.finishRefresh(success ? .completed : .failed)
+                }
             }
-        }
+        )
+        refresh(request)
     }
 
     private func finishRefresh(_ outcome: Outcome) {
@@ -261,15 +267,17 @@ public final class BackgroundKeepAlive: ObservableObject {
     private func scheduleReminder(for deadline: Date, now: Date, interval: TimeInterval) {
         let privateTitle = privateReminderTitle?()
         let isPrivate = privateTitle != nil
-        if let previous = reminderIsPrivate, previous != isPrivate {
+        let privacyChanged = reminderIsPrivate.map { $0 != isPrivate } ?? false
+        if privacyChanged {
             reminderDeadline = nil
-            defaults.removeObject(forKey: Self.acknowledgedDeadlineKey)
+            // Remove already-public text silently; replacing a future pending request keeps its original deadline.
+            notifications.removeDeliveredNotifications(withIdentifiers: [Self.reminderID])
+            if deadline <= now { notifications.removePendingNotificationRequests(withIdentifiers: [Self.reminderID]) }
         }
         reminderIsPrivate = isPrivate
         if let current = reminderDeadline, current == deadline || (current <= now && deadline <= now) { return }
-        if reminderDeadline == nil, deadline <= now,
-           defaults.object(forKey: Self.acknowledgedDeadlineKey) as? Date == deadline
-        {
+        if !KeepAliveReminderPolicy.shouldNotify(deadline: deadline, now: now,
+            acknowledged: defaults.object(forKey: Self.acknowledgedDeadlineKey) as? Date, privacyChanged: privacyChanged) {
             reminderDeadline = deadline
             return
         }
@@ -312,6 +320,7 @@ public final class BackgroundKeepAlive: ObservableObject {
         clearedReminder = true
         defaults.removeObject(forKey: Self.acknowledgedDeadlineKey)
         notifications.removePendingNotificationRequests(withIdentifiers: [Self.reminderID])
+        notifications.removeDeliveredNotifications(withIdentifiers: [Self.reminderID])
     }
 
     private func stopAudio(_ outcome: Outcome, report: Bool = true) {
@@ -323,12 +332,12 @@ public final class BackgroundKeepAlive: ObservableObject {
     private func handleInterruption(type: UInt, options: UInt) {
         switch AVAudioSession.InterruptionType(rawValue: type) {
         case .began:
-            interrupted = true
+            interruption.began()
             stopAudio(.interrupted)
             reevaluate()
         case .ended:
-            interrupted = !AVAudioSession.InterruptionOptions(rawValue: options).contains(.shouldResume)
-                && AVAudioSession.sharedInstance().isOtherAudioPlaying
+            interruption.ended(shouldResume: AVAudioSession.InterruptionOptions(rawValue: options).contains(.shouldResume),
+                               otherAudio: AVAudioSession.sharedInstance().isOtherAudioPlaying)
             reevaluate()
         default: break
         }

@@ -144,6 +144,8 @@ extension OttaiCGMManager {
         if Self.isOnForwardGrid(sequence: sample.sequence),
            sample.sequence > (updated.lastGridSequence ?? 0)
         {
+            // Retain the pre-frame cursor even if later validity gates reject this grid frame.
+            pendingBackfillFrom = OttaiReconnectGridRecovery.preservedCursor(pending: pendingBackfillFrom, previousGrid: previousGridSequence)
             updated.lastGridSequence = sample.sequence
         }
 
@@ -451,7 +453,6 @@ extension OttaiCGMManager {
     /// first while the older history cursor remains queued.
     @MainActor private func firePendingBackfill(newest: UInt16, previousGridSequence: UInt16?) {
         guard priorityGridSequence == nil else { return }
-        checkPriorityGridOnLiveFrame = false
         guard let have = pendingBackfillFrom ?? previousGridSequence else { return }
         guard let monitor else {
             logger.debug("backfill: skipped, no live monitor (have=\(have), seq=\(newest))")
