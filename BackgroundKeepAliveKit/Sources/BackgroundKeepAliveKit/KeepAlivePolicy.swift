@@ -45,4 +45,10 @@ struct KeepAlivePolicy {
     func isStale(now: Date, interval: TimeInterval) -> Bool {
         deadline(interval: interval).map { $0 <= now } ?? false
     }
+
+    // Decision boundary extracted from the existing coordinator for regression coverage.
+    func wantsAudio(configuration: Configuration, now: Date, background: Bool, blocked: Bool, capped: Bool) -> Bool {
+        guard background, !blocked, !capped, configuration.mode != .off else { return false }
+        return configuration.mode == .always || isStale(now: now, interval: configuration.stallInterval)
+    }
 }

@@ -11,9 +11,15 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
       - name: Test independent presentation policy
-        run: swift test --package-path PrivacyKit
+        run: |
+          swift test --package-path BackgroundKeepAliveKit
+          swift test --package-path PrivacyKit
       - name: Build iOS presentation and settings
         run: |
+          swift build --package-path BackgroundKeepAliveKit \
+            --scratch-path "$RUNNER_TEMP/background-ios-build" \
+            --triple arm64-apple-ios17.0-simulator \
+            --sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)"
           swift build --package-path PrivacyKit \
             --scratch-path "$RUNNER_TEMP/privacy-ios-build" \
             --triple arm64-apple-ios17.0-simulator \

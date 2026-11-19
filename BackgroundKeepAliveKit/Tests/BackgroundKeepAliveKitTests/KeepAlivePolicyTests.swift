@@ -5,6 +5,17 @@ import XCTest
 final class KeepAlivePolicyTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 10_000)
 
+    func testAutomaticProtectionStartsBeforeTheAppCanBeSuspended() {
+        var policy = KeepAlivePolicy()
+        policy.beginMonitoring(at: now)
+        policy.accept(now, now: now)
+        let config = KeepAlivePolicy.Configuration(mode: "smart", stallMinutes: 5, maxSessionMinutes: 15)
+        XCTAssertTrue(policy.wantsAudio(configuration: config, now: now + 1, background: true, blocked: false, capped: false))
+        XCTAssertFalse(policy.wantsAudio(configuration: config, now: now + 1, background: false, blocked: false, capped: false))
+        XCTAssertFalse(policy.wantsAudio(configuration: config, now: now + 301, background: true, blocked: true, capped: false))
+        XCTAssertFalse(policy.wantsAudio(configuration: config, now: now + 301, background: true, blocked: false, capped: true))
+    }
+
     func testNewerBackfillDoesNotCountAsRecovery() {
         var policy = KeepAlivePolicy()
         XCTAssertTrue(policy.accept(now - 900, now: now))
