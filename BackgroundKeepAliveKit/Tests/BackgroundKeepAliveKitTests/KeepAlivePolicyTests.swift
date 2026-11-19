@@ -5,6 +5,23 @@ import XCTest
 final class KeepAlivePolicyTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 10_000)
 
+    func testAnActiveInterruptionCannotBeClearedByADataWake() {
+        var interruption = KeepAliveInterruptionState()
+        interruption.began()
+        interruption.wake(otherAudio: false)
+        XCTAssertTrue(interruption.blocked)
+        interruption.ended(shouldResume: false, otherAudio: true)
+        XCTAssertTrue(interruption.blocked)
+        interruption.wake(otherAudio: false)
+        XCTAssertFalse(interruption.blocked)
+    }
+
+    func testPrivacyChangeCannotRepeatAnAcknowledgedOutageSound() {
+        XCTAssertFalse(KeepAliveReminderPolicy.shouldNotify(deadline: now - 1, now: now, acknowledged: now - 1, privacyChanged: true))
+        XCTAssertTrue(KeepAliveReminderPolicy.shouldNotify(deadline: now + 60, now: now, acknowledged: now - 1, privacyChanged: true))
+        XCTAssertTrue(KeepAliveReminderPolicy.shouldNotify(deadline: now - 1, now: now, acknowledged: nil, privacyChanged: false))
+    }
+
     func testAutomaticProtectionStartsBeforeTheAppCanBeSuspended() {
         var policy = KeepAlivePolicy()
         policy.beginMonitoring(at: now)

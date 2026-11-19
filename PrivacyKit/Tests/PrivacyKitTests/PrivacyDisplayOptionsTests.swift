@@ -3,6 +3,13 @@ import XCTest
 @testable import PrivacyKit
 
 final class PrivacyDisplayOptionsTests: XCTestCase {
+    func testReferenceUsesFiveActualReadingsEvenWhenSpacingIsIrregular() {
+        let now = Date()
+        let readings = (0 ..< 5).map { PrivacyReading(mgDL: Double(9 - $0) * 18, date: now - Double($0) * 180) }
+        let state = PrivacyActivityState(readings: readings, now: now, meterStyle: .referenceFive)
+        XCTAssertEqual(state.waveformHeights.prefix(5).compactMap { $0 }.count, 5)
+        XCTAssertEqual(Array(state.waveformHeights.prefix(5)).compactMap { $0 }, [5.0/12, 6.0/12, 7.0/12, 8.0/12, 9.0/12])
+    }
     func testThreeDistinctPalettesShareAllSixRangesAndContinuousBoundaries() {
         XCTAssertEqual(PrivacyPalettePreset.allCases.count, 3)
         for preset in PrivacyPalettePreset.allCases {

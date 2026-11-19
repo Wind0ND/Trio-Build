@@ -1,5 +1,19 @@
 import Foundation
 
+// Extracted interruption boundary; the next regression fixes ownership of an active interruption.
+struct KeepAliveInterruptionState {
+    private(set) var blocked = false
+    mutating func began() { blocked = true }
+    mutating func ended(shouldResume: Bool, otherAudio: Bool) { blocked = !shouldResume && otherAudio }
+    mutating func wake(otherAudio: Bool) { if !otherAudio { blocked = false } }
+}
+
+struct KeepAliveReminderPolicy {
+    static func shouldNotify(deadline: Date, now: Date, acknowledged: Date?, privacyChanged: Bool) -> Bool {
+        privacyChanged || !(deadline <= now && acknowledged == deadline)
+    }
+}
+
 public enum KeepAliveMode: String, CaseIterable, Identifiable {
     case off, smart, always
 
