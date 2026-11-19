@@ -1,10 +1,29 @@
 import Foundation
+import LoopKit
 import PrivacyKit
 import Testing
 
 @testable import Trio
 
 @Suite("Private Live Activity payload") struct PrivacyPresentationTests {
+    @Test("Private alert content preserves the dependency's complete action list") func alertActions() {
+        let content = LoopKit.Alert.Content(
+            title: "Low Glucose", body: "Clinical details",
+            actions: [.init(label: "OK", identifier: "acknowledge")]
+        )
+        let alert = LoopKit.Alert(
+            identifier: .init(managerIdentifier: "Trio", alertIdentifier: "glucose.low.test"),
+            foregroundContent: content, backgroundContent: content,
+            trigger: .immediate, interruptionLevel: .critical, sound: .sound(name: "alarm.caf")
+        )
+        let presentation = TrioPrivacyAlert.content(content, for: alert, enabled: true)
+        #expect(presentation?.title == PrivacyText.attention)
+        #expect(presentation?.body == "")
+        #expect(presentation?.actions == content.actions)
+        #expect(TrioPrivacyAlert.content(content, for: alert, enabled: false) == content)
+        #expect(alert.backgroundContent == content)
+    }
+
     @Test("Private snapshots fit ActivityKit and omit health text") func payloadBudget() throws {
         let now = Date()
         let reading = GlucoseData(glucose: 142, date: now, direction: nil)

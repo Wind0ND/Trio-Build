@@ -6,14 +6,17 @@ import PrivacyKit
 import UserNotifications
 
 enum TrioPrivacyAlert {
-    static func kind(_ alert: LoopKit.Alert) -> PrivacyGlucoseAlarm? {
-        guard PrivacyPreference.alertsEnabled else { return nil }
+    static func kind(_ alert: LoopKit.Alert, enabled: Bool = PrivacyPreference.alertsEnabled) -> PrivacyGlucoseAlarm? {
+        guard enabled else { return nil }
         return PrivacyGlucoseAlarm(identifier: alert.identifier.alertIdentifier)
     }
 
-    static func content(_ original: LoopKit.Alert.Content?, for alert: LoopKit.Alert) -> LoopKit.Alert.Content? {
-        guard let original, kind(alert) != nil else { return original }
-        return LoopKit.Alert.Content(title: PrivacyText.attention, body: "", acknowledgeActionButtonLabel: original.acknowledgeActionButtonLabel)
+    static func content(
+        _ original: LoopKit.Alert.Content?, for alert: LoopKit.Alert,
+        enabled: Bool = PrivacyPreference.alertsEnabled
+    ) -> LoopKit.Alert.Content? {
+        guard let original, kind(alert, enabled: enabled) != nil else { return original }
+        return LoopKit.Alert.Content(title: PrivacyText.attention, body: "", actions: original.actions)
     }
 }
 
