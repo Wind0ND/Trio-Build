@@ -12,8 +12,10 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
       - name: Test independent presentation policy
         run: |
-          swift test --package-path BackgroundKeepAliveKit
-          swift test --package-path PrivacyKit
+          result=0
+          swift test --package-path BackgroundKeepAliveKit || result=$?
+          swift test --package-path PrivacyKit || result=$?
+          exit "$result"
       - name: Build iOS presentation and settings
         run: |
           swift build --package-path BackgroundKeepAliveKit \
