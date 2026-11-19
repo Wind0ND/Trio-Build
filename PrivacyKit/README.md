@@ -57,3 +57,13 @@ Private activities refresh stale content in place. When creation is required, th
 Public TestFlight text lives in `fastlane/beta_metadata.json`; `scripts/check_beta_metadata.py` validates the two locales and screens for sensitive terminology/encoding errors before tests and signed builds. This personal distribution requires the file: both CI and direct Fastlane release fail if it is missing or invalid, rather than restoring upstream release notes. Preserve it and the release-lane override when merging upstream.
 
 A successful Ottai current-grid recovery has a separate in-process receipt. The existing driver still requires a newer valid sample no more than five minutes old. The host matches that receipt to the latest saved sample and grants six minutes of presentation from receipt, while preserving the real measurement time. Plain history batches, cover/settings changes and algorithm updates do not restart that clock. The optional receipt timestamp remains backward-compatible with old ActivityKit content and is not part of exported diagnostic events.
+# Quiet activity presentation (2026-11-20)
+
+`PrivacyColor.displayPalette` owns the six quieter activity colors; `PrivacyColor.palette` remains the original alarm accent set. Settings range swatches use the display palette. Thresholds, boundary blending, readings and alarm policy are unchanged.
+
+`PrivacyMeterGeometry` computes six chronological bar rectangles plus the centered overdue ring. `PrivacyWaveformView` uses a custom SwiftUI Layout which accepts proposed widths instead of clipping a fixed 22pt HStack. Standard, compact and minimal presentations have independent preferred widths (22/20/14pt) and scale all bars and gaps together when less space is offered. Missing historical slots remain dim short placeholders.
+
+The host supplies matching 22pt compact alignment boxes (20pt artwork) and 28pt expanded alignment boxes (24pt artwork). Private layouts use system content margins; public layouts retain their existing overrides. ActivityKit still determines which side an activity occupies and how multiple activities share the island.
+
+Independent checks: manually dispatch `privacy_kit_tests.yml` for package tests and iOS package compilation; the complete app test workflow additionally renders narrow waveforms to pixels, verifies six visible bars and checks the overdue ring center. Physical camera masks and simultaneous activities still require device testing.
+

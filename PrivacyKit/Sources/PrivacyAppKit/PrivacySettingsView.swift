@@ -56,7 +56,7 @@ public struct PrivacySettingsView: View {
             Section(privacyText("Color ranges")) {
                 ForEach(0 ..< 5, id: \.self) { index in
                     HStack {
-                        Circle().fill(PrivacyColor.palette[index].swiftUIColor).frame(width: 12, height: 12)
+                        Circle().fill(PrivacyColor.displayPalette[index].swiftUIColor).frame(width: 12, height: 12)
                         Text(privacyText("Upper boundary"))
                         TextField("mmol/L", text: $boundaryText[index]).keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
@@ -64,7 +64,7 @@ public struct PrivacySettingsView: View {
                     }
                 }
                 HStack {
-                    Circle().fill(PrivacyColor.palette[5].swiftUIColor).frame(width: 12, height: 12)
+                    Circle().fill(PrivacyColor.displayPalette[5].swiftUIColor).frame(width: 12, height: 12)
                     Text(privacyText("Red represents values above the final boundary."))
                 }
                 Button(privacyText("Save color ranges"), action: saveBoundaries)

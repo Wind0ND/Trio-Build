@@ -14,15 +14,17 @@ import UIKit
         let state = PrivacyActivityState(readings: (0 ..< 6).map {
             PrivacyReading(mgDL: 108, date: now.addingTimeInterval(-Double($0) * 300))
         }, now: now)
-        for width in [12.0, 14, 16] {
-            let columns = try renderedCenterRow(state: state, stale: false, width: width)
-            var runs = 0
-            var previous = false
-            for active in columns {
-                if active && !previous { runs += 1 }
-                previous = active
+        for presentation in [PrivacyMeterPresentation.standard, .compact, .minimal] {
+            for width in [12.0, 14, 16] {
+                let columns = try renderedCenterRow(state: state, stale: false, width: width, presentation: presentation)
+                var runs = 0
+                var previous = false
+                for active in columns {
+                    if active && !previous { runs += 1 }
+                    previous = active
+                }
+                #expect(runs == 6, "All six chronological bars should fit a \(width)pt region")
             }
-            #expect(runs == 6, "All six chronological bars should fit a \(width)pt region")
         }
     }
 
@@ -30,15 +32,15 @@ import UIKit
     func centeredOverdueRing() throws {
         let state = PrivacyActivityState(readings: [], now: Date())
         for width in [12.0, 14, 16] {
-            let columns = try renderedCenterRow(state: state, stale: true, width: width)
+            let columns = try renderedCenterRow(state: state, stale: true, width: width, presentation: .minimal)
             let first = try #require(columns.firstIndex(of: true))
             let last = try #require(columns.lastIndex(of: true))
             #expect(abs(Double(first + last) / 2 - Double(columns.count - 1) / 2) <= 1)
         }
     }
 
-    @MainActor private func renderedCenterRow(state: PrivacyActivityState, stale: Bool, width: Double) throws -> [Bool] {
-        let content = PrivacyWaveformView(state: state, stale: stale)
+    @MainActor private func renderedCenterRow(state: PrivacyActivityState, stale: Bool, width: Double, presentation: PrivacyMeterPresentation) throws -> [Bool] {
+        let content = PrivacyWaveformView(state: state, stale: stale, presentation: presentation)
             .frame(width: width, height: 20).clipped().background(Color.black)
             .environment(\.colorScheme, .dark)
         let renderer = ImageRenderer(content: content)

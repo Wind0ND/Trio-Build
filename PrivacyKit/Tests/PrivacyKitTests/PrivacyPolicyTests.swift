@@ -34,7 +34,7 @@ final class PrivacyPolicyTests: XCTestCase {
         ], now: now)
         XCTAssertEqual(state.measuredAt, now)
         XCTAssertEqual(state.heights.compactMap { $0 }.count, 1)
-        XCTAssertEqual(state.color, PrivacyColor.palette[2])
+        XCTAssertEqual(state.color, PrivacyColor.displayPalette[2])
     }
 
     func testFreshnessUsesMeasurementAgeAndKeepsColor() {
@@ -44,7 +44,7 @@ final class PrivacyPolicyTests: XCTestCase {
         XCTAssertFalse(state.isStale(at: now.addingTimeInterval(359)))
         XCTAssertTrue(state.isStale(at: now.addingTimeInterval(360)))
         XCTAssertEqual(state.staleDate, now.addingTimeInterval(360))
-        XCTAssertEqual(state.color, PrivacyColor.palette[2])
+        XCTAssertEqual(state.color, PrivacyColor.displayPalette[2])
     }
 
     func testHeightClampsAndUnknownData() {

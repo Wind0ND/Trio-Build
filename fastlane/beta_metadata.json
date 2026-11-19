@@ -1,10 +1,10 @@
 {
   "en-US": {
     "description": "hiro is a personal test build with customizable on-screen presentation, viewing protection and device connectivity.",
-    "whats_new": "This update improves cover import, pattern input and display scaling, and adds an optional pattern trace. Please test layout, unlocking, image import and background stability."
+    "whats_new": "This update adds quieter display colors, improves artwork and meter alignment, and keeps all six bars visible in compact regions. Five animal icons are available, with a corgi as the default. Please test simultaneous activities, icon switching and display readability."
   },
   "zh-Hans": {
     "description": "hiro 是用于个人测试的应用版本，提供可自定义的界面展示、查看保护和设备连接功能。",
-    "whats_new": "本次更新优化封面图片读取、图案输入与显示比例，增加轨迹显示选项。请验证界面布局、解锁操作、图片导入及后台运行的稳定性。"
+    "whats_new": "本次更新采用更柔和的显示配色，优化封面与声浪对齐，改善狭窄区域中六条声浪的完整显示。新增五款动物图标，默认使用柯基。请验证多个活动并存时的布局、图标切换与显示辨识度。"
   }
 }

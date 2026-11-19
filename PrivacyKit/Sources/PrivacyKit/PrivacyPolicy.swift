@@ -43,6 +43,9 @@ public struct PrivacyColor: Codable, Hashable, Sendable {
 
     public static let palette: [Self] = [0x6D28D9, 0x3B82F6, 0x22C55E, 0xB8DB55, 0xFB923C, 0xEF4444]
         .map(Self.init(hex:))
+    // Public activity presentation has its own quieter colors; alarm accents stay unchanged.
+    public static let displayPalette: [Self] = [0x7B63A3, 0x5375A9, 0x508165, 0x7C834A, 0xA16D40, 0xAC5853]
+        .map(Self.init(hex:))
     public static let unknown = Self(hex: 0x9CA3AF)
 
     public func blended(with other: Self, amount: Double) -> Self {
@@ -78,14 +81,14 @@ public struct PrivacyPalette: Sendable {
         for (index, boundary) in boundaries.enumerated() {
             let halfWidth = 0.15
             if abs(value - boundary) < halfWidth {
-                return PrivacyColor.palette[index].blended(
-                    with: PrivacyColor.palette[index + 1],
+                return PrivacyColor.displayPalette[index].blended(
+                    with: PrivacyColor.displayPalette[index + 1],
                     amount: (value - boundary + halfWidth) / (2 * halfWidth)
                 )
             }
-            if value < boundary { return PrivacyColor.palette[index] }
+            if value < boundary { return PrivacyColor.displayPalette[index] }
         }
-        return PrivacyColor.palette[5]
+        return PrivacyColor.displayPalette[5]
     }
 }
 

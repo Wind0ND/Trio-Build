@@ -37,32 +37,60 @@ public struct PrivacyWaveformView: View {
     private let state: PrivacyActivityState
     private let stale: Bool
     private let height: CGFloat
+    private let presentation: PrivacyMeterPresentation
 
-    public init(state: PrivacyActivityState, stale: Bool, height: CGFloat = 16) {
+    public init(state: PrivacyActivityState, stale: Bool, height: CGFloat = 16, presentation: PrivacyMeterPresentation = .standard) {
         self.state = state
         self.stale = stale
         self.height = height
+        self.presentation = presentation
     }
 
     public var body: some View {
-        Group {
+        PrivacyMeterLayout(heights: state.heights, height: height, presentation: presentation) {
             if stale || state.measuredAt == nil {
-                Circle().strokeBorder(lineWidth: 1.5).frame(width: 11, height: 11)
+                Circle().strokeBorder(lineWidth: 1.5)
             } else {
-                HStack(alignment: .center, spacing: 1.8) {
-                    ForEach(0 ..< 6, id: \.self) { index in
-                        let value = state.heights.indices.contains(index) ? state.heights[index] : nil
-                        Capsule()
-                            .fill(value == nil ? Color.secondary.opacity(0.25) : state.color.swiftUIColor)
-                            .frame(width: index == 5 ? 2 : 1.6, height: max(2, height * CGFloat(value ?? 0.12)))
-                    }
+                ForEach(0 ..< 6, id: \.self) { index in
+                    let value = state.heights.indices.contains(index) ? state.heights[index] : nil
+                    Capsule().fill(value == nil ? Color.secondary.opacity(0.25) : state.color.swiftUIColor)
                 }
             }
         }
         .foregroundStyle(state.color.swiftUIColor)
-        .frame(width: 22, height: height)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(stale ? "Reading overdue" : "Private activity", bundle: .module))
+    }
+}
+
+/// Uses the actual proposed region instead of allowing a fixed-width HStack to be cropped.
+private struct PrivacyMeterLayout: Layout {
+    let heights: [Double?]
+    let height: CGFloat
+    let presentation: PrivacyMeterPresentation
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let geometry = geometry(width: proposal.width, proposedHeight: proposal.height)
+        return CGSize(width: geometry.width, height: geometry.height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let geometry = geometry(width: bounds.width, proposedHeight: bounds.height)
+        let frames = subviews.count == 1 ? [geometry.ring] : geometry.bars
+        let offset = CGPoint(x: bounds.midX - geometry.width / 2, y: bounds.midY - geometry.height / 2)
+        for (subview, frame) in zip(subviews, frames) {
+            subview.place(
+                at: CGPoint(x: offset.x + frame.x, y: offset.y + frame.y), anchor: .topLeading,
+                proposal: ProposedViewSize(width: frame.width, height: frame.height)
+            )
+        }
+    }
+
+    private func geometry(width: CGFloat?, proposedHeight: CGFloat?) -> PrivacyMeterGeometry {
+        PrivacyMeterGeometry(
+            heights: heights, availableWidth: Double(width ?? presentation.preferredWidth),
+            height: Double(min(height, proposedHeight ?? height)), presentation: presentation
+        )
     }
 }
 #endif

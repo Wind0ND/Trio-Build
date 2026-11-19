@@ -12,10 +12,11 @@ struct LiveActivity: Widget {
             let hasStaticColorScheme = context.state.glucoseColorScheme == "staticColor"
             let glucoseColor = context.state.privacy?.color.swiftUIColor ?? context.state.glucoseColor
 
-            return DynamicIsland {
+            let island = DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     if let privacy = context.state.privacy {
                         PrivacyCoverView(data: privacy.cover, size: 24)
+                            .frame(width: 28, height: 28)
                     } else {
                     LiveActivityExpandedLeadingView(
                         context: context,
@@ -26,6 +27,7 @@ struct LiveActivity: Widget {
                 DynamicIslandExpandedRegion(.trailing) {
                     if let privacy = context.state.privacy {
                         PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()))
+                            .frame(width: 28, height: 28)
                     } else {
                     LiveActivityExpandedTrailingView(
                         context: context,
@@ -45,7 +47,8 @@ struct LiveActivity: Widget {
                 }
             } compactLeading: {
                 if let privacy = context.state.privacy {
-                    PrivacyCoverView(data: privacy.cover, size: 18)
+                    PrivacyCoverView(data: privacy.cover, size: 20)
+                        .frame(width: 22, height: 22)
                 } else {
                 LiveActivityCompactLeadingView(
                     context: context,
@@ -54,7 +57,8 @@ struct LiveActivity: Widget {
                 }
             } compactTrailing: {
                 if let privacy = context.state.privacy {
-                    PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()))
+                    PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()), presentation: .compact)
+                        .frame(width: 22, height: 22)
                 } else {
                 LiveActivityCompactTrailingView(
                     context: context,
@@ -63,7 +67,7 @@ struct LiveActivity: Widget {
                 }
             } minimal: {
                 if let privacy = context.state.privacy {
-                    PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()))
+                    PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()), presentation: .minimal)
                 } else {
                 LiveActivityMinimalView(
                     context: context,
@@ -73,8 +77,14 @@ struct LiveActivity: Widget {
             }
             .widgetURL(URL(string: "Trio://"))
             .keylineTint(glucoseColor)
-            .contentMargins(.horizontal, 0, for: .minimal)
-            .contentMargins(.leading, 0, for: .compactTrailing)
+
+            if context.state.privacy != nil {
+                return island
+            } else {
+                return island
+                    .contentMargins(.horizontal, 0, for: .minimal)
+                    .contentMargins(.leading, 0, for: .compactTrailing)
+            }
         }
 
         if #available(iOS 18.0, *) {
