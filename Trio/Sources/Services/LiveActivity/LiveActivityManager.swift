@@ -11,14 +11,14 @@ import PrivacyKit
 
     /// Determines if the current activity needs to be recreated.
     ///
-    /// - Returns: `true` if the activity is dismissed, ended, stale, or has been active for more than 60 minutes; otherwise,
-    /// `false`.
-    func needsRecreation() -> Bool {
+    /// Private content can refresh an expired reading in place; a stale flag alone need not recreate its activity.
+    func needsRecreation(updatingPrivateContent: Bool) -> Bool {
         switch activity.activityState {
         case .dismissed,
-             .ended,
-             .stale:
+             .ended:
             return true
+        case .stale:
+            if !updatingPrivateContent { return true }
         case .active:
             break
         @unknown default:
@@ -268,7 +268,8 @@ final class LiveActivityData: ObservableObject {
         }
 
         if let currentActivity {
-            if currentActivity.needsRecreation(), UIApplication.shared.applicationState == .active {
+            if currentActivity.needsRecreation(updatingPrivateContent: state.privacy != nil),
+               UIApplication.shared.applicationState == .active {
                 debug(.liveActivity, "Recreating Live Activity \(currentActivity.activity.id)")
                 await endActivity()
                 // After endActivity(), currentActivity is guaranteed to be nil
@@ -338,9 +339,13 @@ final class LiveActivityData: ObservableObject {
                     staleDate: Date.now.addingTimeInterval(60)
                 )
 
+                // A private start already has a sanitized snapshot. Do not briefly publish an empty ring first.
+                let initialContent = state.privacy != nil
+                    ? ActivityContent(state: state, staleDate: state.privacy?.staleDate)
+                    : expired
                 let activity = try Activity.request(
                     attributes: LiveActivityAttributes(startDate: Date.now),
-                    content: expired,
+                    content: initialContent,
                     pushType: nil
                 )
                 currentActivity = ActiveActivity(activity: activity)

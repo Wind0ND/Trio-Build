@@ -94,6 +94,11 @@ jobs:
       - name: Apply Simplified Chinese dependency localization
         run: python3 scripts/apply_zh_hans.py
 
+      - name: Validate public TestFlight copy
+        run: |
+          ruby -c fastlane/Fastfile
+          python3 scripts/check_beta_metadata.py
+
       - name: Test standalone device and background packages
         if: github.event_name == 'workflow_dispatch'
         run: |

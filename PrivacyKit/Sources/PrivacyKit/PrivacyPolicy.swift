@@ -7,6 +7,7 @@ public enum PrivacyPreference {
     public static let boundariesKey = "privacy.color.boundaries"
     public static let coverKey = "privacy.cover.thumbnail"
     public static let biometricsKey = "privacy.lock.biometrics"
+    public static let patternTraceKey = "privacy.lock.patternTrace"
 
     public static var displayEnabled: Bool { UserDefaults.standard.bool(forKey: displayKey) }
     public static var alertsEnabled: Bool { UserDefaults.standard.bool(forKey: alertsKey) }
@@ -120,11 +121,12 @@ public struct PrivacyActivityState: Codable, Hashable, Sendable {
             let target = latest.date.addingTimeInterval(-Double(slot) * 300)
             let sample = valid.min { abs($0.date.timeIntervalSince(target)) < abs($1.date.timeIntervalSince(target)) }
             guard let sample, abs(sample.date.timeIntervalSince(target)) < 150 else { return nil }
-            return min(1, max(0.12, sample.mgDL / (15 * 18)))
+            return min(1, max(0.12, sample.mgDL / (12 * 18)))
         }
     }
 
-    public var staleDate: Date { measuredAt?.addingTimeInterval(300) ?? .distantPast }
+    // Five-minute readings get one minute of presentation grace; this never refreshes measurement age.
+    public var staleDate: Date { measuredAt?.addingTimeInterval(360) ?? .distantPast }
     public func isStale(at now: Date) -> Bool { now >= staleDate }
 
     public func replacingCover(_ cover: Data?) -> Self {

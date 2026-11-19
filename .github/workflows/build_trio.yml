@@ -215,6 +215,11 @@ jobs:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || env.TARGET_BRANCH }}
 
       # Customize Trio: Use patches or download and apply patches from GitHub
+      - name: Validate public TestFlight copy
+        run: |
+          ruby -c fastlane/Fastfile
+          python3 scripts/check_beta_metadata.py
+
       - name: Customize Trio
         run: |
 

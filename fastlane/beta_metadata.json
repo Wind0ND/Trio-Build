@@ -1,0 +1,10 @@
+{
+  "en-US": {
+    "description": "hiro is a personal test build with customizable on-screen presentation, viewing protection and device connectivity.",
+    "whats_new": "This update improves cover import, pattern input and display scaling, and adds an optional pattern trace. Please test layout, unlocking, image import and background stability."
+  },
+  "zh-Hans": {
+    "description": "hiro 是用于个人测试的应用版本，提供可自定义的界面展示、查看保护和设备连接功能。",
+    "whats_new": "本次更新优化封面图片读取、图案输入与显示比例，增加轨迹显示选项。请验证界面布局、解锁操作、图片导入及后台运行的稳定性。"
+  }
+}

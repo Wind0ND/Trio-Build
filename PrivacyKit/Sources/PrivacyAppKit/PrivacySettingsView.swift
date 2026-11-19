@@ -1,6 +1,5 @@
 #if canImport(UIKit)
 import PhotosUI
-import ImageIO
 import PrivacyKit
 import SwiftUI
 import UIKit
@@ -10,9 +9,12 @@ public struct PrivacySettingsView: View {
     @AppStorage(PrivacyPreference.displayKey) private var privateDisplay = false
     @AppStorage(PrivacyPreference.alertsKey) private var privateAlerts = false
     @AppStorage(PrivacyPreference.biometricsKey) private var biometrics = false
+    @AppStorage(PrivacyPreference.patternTraceKey) private var patternTrace = false
     @State private var showSetup = false
     @State private var method: PrivacyLockMethod = .pin
     @State private var selectedPhoto: PhotosPickerItem?
+    @State private var coverSelectionGeneration = UUID()
+    @State private var loadingCover = false
     @State private var cover = UserDefaults.standard.data(forKey: PrivacyPreference.coverKey)
     @State private var boundaryText = PrivacyPalette.stored().boundaries.map { String(format: "%.1f", $0) }
     @State private var message: String?
@@ -32,11 +34,17 @@ public struct PrivacySettingsView: View {
             Section(privacyText("Cover")) {
                 HStack {
                     PrivacyCoverView(data: cover, size: 36)
-                    PhotosPicker(selection: $selectedPhoto, matching: .images) { Text(privacyText("Choose from Photos")) }
+                    PhotosPicker(selection: $selectedPhoto, matching: .images, preferredItemEncoding: .compatible) {
+                        Text(privacyText("Choose from Photos"))
+                    }
                 }
+                if loadingCover { ProgressView(privacyText("Loading cover…")) }
                 if cover != nil {
                     Button(privacyText("Use abstract cover")) {
                         lock.requireAuthentication {
+                            coverSelectionGeneration = UUID()
+                            selectedPhoto = nil
+                            loadingCover = false
                             UserDefaults.standard.removeObject(forKey: PrivacyPreference.coverKey)
                             cover = nil
                             PrivacyPreference.record(stage: "cover", outcome: "reset")
@@ -60,7 +68,7 @@ public struct PrivacySettingsView: View {
                     Text(privacyText("Red represents values above the final boundary."))
                 }
                 Button(privacyText("Save color ranges"), action: saveBoundaries)
-                Text(privacyText("Display ranges are independent of alarm thresholds. Bar heights use a fixed 0–15 mmol/L scale. Missing readings leave an empty slot. After five minutes without a new reading, a ring keeps the last color."))
+                Text(privacyText("Display ranges are independent of alarm thresholds. Bar heights use a fixed 0–12 mmol/L scale. Missing readings leave an empty slot. After six minutes without a new reading, a ring keeps the last color."))
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section(privacyText("Viewing lock")) {
@@ -68,6 +76,9 @@ public struct PrivacySettingsView: View {
                     Text(privacyText("4-digit PIN")).tag(PrivacyLockMethod.pin)
                     Text(privacyText("Pattern")).tag(PrivacyLockMethod.pattern)
                 }
+                Toggle(privacyText("Show pattern trace"), isOn: protected($patternTrace))
+                Text(privacyText("When off, pattern input shows neither the path nor selected dots."))
+                    .font(.footnote).foregroundStyle(.secondary)
                 if lock.configured {
                     Button(privacyText("Change PIN or pattern")) { lock.requireAuthentication { showSetup = true } }
                     Toggle(privacyText("Allow Face ID or Touch ID"), isOn: protected($biometrics))
@@ -112,49 +123,41 @@ public struct PrivacySettingsView: View {
         }
     }
 
-    private func loadCover() async {
+    @MainActor private func loadCover() async {
         guard let photo = selectedPhoto else { return }
+        let generation = UUID()
+        coverSelectionGeneration = generation
+        loadingCover = true
+        message = nil
+        defer {
+            if generation == coverSelectionGeneration {
+                loadingCover = false
+                // Do not clear a newer selection whose task has not started yet.
+                if selectedPhoto == photo { selectedPhoto = nil }
+            }
+        }
         do {
-            guard let data = try await photo.loadTransferable(type: Data.self),
-                  let thumbnail = Self.thumbnail(data)
-            else { throw PrivacyVaultError.storage }
+            guard let data = try await photo.loadTransferable(type: Data.self) else { throw PrivacyVaultError.storage }
+            try Task.checkCancellation()
+            guard generation == coverSelectionGeneration, selectedPhoto == photo else { return }
+            guard let thumbnail = PrivacyCoverImage.thumbnail(data) else {
+                message = privacyText("This image could not be processed into a cover. Try another image.")
+                PrivacyPreference.record(stage: "cover", outcome: "failed")
+                return
+            }
             lock.requireAuthentication {
+                guard generation == coverSelectionGeneration, selectedPhoto == nil || selectedPhoto == photo else { return }
                 UserDefaults.standard.set(thumbnail, forKey: PrivacyPreference.coverKey)
                 cover = thumbnail
+                message = nil
                 PrivacyPreference.record(stage: "cover", outcome: "succeeded")
                 PrivacyPreference.notifyChanged()
             }
         } catch {
-            message = privacyText("The cover could not be loaded. Choose another image.")
+            guard !Task.isCancelled, generation == coverSelectionGeneration, selectedPhoto == photo else { return }
+            message = privacyText("The photo could not be read or downloaded. Check your connection and try again.")
             PrivacyPreference.record(stage: "cover", outcome: "failed")
         }
-    }
-
-    private static func thumbnail(_ data: Data) -> Data? {
-        // ImageIO downsamples before decoding the full photo. Re-encoding drops source metadata.
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
-              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
-                  kCGImageSourceCreateThumbnailFromImageAlways: true,
-                  kCGImageSourceThumbnailMaxPixelSize: 64,
-                  kCGImageSourceCreateThumbnailWithTransform: true
-              ] as CFDictionary)
-        else { return nil }
-        for size in [CGFloat(48), CGFloat(32), CGFloat(24)] {
-            let format = UIGraphicsImageRendererFormat()
-            format.scale = 1
-            format.opaque = true
-            let thumbnail = UIGraphicsImageRenderer(size: CGSize(width: size, height: size), format: format).image { context in
-                UIColor.black.setFill()
-                context.fill(CGRect(x: 0, y: 0, width: size, height: size))
-                let side = CGFloat(min(image.width, image.height))
-                let crop = CGRect(x: (CGFloat(image.width) - side) / 2, y: (CGFloat(image.height) - side) / 2, width: side, height: side)
-                if let cropped = image.cropping(to: crop) { UIImage(cgImage: cropped).draw(in: CGRect(x: 0, y: 0, width: size, height: size)) }
-            }
-            for quality in [0.65, 0.4, 0.2] {
-                if let jpeg = thumbnail.jpegData(compressionQuality: quality), jpeg.count <= 1200 { return jpeg }
-            }
-        }
-        return nil
     }
 }
 
@@ -172,7 +175,8 @@ private struct PrivacyLockSetup: View {
             VStack(spacing: 24) {
                 Text(privacyText(first == nil ? "Enter a new code." : "Repeat the code to confirm."))
                 if method == .pattern {
-                    Text(privacyText("Use at least four dots. The trace is hidden.")).font(.footnote).foregroundStyle(.secondary)
+                    Text(privacyText("Use at least four dots. Trace visibility follows Privacy settings."))
+                        .font(.footnote).foregroundStyle(.secondary)
                 }
                 PrivacySecretInput(method: method, value: $value, onComplete: accept).disabled(busy)
                 if let message { Text(message).font(.footnote) }

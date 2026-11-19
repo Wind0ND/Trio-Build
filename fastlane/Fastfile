@@ -210,14 +210,6 @@ platform :ios do
       key_content: "#{FASTLANE_KEY}"
     )
 
-    # APP_DEV_VERSION only has a 4th component off main (e.g. 1.0.2.33 on dev)
-    dev_version = xcconfig["APP_DEV_VERSION"].to_s
-    on_main = dev_version.split(".").length != 4
-    version_note = on_main ? "" : " "+dev_version
-    notes = git_branch+version_note+" "+last_git_commit[:abbreviated_commit_hash]
-    release_notes = on_main && bundled_release_notes("#{GITHUB_WORKSPACE}/Trio.ipa")
-    notes += "\n\n"+release_notes if release_notes
-
     # changelog alone only updates existing "What to Test" notes, so name the primary locale to create one.
     # Keep changelog too: without it, skip_waiting_for_build_processing returns before notes are set.
     primary_locale = begin
@@ -227,17 +219,37 @@ platform :ios do
       nil
     end || "en-US"
 
-    upload_to_testflight(
+    # This personal distribution requires its neutral public copy. Never fall back to upstream release notes.
+    metadata_path = File.join(GITHUB_WORKSPACE, "fastlane", "beta_metadata.json")
+    UI.user_error!("Missing public TestFlight copy: #{metadata_path}") unless File.file?(metadata_path)
+    metadata = JSON.parse(File.read(metadata_path, encoding: "UTF-8"))
+    %w[en-US zh-Hans].each do |locale|
+      entry = metadata[locale]
+      unless entry.is_a?(Hash) && %w[description whats_new].all? { |key| entry[key].is_a?(String) && !entry[key].strip.empty? }
+        UI.user_error!("Missing TestFlight metadata for #{locale}")
+      end
+    end
+    fallback = metadata.fetch("en-US")
+    notes = metadata.fetch(primary_locale, fallback).fetch("whats_new")
+    localized_build_info = { "default" => { whats_new: notes } }
+    localized_app_info = { "default" => { description: metadata.fetch(primary_locale, fallback).fetch("description") } }
+    metadata.each do |locale, entry|
+      localized_build_info[locale] = { whats_new: entry.fetch("whats_new") }
+      localized_app_info[locale] = { description: entry.fetch("description") }
+    end
+    localized_build_info[primary_locale] ||= { whats_new: notes }
+    localized_app_info[primary_locale] ||= { description: fallback.fetch("description") }
+
+    upload_options = {
       api_key: api_key,
       skip_submission: false,
       ipa: "Trio.ipa",
       skip_waiting_for_build_processing: true,
       changelog: notes,
-      localized_build_info: {
-        "default" => { whats_new: notes },
-        primary_locale => { whats_new: notes },
-      },
-    )
+      localized_build_info: localized_build_info,
+    }
+    upload_options[:localized_app_info] = localized_app_info if localized_app_info
+    upload_to_testflight(**upload_options)
   end
 
   desc "Provision Identifiers and Certificates"

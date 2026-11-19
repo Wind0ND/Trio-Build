@@ -121,12 +121,12 @@
         }
       }
     },
-    "Display ranges are independent of alarm thresholds. Bar heights use a fixed 0–15 mmol/L scale. Missing readings leave an empty slot. After five minutes without a new reading, a ring keeps the last color.": {
+    "Display ranges are independent of alarm thresholds. Bar heights use a fixed 0–12 mmol/L scale. Missing readings leave an empty slot. After six minutes without a new reading, a ring keeps the last color.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "显示分段与警报阈值分别设置。声浪高度按固定的 0～15 mmol/L 刻度换算，缺测保留空位。超过五分钟没有新读数时显示空心圆，并保留最后读数的颜色。"
+            "value": "显示分段与警报阈值分别设置。声浪高度按固定的 0～12 mmol/L 刻度换算，缺测保留空位。满六分钟没有新读数时显示空心圆，并保留最后读数的颜色。"
           }
         }
       }
@@ -137,6 +137,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "请连接至少四个点绘制图案，绘制轨迹会隐藏。"
+          }
+        }
+      }
+    },
+    "Draw a pattern through at least four dots. The trace is visible.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请至少连接四个点绘制图案，绘制轨迹会显示。"
           }
         }
       }
@@ -197,6 +207,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "忘记 PIN 或图案？"
+          }
+        }
+      }
+    },
+    "Loading cover…": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在载入封面…"
           }
         }
       }
@@ -341,6 +361,16 @@
         }
       }
     },
+    "Show pattern trace": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示绘制轨迹"
+          }
+        }
+      }
+    },
     "System alarms already ringing keep their original title until stopped. Enable alert privacy before an alarm starts.": {
       "localizations": {
         "zh-Hans": {
@@ -381,6 +411,16 @@
         }
       }
     },
+    "The photo could not be read or downloaded. Check your connection and try again.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取或下载照片，请检查网络连接后重试。"
+          }
+        }
+      }
+    },
     "The viewing lock could not be read. Use device authentication to reset it.": {
       "localizations": {
         "zh-Hans": {
@@ -407,6 +447,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "离开应用后，查看锁会遮住应用内容。血糖采集、闭环和警报独立运行。忘记 PIN 或图案时，可通过 iPhone 机主身份验证重设。"
+          }
+        }
+      }
+    },
+    "This image could not be processed into a cover. Try another image.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法将这张图片处理为封面，请尝试其他图片。"
           }
         }
       }
@@ -491,6 +541,16 @@
         }
       }
     },
+    "Use at least four dots. Trace visibility follows Privacy settings.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请至少连接四个点。是否显示轨迹取决于隐私设置。"
+          }
+        }
+      }
+    },
     "Verify with device passcode": {
       "localizations": {
         "zh-Hans": {
@@ -507,6 +567,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "查看锁"
+          }
+        }
+      }
+    },
+    "When off, pattern input shows neither the path nor selected dots.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭后，绘制图案时不显示轨迹，也不突出已选中的点。"
           }
         }
       }

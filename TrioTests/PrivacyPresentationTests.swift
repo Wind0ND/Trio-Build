@@ -38,6 +38,7 @@ import Testing
         #expect(state.detailedViewState.chart.isEmpty)
         #expect(state.detailedViewState.iob == 0)
         #expect(state.privacy?.measuredAt == now)
+        #expect(state.privacy?.staleDate == now.addingTimeInterval(360))
         #expect(try JSONEncoder().encode(state).count < 4096)
     }
 
