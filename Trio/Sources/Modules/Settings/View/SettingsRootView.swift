@@ -174,7 +174,7 @@ extension Settings {
                         content: {
                             NavigationLink(destination: SubmodulesView(buildDetails: buildDetails)) {
                                 HStack {
-                                    Image(appIcons.appIcon.rawValue)
+                                    Image(appIcons.appIcon.assetName)
                                         .resizable()
                                         .aspectRatio(contentMode: .fit)
                                         .frame(width: 50, height: 50)

@@ -1,11 +1,80 @@
 import Foundation
 import LoopKit
 import PrivacyKit
+import SwiftUI
 import Testing
+import UIKit
 
 @testable import Trio
 
 @Suite("Private Live Activity payload") struct PrivacyPresentationTests {
+    @Test("All six bars remain visible inside a narrow activity region") @MainActor
+    func narrowWaveformRendering() throws {
+        let now = Date()
+        let state = PrivacyActivityState(readings: (0 ..< 6).map {
+            PrivacyReading(mgDL: 108, date: now.addingTimeInterval(-Double($0) * 300))
+        }, now: now)
+        for width in [12.0, 14, 16] {
+            let columns = try renderedCenterRow(state: state, stale: false, width: width)
+            var runs = 0
+            var previous = false
+            for active in columns {
+                if active && !previous { runs += 1 }
+                previous = active
+            }
+            #expect(runs == 6, "All six chronological bars should fit a \(width)pt region")
+        }
+    }
+
+    @Test("The overdue ring keeps the same center in narrow regions") @MainActor
+    func centeredOverdueRing() throws {
+        let state = PrivacyActivityState(readings: [], now: Date())
+        for width in [12.0, 14, 16] {
+            let columns = try renderedCenterRow(state: state, stale: true, width: width)
+            let first = try #require(columns.firstIndex(of: true))
+            let last = try #require(columns.lastIndex(of: true))
+            #expect(abs(Double(first + last) / 2 - Double(columns.count - 1) / 2) <= 1)
+        }
+    }
+
+    @MainActor private func renderedCenterRow(state: PrivacyActivityState, stale: Bool, width: Double) throws -> [Bool] {
+        let content = PrivacyWaveformView(state: state, stale: stale)
+            .frame(width: width, height: 20).clipped().background(Color.black)
+            .environment(\.colorScheme, .dark)
+        let renderer = ImageRenderer(content: content)
+        renderer.scale = 3
+        let cgImage = try #require(renderer.cgImage)
+        let bytesPerRow = cgImage.width * 4
+        var bytes = [UInt8](repeating: 0, count: bytesPerRow * cgImage.height)
+        try bytes.withUnsafeMutableBytes { buffer in
+            let context = try #require(CGContext(
+                data: buffer.baseAddress, width: cgImage.width, height: cgImage.height,
+                bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+            ))
+            context.draw(cgImage, in: CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height))
+        }
+        let middleRow = cgImage.height / 2
+        return (0 ..< cgImage.width).map { x in
+            let index = middleRow * bytesPerRow + x * 4
+            return Int(bytes[index]) + Int(bytes[index + 1]) + Int(bytes[index + 2]) > 60
+        }
+    }
+
+    @Test("Icon picker follows the built primary and keeps all original alternatives")
+    func iconCatalog() {
+        let icons = Icon_.availableIcons
+        #expect(icons.contains(.primary))
+        #expect(icons.filter { $0.assetName == Icon_.primaryAssetName }.count == 1)
+        #expect(Icon_.resolvedIcon(named: nil) == .primary)
+        #expect(Icon_.resolvedIcon(named: "removed-or-unknown-icon") == .primary)
+        #expect(Icon_.resolvedIcon(named: Icon_.primaryAssetName) == .primary)
+        for name in ["trioBlack", "catWithPod", "catWithPodWhiteBG", "hiroSleepCat", "hiroRoundCat", "hiroShiba", "hiroSpaniel", "hiroCorgi"] {
+            #expect(icons.contains { $0.assetName == name })
+            #expect(UIImage(named: name) != nil)
+        }
+    }
+
     @Test("A current-grid recovery refreshes presentation but preserves the actual sample timestamp") func recoveredGridReceipt() {
         let receivedAt = Date()
         let measuredAt = receivedAt.addingTimeInterval(-240)

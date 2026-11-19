@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA9200000000000000000001 /* Hiro assets in Resources */ = {isa = PBXBuildFile; fileRef = AA9200000000000000000002 /* Assets.xcassets */; };
+		AA9200000000000000000004 /* HiroAppIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9200000000000000000005 /* HiroAppIcon.swift */; };
+		AA9200000000000000000006 /* HiroBranding.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = AA9200000000000000000007 /* HiroBranding.xcstrings */; };
 		AA9100000000000000000003 /* PrivacyKit in Frameworks */ = {isa = PBXBuildFile; productRef = AA9100000000000000000002 /* PrivacyKit */; };
 		AA9100000000000000000005 /* PrivacyAppKit in Frameworks */ = {isa = PBXBuildFile; productRef = AA9100000000000000000004 /* PrivacyAppKit */; };
 		AA9100000000000000000007 /* PrivacyKit in Frameworks */ = {isa = PBXBuildFile; productRef = AA9100000000000000000006 /* PrivacyKit */; };
@@ -1284,6 +1287,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AA9200000000000000000002 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AA9200000000000000000005 /* HiroAppIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiroAppIcon.swift; sourceTree = "<group>"; };
+		AA9200000000000000000007 /* HiroBranding.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = HiroBranding.xcstrings; sourceTree = "<group>"; };
 		AA910000000000000000000A /* TrioPrivacyIntegration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Trio/Sources/Services/Privacy/TrioPrivacyIntegration.swift; sourceTree = SOURCE_ROOT; };
 		AA910000000000000000000C /* PrivacyPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyPresentationTests.swift; sourceTree = "<group>"; };
 		5C7EA1FA38A1728182C949F4 /* PumpStatusStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PumpStatusStorageTests.swift; sourceTree = "<group>"; };
@@ -2521,6 +2527,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		AA9200000000000000000003 /* HiroBranding */ = {
+			isa = PBXGroup;
+			children = (
+				AA9200000000000000000002 /* Assets.xcassets */,
+				AA9200000000000000000005 /* HiroAppIcon.swift */,
+				AA9200000000000000000007 /* HiroBranding.xcstrings */,
+			);
+			path = HiroBranding;
+			sourceTree = "<group>";
+		};
 		0610F7D6D2EC00E3BA1569F0 /* ConfigEditor */ = {
 			isa = PBXGroup;
 			children = (
@@ -3304,6 +3320,7 @@
 		388E594F25AD948C0019842D = {
 			isa = PBXGroup;
 			children = (
+				AA9200000000000000000003 /* HiroBranding */,
 				DDA9AC0A2D678DAD00E6F1A9 /* blacklisted-versions.json */,
 				CE1F6DE62BAF1A180064EB8D /* BuildDetails.plist */,
 				38F3783A2613555C009DB701 /* Config.xcconfig */,
@@ -5618,6 +5635,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA9200000000000000000001 /* Hiro assets in Resources */,
+				AA9200000000000000000006 /* HiroBranding.xcstrings in Resources */,
 				8A91342C2D63D9A2007F8874 /* InfoPlist.xcstrings in Resources */,
 				CE1F6DE72BAF1A180064EB8D /* BuildDetails.plist in Resources */,
 				3B3B57C92DA07B3400849D16 /* GoogleService-Info.plist in Resources */,
@@ -5850,6 +5869,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA9200000000000000000004 /* HiroAppIcon.swift in Sources */,
 				AA910000000000000000000B /* TrioPrivacyIntegration.swift in Sources */,
 				3A627606ABC518974CC60B55 /* PumpStatusStorage.swift in Sources */,
 				4AB6E54D1659F6137A70BF74 /* PumpStatusStored+helper.swift in Sources */,

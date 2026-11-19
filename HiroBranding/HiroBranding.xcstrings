@@ -1,0 +1,11 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Sleeping cat": { "extractionState": "manual", "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Sleeping cat" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "蜷睡猫" } } } },
+    "Round-faced cat": { "extractionState": "manual", "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Round-faced cat" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "圆脸猫" } } } },
+    "Shiba Inu": { "extractionState": "manual", "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Shiba Inu" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "柴犬" } } } },
+    "Floppy-eared dog": { "extractionState": "manual", "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Floppy-eared dog" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "垂耳犬" } } } },
+    "Corgi": { "extractionState": "manual", "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Corgi" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "柯基" } } } }
+  },
+  "version": "1.0"
+}

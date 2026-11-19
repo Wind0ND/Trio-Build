@@ -3,7 +3,8 @@ import Foundation
 import UIKit
 
 enum Icon_: String, CaseIterable, Identifiable {
-    case primary = "trioBlack"
+    case primary
+    case trioBlack
     case trioWhiteShadow
     case trioColorBG
     case trioWhite
@@ -12,6 +13,7 @@ enum Icon_: String, CaseIterable, Identifiable {
     case wilford = "diabeetus"
     case catWithPod
     case catWithPodWhite = "catWithPodWhiteBG"
+    case hiroSleepCat, hiroRoundCat, hiroShiba, hiroSpaniel, hiroCorgi
     var id: String { rawValue }
 }
 
@@ -23,26 +25,24 @@ class Icons: ObservableObject, Equatable {
     }
 
     func setAlternateAppIcon(icon: Icon_) {
-        let iconName: String? = (icon != .primary) ? icon.rawValue : nil
+        let selected = Icon_.resolvedIcon(named: icon == .primary ? nil : icon.rawValue)
+        let iconName: String? = (selected != .primary) ? selected.rawValue : nil
 
         guard UIApplication.shared.alternateIconName != iconName else { return }
 
         UIApplication.shared.setAlternateIconName(iconName) { error in
             if let error = error {
                 warning(.ui, "Changing the app icon failed", error: error)
+            } else {
+                DispatchQueue.main.async { self.appIcon = selected }
             }
         }
 
-        appIcon = icon
     }
 
     init() {
         let iconName = UIApplication.shared.alternateIconName
 
-        if iconName == nil {
-            appIcon = .primary
-        } else {
-            appIcon = Icon_(rawValue: iconName!)!
-        }
+        appIcon = Icon_.resolvedIcon(named: iconName)
     }
 }

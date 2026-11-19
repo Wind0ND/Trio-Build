@@ -6,9 +6,9 @@ struct IconImage: View {
 
     var body: some View {
         Label {
-            Text(icon.rawValue)
+            Text(icon.displayName)
         } icon: {
-            Image(icon.rawValue)
+            Image(icon.assetName)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(minHeight: 57, maxHeight: 1024)
