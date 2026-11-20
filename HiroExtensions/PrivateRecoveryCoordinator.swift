@@ -10,7 +10,7 @@ import UIKit
             guard let manager = resolver.resolve(FetchGlucoseManager.self),
                   manager.cgmGlucoseSourceType != .none, manager.cgmGlucoseSourceType != .simulator,
                   request.isCurrent() else { request.complete(false); return }
-            let permit = Permit(sourceRevision: manager.recoverySourceRevision)
+            let permit = Permit(sourceRevision: manager.recoverySourceRevision, expiresAt: request.expiresAtUptime)
             var lease: UIBackgroundTaskIdentifier = .invalid
             func finish(_ success: Bool) {
                 permit.cancel()
@@ -27,7 +27,7 @@ import UIKit
             record("requested")
             // A separate deadline also invalidates storage authorization if the callback is late.
             let timeout = Task { @MainActor in
-                do { try await Task.sleep(for: .seconds(18)) } catch { return }
+                do { try await Task.sleep(for: .seconds(permit.remaining)) } catch { return }
                 finish(false)
             }
             manager.requestRecovery(isAuthorized: {
@@ -56,9 +56,13 @@ import UIKit
     private final class Permit: @unchecked Sendable {
         private let lock = NSLock()
         private var valid = true
-        private let expires = ProcessInfo.processInfo.systemUptime + 18
+        private let expires: TimeInterval
         let sourceRevision: UUID
-        init(sourceRevision: UUID) { self.sourceRevision = sourceRevision }
+        init(sourceRevision: UUID, expiresAt: TimeInterval) {
+            self.sourceRevision = sourceRevision
+            expires = min(expiresAt, ProcessInfo.processInfo.systemUptime + 18)
+        }
+        var remaining: TimeInterval { max(0, expires - ProcessInfo.processInfo.systemUptime) }
         var isValid: Bool { lock.lock(); defer { lock.unlock() }; return valid && ProcessInfo.processInfo.systemUptime < expires }
         func cancel() { lock.lock(); valid = false; lock.unlock() }
     }
