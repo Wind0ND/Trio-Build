@@ -14,6 +14,7 @@ public final class BackgroundKeepAlive: ObservableObject {
     @Published public private(set) var audioSessionSeconds: TimeInterval = 0
     @Published public private(set) var audioStarts = 0
     @Published public private(set) var lastCycleDelaySeconds: TimeInterval = 0
+    @Published public private(set) var missedAudioWindows = 0
 
     public enum SettingsKey {
         public static let mode = "backgroundKeepAlive.mode"
@@ -26,6 +27,7 @@ public final class BackgroundKeepAlive: ObservableObject {
     private enum Stage: String {
         case audio, reminder, data, source, lifecycle, recovery
         case audioMinutes = "audio_minutes", audioStarts = "audio_starts", cycleDelay = "cycle_delay_seconds"
+        case missedWindows = "missed_windows"
     }
     private enum Outcome: String {
         case started, stopped, failed, interrupted, capped, scheduled, recovered, received, stored
@@ -47,6 +49,10 @@ public final class BackgroundKeepAlive: ObservableObject {
     private var policy = KeepAlivePolicy()
     private var hasSource: (() -> Bool)?
     private var latestStoredSample: (() -> Date?)?
+    private var sourceIdentifier: (() -> String?)?
+    private var currentSourceID = UserDefaults.standard.string(forKey: "backgroundKeepAlive.sourceID")
+    private var windows = PeriodicAudioWindows()
+    private var periodicStartedAt: TimeInterval?
     private var refresh: RefreshHandler?
     private var privateReminderTitle: (() -> String?)?
     private var interruptionChanged: ((Date?) -> Void)?
@@ -68,7 +74,7 @@ public final class BackgroundKeepAlive: ObservableObject {
     private var refreshLease: UIBackgroundTaskIdentifier = .invalid
     private var refreshTimeout: Task<Void, Never>?
     private var reminderIsPrivate: Bool?
-    private struct ReminderPlan: Equatable { let deadline: Date?; let privateTitle: String? }
+    private struct ReminderPlan: Equatable { let deadline: Date?; let privateTitle: String?; var sourceID: String? = nil }
     private lazy var reminderWriter = LatestAsyncWriter<ReminderPlan> { [weak self] plan in await self?.applyReminder(plan) }
 
     private init() {
@@ -105,19 +111,23 @@ public final class BackgroundKeepAlive: ObservableObject {
 
     public func configure(initialSample: Date?, hasSource: @escaping () -> Bool, refresh: RefreshHandler? = nil,
                           latestStoredSample: (() -> Date?)? = nil, privateReminderTitle: (() -> String?)? = nil,
-                          interruptionChanged: ((Date?) -> Void)? = nil) {
+                          interruptionChanged: ((Date?) -> Void)? = nil, sourceID: (() -> String?)? = nil) {
         self.hasSource = hasSource
         self.latestStoredSample = latestStoredSample
+        sourceIdentifier = sourceID
         self.refresh = refresh
         self.privateReminderTitle = privateReminderTitle
         self.interruptionChanged = interruptionChanged
-        if let initialSample { policy.accept(initialSample, now: Date()) }
+        if sourceID == nil, let initialSample { policy.accept(initialSample, now: Date()) }
         notifications.removePendingNotificationRequests(withIdentifiers: ["background-keep-alive-expired"])
         reevaluate()
     }
 
     public func setBackground(_ value: Bool) {
         if value != background {
+            accountMissedWindows(uptime: ProcessInfo.processInfo.systemUptime)
+            windows = PeriodicAudioWindows()
+            periodicStartedAt = value ? ProcessInfo.processInfo.systemUptime : nil
             record(.lifecycle, value ? .background : .foreground)
             policy.backgroundChanged(value, uptime: ProcessInfo.processInfo.systemUptime)
         }
@@ -133,7 +143,14 @@ public final class BackgroundKeepAlive: ObservableObject {
         reevaluate()
     }
 
-    public func noteGlucoseSample(at timestamp: Date) {
+    /// Called only after accepted CGM storage; the source epoch is captured before the fetch.
+    nonisolated public static func reportStoredSample(at timestamp: Date, sourceID: String) {
+        AcceptedCGMSnapshotStore.record(timestamp, sourceID: sourceID)
+        Task { @MainActor in shared.noteGlucoseSample(at: timestamp, sourceID: sourceID) }
+    }
+
+    public func noteGlucoseSample(at timestamp: Date, sourceID: String? = nil) {
+        if let expected = sourceIdentifier?(), sourceID != expected { return }
         let now = Date()
         let configuration = configuration
         let interval = configuration.stallInterval
@@ -143,7 +160,6 @@ public final class BackgroundKeepAlive: ObservableObject {
         if !policy.isStale(now: now, interval: interval) {
             if wasStale, configuration.mode != .off, hasSource?() == true {
                 record(.data, .recovered)
-                notifications.removeDeliveredNotifications(withIdentifiers: [Self.reminderID])
             }
         }
         reevaluate()
@@ -176,6 +192,7 @@ public final class BackgroundKeepAlive: ObservableObject {
         check?.cancel()
         check = nil
         let configuration = configuration
+        synchronizeSource(now: Date())
         guard configuration.mode != .off, hasSource() else {
             status = configuration.mode == .off ? .disabled : .noSource
             policy.endMonitoring()
@@ -189,17 +206,20 @@ public final class BackgroundKeepAlive: ObservableObject {
 
         let now = Date()
         // A storage callback can still be queued on the main actor. Read the accepted store before scheduling.
-        if let accepted = latestStoredSample?() { policy.accept(accepted, now: now) }
+        if let accepted = acceptedSample(now: now) { policy.accept(accepted, now: now) }
         policy.beginMonitoring(at: now)
         let deadline = policy.deadline(interval: configuration.stallInterval)
         if let deadline { scheduleReminder(for: deadline, now: now, interval: configuration.stallInterval) }
 
         let uptime = ProcessInfo.processInfo.systemUptime
+        accountMissedWindows(uptime: uptime)
         accountAudio(until: uptime)
         let periodicKey = "\(configuration.mode.rawValue)|\(configuration.cycleInterval)|\(configuration.audioInterval)"
         if periodicConfiguration != periodicKey {
             periodicConfiguration = periodicKey
             policy.backgroundChanged(background, uptime: uptime)
+            windows = PeriodicAudioWindows()
+            periodicStartedAt = background ? uptime : nil
         }
         let stale = policy.isStale(now: now, interval: configuration.stallInterval)
         if stale, activeOutage == nil, let deadline {
@@ -237,6 +257,7 @@ public final class BackgroundKeepAlive: ObservableObject {
             audioAccountedAt = uptime
             record(.audioStarts, .sampled, count: audioStarts, force: true)
             if configuration.mode == .periodic {
+                accountMissedWindows(uptime: uptime, started: true)
                 lastCycleDelaySeconds = policy.periodicPhase(configuration: configuration, now: now, uptime: uptime)
                 record(.cycleDelay, .sampled, count: Int(lastCycleDelaySeconds), force: true)
             }
@@ -265,6 +286,35 @@ public final class BackgroundKeepAlive: ObservableObject {
         audioSessionSeconds += max(0, uptime - previous)
         audioAccountedAt = uptime
         record(.audioMinutes, .sampled, count: Int(audioSessionSeconds / 60))
+    }
+
+    private func synchronizeSource(now: Date) {
+        guard let sourceIdentifier else { return }
+        let selected = sourceIdentifier()
+        if currentSourceID != selected || policy.latestSample.map({ $0 > now }) == true {
+            currentSourceID = selected
+            policy.endMonitoring()
+            clearReminder()
+            endOutage()
+            defaults.set(selected, forKey: "backgroundKeepAlive.sourceID")
+        }
+    }
+
+    private func acceptedSample(now: Date) -> Date? {
+        guard let sourceIdentifier else { return latestStoredSample?() }
+        var state = AcceptedCGMSnapshotStore.load()
+        state.select(sourceIdentifier())
+        return state.latest(now: now)
+    }
+
+    private func accountMissedWindows(uptime: TimeInterval, started: Bool = false) {
+        guard background, configuration.mode == .periodic, let start = periodicStartedAt else { return }
+        let skipped = windows.observe(elapsed: uptime - start, cycle: configuration.cycleInterval,
+                                      on: configuration.audioInterval, started: started)
+        if skipped > 0 {
+            missedAudioWindows += skipped
+            record(.missedWindows, .sampled, count: missedAudioWindows, force: true)
+        }
     }
 
     private func requestRefresh(now: Date) {
@@ -331,22 +381,33 @@ public final class BackgroundKeepAlive: ObservableObject {
         }
         reminderDeadline = deadline
         clearedReminder = false
-        reminderWriter.set(.init(deadline: deadline, privateTitle: privateTitle), force: reminderOutcome == .failed)
+        reminderWriter.set(.init(deadline: deadline, privateTitle: privateTitle, sourceID: currentSourceID), force: reminderOutcome == .failed)
     }
 
     private func applyReminder(_ plan: ReminderPlan) async {
         // Even a late add followed by disable/privacy-change must finish with the newest remove/replace.
-        notifications.removeDeliveredNotifications(withIdentifiers: [Self.reminderID])
+        await ReminderDeliveryArchive.captureBeforeRemoval(capture: {
+            await self.notifications.deliveredNotifications().filter { $0.request.identifier == Self.reminderID }.map {
+                ($0.request.content.userInfo["deadline"] as? TimeInterval).map(Date.init(timeIntervalSince1970:)) ?? $0.date
+            }
+        }, record: { self.interruptionChanged?($0) }, remove: {
+            self.notifications.removeDeliveredNotifications(withIdentifiers: [Self.reminderID])
+        })
+        if !policy.isStale(now: Date(), interval: 360) { interruptionChanged?(nil) }
         guard let deadline = plan.deadline else {
             notifications.removePendingNotificationRequests(withIdentifiers: [Self.reminderID])
             return
         }
-        if let latest = latestStoredSample?(), policy.accept(latest, now: Date()) {
+        if let latest = acceptedSample(now: Date()), policy.accept(latest, now: Date()) {
             reevaluate()
-            return
+            // Newer backfill that is still stale belongs to the existing due episode.
+            // Keep its original write instead of suppressing both the old and replacement plans.
+            guard deadline <= Date(), policy.isStale(now: Date(), interval: 360) else { return }
         }
         guard hasSource?() == true, configuration.mode != .off,
-              policy.deadline(interval: 360) == deadline else { return }
+              plan.sourceID == currentSourceID,
+              let current = policy.deadline(interval: 360),
+              current == deadline || (deadline <= Date() && current <= Date()) else { return }
 
         let content = UNMutableNotificationContent()
         let minutes = 6

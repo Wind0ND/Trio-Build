@@ -210,21 +210,24 @@ extension Notification.Name {
                     HiroPrivateRecovery.configure(resolver: resolver)
                     if let settingsManager = resolver.resolve(SettingsManager.self) {
                         BackgroundKeepAlive.shared.configure(
-                            initialSample: resolver.resolve(GlucoseStorage.self)?.lastGlucoseDate(),
+                            initialSample: nil,
                             hasSource: { settingsManager.settings.cgm != .none && settingsManager.settings.cgm != .simulator },
                             refresh: { request in
                                 guard let manager = resolver.resolve(FetchGlucoseManager.self) else { request.complete(false); return }
+                                let revision = manager.recoverySourceRevision
                                 manager.requestRecovery { success in
                                     Task { @MainActor in
-                                        guard request.isCurrent() else { return }
-                                        await resolver.resolve(LiveActivityManager.self)?.refreshCurrentContent(isAuthorized: request.isCurrent)
+                                        guard request.isCurrent(), manager.recoverySourceRevision == revision else { request.complete(false); return }
+                                        await resolver.resolve(LiveActivityManager.self)?.refreshCurrentContent(isAuthorized: {
+                                            request.isCurrent() && manager.recoverySourceRevision == revision
+                                        })
                                         request.complete(success)
                                     }
                                 }
                             },
-                            latestStoredSample: { resolver.resolve(GlucoseStorage.self)?.lastGlucoseDate() },
                             privateReminderTitle: { PrivacyPreference.alertsEnabled ? PrivacyText.attention : nil },
-                            interruptionChanged: { HiroAlertJournal.shared.dataInterruption(deadline: $0) }
+                            interruptionChanged: { HiroAlertJournal.shared.dataInterruption(deadline: $0) },
+                            sourceID: { resolver.resolve(FetchGlucoseManager.self)?.freshnessSourceID }
                         )
                         BackgroundKeepAlive.shared.setBackground(scenePhase == .background)
                     }

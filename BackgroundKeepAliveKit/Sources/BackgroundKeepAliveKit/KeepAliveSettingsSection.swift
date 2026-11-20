@@ -31,6 +31,7 @@ public struct KeepAliveSettingsSection: View {
                 LabeledContent(text("Audio starts this launch"), value: "\(monitor.audioStarts)")
                 if mode == KeepAliveMode.periodic.rawValue {
                     LabeledContent(text("Last audio window delay"), value: Duration.seconds(monitor.lastCycleDelaySeconds).formatted(.time(pattern: .minuteSecond)))
+                    LabeledContent(text("Missed audio windows this launch"), value: "\(monitor.missedAudioWindows)")
                 }
                 Text(text("Automatic mode keeps audio off while readings update. After six minutes without a valid update, it attempts audio until valid updates resume. Continuous mode attempts audio throughout the background session. Periodic mode follows adjustable on/off windows; iOS suspension can delay or skip them. Session time is an estimate, not a battery measurement."))
                     .font(.footnote).foregroundStyle(.secondary)

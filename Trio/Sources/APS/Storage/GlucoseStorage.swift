@@ -252,12 +252,6 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
             try storeGlucoseRegular(plausible, context: context)
         }
 
-        let now = Date()
-        if let latestSample = plausible.lazy.filter({
-            $0.mbg == nil && ($0.glucose ?? 0) > 0 && $0.dateString <= now
-        }).map(\.dateString).max() {
-            Task { @MainActor in BackgroundKeepAlive.shared.noteGlucoseSample(at: latestSample) }
-        }
     }
 
     private func storeGlucoseRegular(_ glucose: [BloodGlucose], context: NSManagedObjectContext) throws {

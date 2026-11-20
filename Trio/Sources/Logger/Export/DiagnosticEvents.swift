@@ -86,7 +86,7 @@ enum DiagnosticEventContract {
             outcomes: ["changed", "succeeded", "failed", "reset", "enabled", "disabled", "published", "requested", "completed"]
         ),
         "keep_alive": Feature(
-            stages: ["audio", "reminder", "data", "source", "lifecycle", "recovery", "audio_minutes", "audio_starts", "cycle_delay_seconds"],
+            stages: ["audio", "reminder", "data", "source", "lifecycle", "recovery", "audio_minutes", "audio_starts", "cycle_delay_seconds", "missed_windows"],
             outcomes: ["started", "stopped", "failed", "interrupted", "capped", "scheduled", "recovered", "received", "stored", "background", "foreground", "requested", "completed", "timed_out", "reset", "overdue", "sampled"]
         )
     ]

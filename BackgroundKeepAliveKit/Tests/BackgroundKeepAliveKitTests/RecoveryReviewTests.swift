@@ -25,7 +25,7 @@ final class RecoveryReviewTests: XCTestCase {
     func testMissedPeriodicWindowsAreCountedWithoutCatchupAudio() {
         var state = PeriodicAudioWindows()
         XCTAssertEqual(state.observe(elapsed: 0, cycle: 1800, on: 300, started: true), 0)
-        XCTAssertEqual(state.observe(elapsed: 3601, cycle: 1800, on: 300, started: false), 1)
+        XCTAssertEqual(state.observe(elapsed: 3601, cycle: 1800, on: 300, started: true), 1)
         XCTAssertEqual(state.observe(elapsed: 5700, cycle: 1800, on: 300, started: false), 1)
         XCTAssertEqual(state.observe(elapsed: 9300, cycle: 1800, on: 300, started: false), 2)
         XCTAssertEqual(state.observe(elapsed: 9300, cycle: 1800, on: 300, started: false), 0)

@@ -30,7 +30,7 @@ public struct AlertJournal: Codable, Sendable {
     }
     public mutating func acknowledge(source: String, kind: String, at date: Date) {
         for index in entries.indices where entries[index].source == source && entries[index].kind == kind
-            && entries[index].issuedAt <= date && entries[index].acknowledgedAt == nil {
+            && entries[index].issuedAt <= date && entries[index].acknowledgedAt == nil && entries[index].resolvedAt == nil {
             entries[index].acknowledgedAt = date
         }
     }

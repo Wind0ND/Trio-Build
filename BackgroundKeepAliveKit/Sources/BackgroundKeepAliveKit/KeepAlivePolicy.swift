@@ -12,7 +12,7 @@ struct KeepAliveInterruptionState {
 
 struct KeepAliveReminderPolicy {
     static func shouldNotify(deadline: Date, now: Date, acknowledged: Date?, privacyChanged: Bool) -> Bool {
-        !(deadline <= now && acknowledged == deadline)
+        !(deadline <= now && acknowledged.map { $0 <= now } == true)
     }
 }
 
@@ -49,6 +49,7 @@ struct KeepAlivePolicy {
     }
 
     mutating func endMonitoring() {
+        latestSample = nil
         monitoringSince = nil
         backgroundUptime = nil
         lastRefresh = nil
