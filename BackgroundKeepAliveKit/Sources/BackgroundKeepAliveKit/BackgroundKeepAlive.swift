@@ -409,7 +409,7 @@ public final class BackgroundKeepAlive: ObservableObject {
         guard hasSource?() == true, configuration.mode != .off,
               plan.sourceID == currentSourceID,
               let current = policy.deadline(interval: 360),
-              current == deadline || (deadline <= Date() && current <= Date()) else { return }
+              KeepAliveReminderPolicy.canApply(planned: deadline, current: current, now: Date()) else { return }
 
         let content = UNMutableNotificationContent()
         let minutes = 6

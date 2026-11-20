@@ -11,6 +11,7 @@ struct KeepAliveInterruptionState {
 }
 
 struct KeepAliveReminderPolicy {
+    static func canApply(planned: Date, current: Date, now: Date) -> Bool { planned == current }
     static func shouldNotify(deadline: Date, now: Date, acknowledged: Date?, privacyChanged: Bool) -> Bool {
         !(deadline <= now && acknowledged.map { $0 <= now } == true)
     }

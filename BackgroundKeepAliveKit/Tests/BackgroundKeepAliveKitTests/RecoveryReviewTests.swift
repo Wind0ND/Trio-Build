@@ -36,4 +36,8 @@ final class RecoveryReviewTests: XCTestCase {
         XCTAssertTrue(KeepAliveReminderPolicy.shouldNotify(deadline: now + 300, now: now,
             acknowledged: now - 120, privacyChanged: false))
     }
+    func testDuePlanStillWritesAfterNewerStaleBackfillButNotAfterActualRecovery() {
+        XCTAssertTrue(KeepAliveReminderPolicy.canApply(planned: now - 120, current: now - 60, now: now))
+        XCTAssertFalse(KeepAliveReminderPolicy.canApply(planned: now - 120, current: now + 300, now: now))
+    }
 }
