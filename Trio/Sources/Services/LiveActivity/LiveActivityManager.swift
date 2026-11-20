@@ -286,7 +286,7 @@ final class LiveActivityData: ObservableObject {
             await unknownActivity.end(nil, dismissalPolicy: .immediate)
         }
 
-        guard isAuthorized() else { return }
+        guard isAuthorized(), (state.privacy != nil) == PrivacyPreference.displayEnabled else { return }
         if let currentActivity {
             if currentActivity.needsRecreation(updatingPrivateContent: state.privacy != nil),
                UIApplication.shared.applicationState == .active {
@@ -304,7 +304,7 @@ final class LiveActivityData: ObservableObject {
                 )
                 // Before the update, check if currentActivity is still valid
                 if let stillCurrent = self.currentActivity, stillCurrent.activity.id == currentActivity.activity.id {
-                    guard isAuthorized() else { return }
+                    guard isAuthorized(), (state.privacy != nil) == PrivacyPreference.displayEnabled else { return }
                     debug(.liveActivity, "Updating Live Activity \(stillCurrent.activity.id)")
                     await stillCurrent.activity.update(content)
                     recordPublication()
@@ -366,7 +366,7 @@ final class LiveActivityData: ObservableObject {
                 let initialContent = state.privacy != nil
                     ? ActivityContent(state: state, staleDate: state.privacy?.staleDate)
                     : expired
-                guard isAuthorized() else { return }
+                guard isAuthorized(), (state.privacy != nil) == PrivacyPreference.displayEnabled else { return }
                 let activity = try Activity.request(
                     attributes: LiveActivityAttributes(startDate: Date.now),
                     content: initialContent,
