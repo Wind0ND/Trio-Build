@@ -12,6 +12,7 @@ protocol AlertHistoryStorage {
     func acknowledgeAlert(_ issuedAt: Date, _ error: String?)
     func acknowledgeAllEntries(managerIdentifier: String, alertIdentifier: String)
     func removeAlert(identifier: String)
+    func removeAlert(managerIdentifier: String, identifier: String)
     func unacknowledgedAlertsWithinLast24Hours() -> [AlertEntry]
     func broadcastAlertUpdates()
     func syncDate() -> Date
@@ -19,6 +20,7 @@ protocol AlertHistoryStorage {
 }
 
 final class BaseAlertHistoryStorage: AlertHistoryStorage, Injectable {
+    func removeAlert(managerIdentifier: String, identifier: String) { removeAlert(identifier: identifier) }
     private let processQueue = DispatchQueue.markedQueue(label: "BaseAlertsStorage.processQueue")
 
     private let defaults: UserDefaults

@@ -8,6 +8,18 @@ import UIKit
 @testable import Trio
 
 @Suite("Private Live Activity payload") struct PrivacyPresentationTests {
+    @Test("A manual entry cannot revive private CGM bars") func manualDoesNotRevive() {
+        let now = Date()
+        let sensor = GlucoseData(glucose: 100, date: now.addingTimeInterval(-600), direction: nil)
+        let manual = GlucoseData(glucose: 120, date: now, direction: nil, isManual: true)
+        let state = LiveActivityAttributes.ContentState(
+            new: manual, prev: sensor, units: .mmolL, chart: [manual, sensor], settings: TrioSettings(),
+            determination: nil, iob: nil, override: nil, tempTarget: nil, widgetItems: [], privateDisplay: true
+        )
+        #expect(state.privacy?.measuredAt == sensor.date)
+        #expect(state.privacy?.isStale(at: now) == true)
+        #expect(state.glucoseMeasuredAt == sensor.date)
+    }
     @Test("All six bars remain visible inside a narrow activity region") @MainActor
     func narrowWaveformRendering() throws {
         let now = Date()

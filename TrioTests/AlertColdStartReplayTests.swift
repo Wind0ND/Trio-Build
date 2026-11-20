@@ -213,4 +213,14 @@ import Testing
         storage.removeAlert(identifier: "userPodExpiration")
         #expect(storage.unacknowledgedAlertsWithinLast24Hours().isEmpty)
     }
+    @Test("Full-identifier retraction removes every reissue before cold replay") func retractAllReissues() {
+        let (storage, _) = makeStorage()
+        storage.addAlert(entry("same", issuedAgo: 900, manager: "Omni"))
+        storage.addAlert(entry("same", issuedAgo: 30, manager: "Omni"))
+        storage.addAlert(entry("same", issuedAgo: 60, manager: "Other"))
+        storage.removeAlert(managerIdentifier: "Omni", identifier: "same")
+        let replay = AlertColdStartReplay.newestPerIdentifier(storage.unacknowledgedAlertsWithinLast24Hours())
+        #expect(replay.count == 1)
+        #expect(replay.first?.managerIdentifier == "Other")
+    }
 }
