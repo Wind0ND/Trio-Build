@@ -256,11 +256,13 @@ final class LiveActivityData: ObservableObject {
     /// Otherwise, it updates the current live activity.
     ///
     /// - Parameter state: The new content state to push to the live activity.
-    @MainActor private func pushUpdate(_ state: LiveActivityAttributes.ContentState) async {
+    @MainActor private func pushUpdate(_ state: LiveActivityAttributes.ContentState,
+                                      isAuthorized: @escaping @MainActor () -> Bool = { true }) async {
+        guard isAuthorized() else { return }
         // Reject an older queued update after the user switches display mode.
         guard (state.privacy != nil) == PrivacyPreference.displayEnabled else { return }
         if !settings.useLiveActivity || !systemEnabled {
-            await endActivity()
+            await endActivity(isAuthorized: isAuthorized)
             return
         }
 
@@ -280,18 +282,21 @@ final class LiveActivityData: ObservableObject {
         for unknownActivity in Activity<LiveActivityAttributes>.activities
             .filter({ self.currentActivity?.activity.id != $0.id })
         {
+            guard isAuthorized() else { return }
             await unknownActivity.end(nil, dismissalPolicy: .immediate)
         }
 
+        guard isAuthorized() else { return }
         if let currentActivity {
             if currentActivity.needsRecreation(updatingPrivateContent: state.privacy != nil),
                UIApplication.shared.applicationState == .active {
                 debug(.liveActivity, "Recreating Live Activity \(currentActivity.activity.id)")
-                await endActivity()
+                await endActivity(isAuthorized: isAuthorized)
+                guard isAuthorized() else { return }
                 // After endActivity(), currentActivity is guaranteed to be nil
                 // No recursive task, but explicitly restart
                 debug(.liveActivity, "Pushing update after recreation")
-                await pushUpdate(state)
+                await pushUpdate(state, isAuthorized: isAuthorized)
             } else {
                 let content = ActivityContent(
                     state: state,
@@ -299,6 +304,7 @@ final class LiveActivityData: ObservableObject {
                 )
                 // Before the update, check if currentActivity is still valid
                 if let stillCurrent = self.currentActivity, stillCurrent.activity.id == currentActivity.activity.id {
+                    guard isAuthorized() else { return }
                     debug(.liveActivity, "Updating Live Activity \(stillCurrent.activity.id)")
                     await stillCurrent.activity.update(content)
                     recordPublication()
@@ -360,6 +366,7 @@ final class LiveActivityData: ObservableObject {
                 let initialContent = state.privacy != nil
                     ? ActivityContent(state: state, staleDate: state.privacy?.staleDate)
                     : expired
+                guard isAuthorized() else { return }
                 let activity = try Activity.request(
                     attributes: LiveActivityAttributes(startDate: Date.now),
                     content: initialContent,
@@ -374,6 +381,7 @@ final class LiveActivityData: ObservableObject {
                     state: state,
                     staleDate: state.privacy?.staleDate ?? min(state.glucoseMeasuredAt ?? state.date ?? Date.now, Date.now).addingTimeInterval(300)
                 )
+                guard isAuthorized() else { return }
                 await activity.update(updateContent)
                 debug(.liveActivity, "Set initial content for Live Activity \(activity.id)")
             } catch {
@@ -385,16 +393,19 @@ final class LiveActivityData: ObservableObject {
     }
 
     /// Ends the current live activity and ensures that all unknown activities are terminated.
-    private func endActivity() async {
+    @MainActor private func endActivity(isAuthorized: @escaping @MainActor () -> Bool = { true }) async {
+        guard isAuthorized() else { return }
         debug(.liveActivity, "Ending all Live Activities")
 
         if let currentActivity {
             debug(.liveActivity, "Ending Live Activity \(currentActivity.activity.id)")
             await currentActivity.activity.end(nil, dismissalPolicy: .immediate)
-            self.currentActivity = nil
+            guard isAuthorized() else { return }
+            if self.currentActivity?.activity.id == currentActivity.activity.id { self.currentActivity = nil }
         }
 
         for unknownActivity in Activity<LiveActivityAttributes>.activities {
+            guard isAuthorized() else { return }
             debug(.liveActivity, "Ending untracked Live Activity \(unknownActivity.id)")
             await unknownActivity.end(nil, dismissalPolicy: .immediate)
         }
@@ -428,23 +439,31 @@ final class LiveActivityData: ObservableObject {
 }
 
 @available(iOS 16.2, *) extension LiveActivityManager {
-    @MainActor func refreshCurrentContent(isAuthorized: @MainActor () -> Bool) async {
-        guard isAuthorized() else { return }
-        await loadGlucose()
-        guard isAuthorized() else { return }
-        await pushCurrentContent()
+    @MainActor func refreshCurrentContent(isAuthorized: @escaping @MainActor () -> Bool) async {
+        do {
+            try await AuthorizedSnapshot.publish(fetch: { try await self.fetchAndMapGlucose() },
+                isAuthorized: isAuthorized, commit: { snapshot, authorized in
+                    await self.pushContent(glucose: snapshot, isAuthorized: authorized)
+                })
+        } catch { warning(.liveActivity, "Recovery snapshot fetch failed", error: error) }
     }
 
     @MainActor func pushCurrentContent() async {
-        guard let glucose = data.glucoseFromPersistence, let bg = glucose.first else {
+        await pushContent(glucose: data.glucoseFromPersistence, isAuthorized: { true })
+    }
+
+    /// Recovery snapshots stay local: they cannot trigger an observer-owned unguarded publication.
+    @MainActor private func pushContent(glucose: [GlucoseData]?, isAuthorized: @escaping @MainActor () -> Bool) async {
+        guard isAuthorized() else { return }
+        guard let glucose, let bg = glucose.first else {
             if PrivacyPreference.displayEnabled {
                 let previous = currentActivity?.activity.content.state ?? Activity<LiveActivityAttributes>.activities.first?.content.state
-                await pushUpdate(.privateFallback(previous: previous, settings: settings))
+                await pushUpdate(.privateFallback(previous: previous, settings: settings), isAuthorized: isAuthorized)
             }
             debug(.liveActivity, "Live Activity not updated, no glucose available")
             return
         }
-        let prevGlucose = data.glucoseFromPersistence?.dropFirst().first
+        let prevGlucose = glucose.dropFirst().first
 
         guard data.determination != nil || PrivacyPreference.displayEnabled else {
             debug(.liveActivity, "Live Activity not updated, no determination available")
@@ -474,7 +493,7 @@ final class LiveActivityData: ObservableObject {
             privateRecoveredAt: recoveredAt
         )
 
-        await pushUpdate(content)
+        await pushUpdate(content, isAuthorized: isAuthorized)
     }
 
     @MainActor private func recordPublication() {

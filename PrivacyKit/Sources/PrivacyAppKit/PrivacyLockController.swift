@@ -37,7 +37,7 @@ func privacyText(_ key: String) -> String {
         let window = UIWindow(windowScene: scene)
         window.windowLevel = .alert + 1
         window.backgroundColor = .black
-        window.rootViewController = UIHostingController(rootView: PrivacyLockScreen(controller: self))
+        window.rootViewController = UIHostingController(rootView: PrivacyShieldContents(controller: self))
         window.rootViewController?.view.accessibilityViewIsModal = true
         shield = window
         updateShield()
@@ -59,14 +59,17 @@ func privacyText(_ key: String) -> String {
     }
 
     @objc private func resignActive() {
-        guard configured else { return }
-        if !busy { isLocked = true }
+        guard configured || PrivacyPreference.alertsEnabled else { return }
+        if configured && !busy { isLocked = true }
         // Cover system snapshots synchronously, including sheets presented above the app root.
         showShield()
     }
 
     @objc private func enteredBackground() {
-        guard configured else { return }
+        guard configured else {
+            if PrivacyPreference.alertsEnabled { showShield() }
+            return
+        }
         authenticationGeneration += 1
         context?.invalidate()
         pendingAction = nil
@@ -77,7 +80,7 @@ func privacyText(_ key: String) -> String {
     @objc private func becameActive() { updateShield() }
 
     private func updateShield() {
-        if configured && (isLocked || UIApplication.shared.applicationState != .active) {
+        if (configured && isLocked) || ((configured || PrivacyPreference.alertsEnabled) && UIApplication.shared.applicationState != .active) {
             showShield()
         } else if let shield, !shield.isHidden {
             shield.isHidden = true
@@ -188,6 +191,14 @@ private struct ShieldAttachment: UIViewRepresentable {
 public extension View {
     func privacyViewingShield() -> some View {
         background(ShieldAttachment().frame(width: 0, height: 0))
+    }
+}
+
+private struct PrivacyShieldContents: View {
+    @ObservedObject var controller: PrivacyLockController
+    var body: some View {
+        if controller.configured { PrivacyLockScreen(controller: controller) }
+        else { Color.black.ignoresSafeArea() }
     }
 }
 

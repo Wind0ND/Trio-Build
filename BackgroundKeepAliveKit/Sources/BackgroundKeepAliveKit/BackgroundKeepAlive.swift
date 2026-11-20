@@ -309,6 +309,8 @@ public final class BackgroundKeepAlive: ObservableObject {
 
     private func accountMissedWindows(uptime: TimeInterval, started: Bool = false) {
         guard background, configuration.mode == .periodic, let start = periodicStartedAt else { return }
+        let key = "\(configuration.mode.rawValue)|\(configuration.cycleInterval)|\(configuration.audioInterval)"
+        guard periodicConfiguration == key else { return }
         let skipped = windows.observe(elapsed: uptime - start, cycle: configuration.cycleInterval,
                                       on: configuration.audioInterval, started: started)
         if skipped > 0 {

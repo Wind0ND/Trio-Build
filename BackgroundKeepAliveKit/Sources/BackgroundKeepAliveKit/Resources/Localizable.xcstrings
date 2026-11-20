@@ -275,6 +275,17 @@
           }
         }
       }
+    },
+    "Missed audio windows this launch": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本次启动错过的播放窗口"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

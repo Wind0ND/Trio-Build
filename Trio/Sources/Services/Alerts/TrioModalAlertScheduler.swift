@@ -203,6 +203,7 @@ struct TrioAlertBanner: View {
 
     @AppStorage(PrivacyPreference.alertsKey) private var privateAlerts = false
     @ObservedObject private var viewingLock = PrivacyLockController.shared
+    @Environment(\.scenePhase) private var scenePhase
     @State private var presentedAt = Date()
     @State private var dragOffset: CGSize = .zero
 
@@ -219,8 +220,9 @@ struct TrioAlertBanner: View {
 
     private var content: LoopKit.Alert.Content? {
         _ = privateAlerts
-        return viewingLock.isLocked
-            ? TrioPrivacyAlert.content(alert.foregroundContent, for: alert) : alert.foregroundContent
+        return TrioPrivacyAlert.inAppContent(alert.foregroundContent, for: alert,
+            isActive: scenePhase == .active && UIApplication.shared.applicationState == .active,
+            isLocked: viewingLock.isLocked, enabled: privateAlerts)
     }
 
     private var symbolName: String {

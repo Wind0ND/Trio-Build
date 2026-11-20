@@ -359541,7 +359541,96 @@
           }
         }
       }
+    },
+    "Color palette": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配色方案"
+          }
+        }
+      }
+    },
+    "Waveform style": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "声浪样式"
+          }
+        }
+      }
+    },
+    "PIN": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIN"
+          }
+        }
+      }
+    },
+    "Viewing lock": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看锁"
+          }
+        }
+      }
+    },
+    "Automatic protection": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动守护"
+          }
+        }
+      }
+    },
+    "Periodic audio (experimental)": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "间歇音频（实验）"
+          }
+        }
+      }
+    },
+    "Continuous audio fallback": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "持续音频辅助"
+          }
+        }
+      }
+    },
+    "History is temporarily unavailable. Try again after unlocking the device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂时无法读取记录，请解锁设备后重试。"
+          }
+        }
+      }
     }
+
   },
   "version" : "1.1"
 }

@@ -7,6 +7,7 @@ struct HiroAlertJournalView: View {
     @ObservedObject private var viewingLock = PrivacyLockController.shared
     @Environment(\.scenePhase) private var scenePhase
     @State private var rows: [JournalAlert] = []
+    @State private var unavailable = false
 
     var body: some View {
         Group {
@@ -36,7 +37,8 @@ struct HiroAlertJournalView: View {
                                 }
                             }
                         }
-                        if rows.isEmpty { Text("No alerts in the past 24 hours").foregroundStyle(.secondary) }
+                        if unavailable { Text("History is temporarily unavailable. Try again after unlocking the device.").foregroundStyle(.secondary) }
+                        else if rows.isEmpty { Text("No alerts in the past 24 hours").foregroundStyle(.secondary) }
                     } footer: {
                         Text("Issued or scheduled does not confirm that a sound was heard.")
                     }
@@ -52,6 +54,7 @@ struct HiroAlertJournalView: View {
 
     private func reload() {
         rows = viewingLock.isLocked || scenePhase != .active ? [] : HiroAlertJournal.shared.recent()
+        unavailable = HiroAlertJournal.shared.unavailable
     }
 
     private func status(_ row: JournalAlert) -> LocalizedStringKey {

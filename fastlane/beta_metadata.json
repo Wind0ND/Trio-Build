@@ -1,7 +1,7 @@
 {
   "en-US": {
     "description": "hiro is a personal test build with customizable on-screen presentation, viewing protection and device connectivity.",
-    "whats_new": "This update adds six distinct color themes, grouped extension settings, private activity refresh, protected recent alert history and complete small icon assets. Background assistance now includes on-demand, continuous and adjustable periodic options. Please test theme switching, activity interactions, viewing protection, notification timing and background behavior."
+    "whats_new": "hiro now includes six distinct color themes, grouped extension settings, private activity refresh, protected recent alert history and complete small icon assets. Background assistance includes on-demand, continuous and adjustable periodic options. Please test theme switching, activity interactions, viewing protection, notification timing and background behavior."
   },
   "zh-Hans": {
     "description": "hiro 是用于个人测试的应用版本，提供可自定义的界面展示、查看保护和设备连接功能。",
