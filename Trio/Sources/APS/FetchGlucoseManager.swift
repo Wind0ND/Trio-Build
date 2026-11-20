@@ -302,7 +302,10 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
     }
 
     func updateGlucoseSource(cgmGlucoseSourceType: CGMType, cgmGlucosePluginId: String, newManager: CGMManagerUI?) {
-        freshnessIdentity.select(cgmGlucoseSourceType.rawValue + "/" + cgmGlucosePluginId, replacing: newManager != nil)
+        let replacing = KeepAliveSourceIdentity.isReplacement(
+            current: cgmManager.map { $0 as AnyObject }, proposed: newManager.map { $0 as AnyObject }
+        )
+        freshnessIdentity.select(cgmGlucoseSourceType.rawValue + "/" + cgmGlucosePluginId, replacing: replacing)
         // if changed, remove all calibrations
         if self.cgmGlucoseSourceType != cgmGlucoseSourceType || self.cgmGlucosePluginId != cgmGlucosePluginId {
             info(

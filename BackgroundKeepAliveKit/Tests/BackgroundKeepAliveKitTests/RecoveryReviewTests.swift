@@ -40,4 +40,18 @@ final class RecoveryReviewTests: XCTestCase {
         XCTAssertTrue(KeepAliveReminderPolicy.canApply(planned: now - 120, current: now - 60, now: now))
         XCTAssertFalse(KeepAliveReminderPolicy.canApply(planned: now - 120, current: now + 300, now: now))
     }
+    func testOrdinaryManagerStateUpdatesRetainTheSourceEpoch() {
+        let name = "source-identity-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let identity = KeepAliveSourceIdentity(defaults: defaults)
+        let manager = NSObject()
+        identity.select("plugin/current", replacing: false)
+        let initial = identity.id
+        identity.select("plugin/current", replacing: KeepAliveSourceIdentity.isReplacement(current: manager, proposed: manager))
+        XCTAssertEqual(identity.id, initial)
+        XCTAssertFalse(KeepAliveSourceIdentity.isReplacement(current: manager, proposed: nil))
+        identity.select("plugin/current", replacing: KeepAliveSourceIdentity.isReplacement(current: manager, proposed: NSObject()))
+        XCTAssertNotEqual(identity.id, initial)
+    }
 }
