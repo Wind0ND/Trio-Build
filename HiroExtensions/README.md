@@ -1,0 +1,14 @@
+# hiro host extensions
+
+Small host adapters for independent PrivacyKit and BackgroundKeepAliveKit features. The upstream Trio source only wires routes, accepted storage, original alarm events and the existing recovery pipeline.
+
+- `ExtensionsSettingsView`: Settings → Trio Configuration → Extensions, after Services. Original feature/settings keys are preserved. CGM pairing/direct/probe routes remain at their original locations.
+- `AlertJournalStore` / `AlertJournalView`: original issue/acknowledgement/resolution records retained for24hours, newest first, protected by the existing viewing lock and app lifecycle shield. This store is not an active-alert replay queue and is excluded from default diagnostics/backups. Scheduling or issuing does not prove audio was heard. The new journal starts recording after this update; removed historical events cannot be reconstructed.
+- `PrivateRecoveryIntent`: shared source compiled into the main app and LiveActivity targets. A non-discoverable LiveActivityIntent attaches to the existing expanded-island cover/meter and lock-screen cover/meter. No additional player controls or Shortcut entry. iOS may require device authentication before an interaction; the app viewing lock is never unlocked by this intent.
+- `PrivateRecoveryCoordinator`: readiness rendezvous in PrivacyKit coalesces concurrent taps and expires in20seconds. The host uses an18-second authorization window plus a finite UIKit background lease and the existing fetch/store path. Source revisions reject stale callbacks. No artificial freshness: only valid accepted data changes the waveform/ring; completion means the attempt ended, not that data arrived.
+
+Private history content never enters the default diagnostic ZIP. Allowlisted recovery/journal outcomes do. The UI clears history rows while inactive or viewing-locked. Public notifications/AlarmKit remain private; unlocked in-app banners display original content. Audio selection/sounds and clinical thresholds are unchanged.
+
+Background execution remains conditional: timers, silent audio and user actions do not guarantee revival after force-quit or indefinite running. Validate interruption notices, competing audio, locked interactions and battery use on an actual phone.
+
+Apple references: [interactive widgets/Live Activities](https://developer.apple.com/documentation/widgetkit/adding-interactivity-to-widgets-and-live-activities), [LiveActivityIntent](https://developer.apple.com/documentation/appintents/liveactivityintent).

@@ -3,7 +3,7 @@
 Independent iPhone branding assets; original Trio artwork stays in its upstream catalog.
 
 - `Branding.xcconfig`: default `APP_ICON = hiroCorgi` (F). Included by root `Config.xcconfig` before optional user overrides.
-- `Assets.xcassets`: five opaque 1024px app icons plus 256px previews for the existing icon picker.
+- `Assets.xcassets`: five opaque 1024px app icons, explicit iPhone/iPad notification/settings/Spotlight/launcher sizes, plus 256px previews for the existing icon picker. Small-size files use versioned names. `Tools/export-icons.ps1` regenerates those technical size variants without changing the artwork.
 - `Artwork`: unmodified generated master PNGs, retained for future export.
 - `HiroAppIcon.swift`: resolves the real primary icon from the built Info.plist, lists alternatives without duplicating that primary, and supplies preview/name lookup. Icon selection itself uses the existing `Icons` model.
 - `HiroBranding.xcstrings`: independent English/Simplified Chinese icon names.
@@ -15,3 +15,5 @@ Generation: built-in image generation with the original `catWithPod` and `catWit
 Export: RGB opaque PNG, full-bleed square, no pre-rounded mask. System.Drawing used only for technical size conversion (masters → 1024px icons and 256px previews), without redrawing content.
 
 Upstream integration points: one root config include, three main-target project resources/source references, enum cases and primary/preview lookup in existing icon settings. Bundle identifiers, app groups, URL scheme, watch icons and device logic are unaffected.
+
+Notification-icon feedback: the user confirmed the Home Screen already uses corgi, while ordinary banners/Notification Center showed the old icon. This does not identify a unique device-side cause. Build24 already declared corgi as primary. The update supplies explicit notification-scale assets for every animal; no private API, forced icon choice, app deletion or invented per-notification icon override. Verify the signed IPA and new notifications on-device; old delivered notifications/system caches can differ from the new bundle.

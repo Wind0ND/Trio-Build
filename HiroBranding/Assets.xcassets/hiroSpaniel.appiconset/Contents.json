@@ -1,14 +1,116 @@
 {
-  "info": {
-    "version": 1,
-    "author": "xcode"
-  },
   "images": [
     {
-      "idiom": "universal",
+      "filename": "hiroSpaniel-v2-40.png",
+      "size": "20x20",
+      "idiom": "iphone",
+      "scale": "2x"
+    },
+    {
+      "filename": "hiroSpaniel-v2-60.png",
+      "size": "20x20",
+      "idiom": "iphone",
+      "scale": "3x"
+    },
+    {
+      "filename": "hiroSpaniel-v2-58.png",
+      "size": "29x29",
+      "idiom": "iphone",
+      "scale": "2x"
+    },
+    {
+      "filename": "hiroSpaniel-v2-87.png",
+      "size": "29x29",
+      "idiom": "iphone",
+      "scale": "3x"
+    },
+    {
+      "filename": "hiroSpaniel-v2-80.png",
+      "size": "40x40",
+      "idiom": "iphone",
+      "scale": "2x"
+    },
+    {
+      "filename": "hiroSpaniel-v2-120.png",
+      "size": "40x40",
+      "idiom": "iphone",
+      "scale": "3x"
+    },
+    {
+      "filename": "hiroSpaniel-v2-120.png",
+      "size": "60x60",
+      "idiom": "iphone",
+      "scale": "2x"
+    },
+    {
+      "filename": "hiroSpaniel-v2-180.png",
+      "size": "60x60",
+      "idiom": "iphone",
+      "scale": "3x"
+    },
+    {
+      "filename": "hiroSpaniel-v2-20.png",
+      "size": "20x20",
+      "idiom": "ipad",
+      "scale": "1x"
+    },
+    {
+      "filename": "hiroSpaniel-v2-40.png",
+      "size": "20x20",
+      "idiom": "ipad",
+      "scale": "2x"
+    },
+    {
+      "filename": "hiroSpaniel-v2-29.png",
+      "size": "29x29",
+      "idiom": "ipad",
+      "scale": "1x"
+    },
+    {
+      "filename": "hiroSpaniel-v2-58.png",
+      "size": "29x29",
+      "idiom": "ipad",
+      "scale": "2x"
+    },
+    {
+      "filename": "hiroSpaniel-v2-40.png",
+      "size": "40x40",
+      "idiom": "ipad",
+      "scale": "1x"
+    },
+    {
+      "filename": "hiroSpaniel-v2-80.png",
+      "size": "40x40",
+      "idiom": "ipad",
+      "scale": "2x"
+    },
+    {
+      "filename": "hiroSpaniel-v2-76.png",
+      "size": "76x76",
+      "idiom": "ipad",
+      "scale": "1x"
+    },
+    {
+      "filename": "hiroSpaniel-v2-152.png",
+      "size": "76x76",
+      "idiom": "ipad",
+      "scale": "2x"
+    },
+    {
+      "filename": "hiroSpaniel-v2-167.png",
+      "size": "83.5x83.5",
+      "idiom": "ipad",
+      "scale": "2x"
+    },
+    {
       "filename": "hiroSpaniel.png",
-      "platform": "ios",
-      "size": "1024x1024"
+      "size": "1024x1024",
+      "idiom": "ios-marketing",
+      "scale": "1x"
     }
-  ]
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  }
 }

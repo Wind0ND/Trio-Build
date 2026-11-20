@@ -1,10 +1,10 @@
 {
   "en-US": {
     "description": "hiro is a personal test build with customizable on-screen presentation, viewing protection and device connectivity.",
-    "whats_new": "This update adds three selectable color palettes and an optional five-bar view with a fixed reference marker. Background protection starts earlier, handles audio interruptions and improves recovery diagnostics. Please test palette switching, reference height, video playback, screen locking and background updates."
+    "whats_new": "This update adds six distinct color themes, grouped extension settings, private activity refresh, protected recent alert history and complete small icon assets. Background assistance now includes on-demand, continuous and adjustable periodic options. Please test theme switching, activity interactions, viewing protection, notification timing and background behavior."
   },
   "zh-Hans": {
     "description": "hiro 是用于个人测试的应用版本，提供可自定义的界面展示、查看保护和设备连接功能。",
-    "whats_new": "本次更新新增三套可切换配色，以及五条声浪加固定标桩的可选样式。后台守护改为提前启动，改进声音中断处理、恢复流程与诊断记录。请验证配色切换、标桩高度、有声视频、锁屏及后台更新。"
+    "whats_new": "本次更新提供六套不同配色，将附加设置集中至扩展，加入活动内后台刷新、受保护的近期提醒记录，并补齐小尺寸图标资源。后台辅助支持按需、持续及可调间歇模式。请验证配色切换、活动点击、查看保护、通知时机和后台表现。"
   }
 }
