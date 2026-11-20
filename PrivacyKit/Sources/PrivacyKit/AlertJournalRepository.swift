@@ -48,6 +48,12 @@ public final class AlertJournalRepository: @unchecked Sendable {
     public func recent(now: Date) -> [JournalAlert] {
         lock.lock(); defer { lock.unlock() }
         retry()
+        if loaded {
+            let before = journal.entries
+            journal.prune(now: now)
+            dirty = dirty || before != journal.entries
+            retry()
+        }
         return journal.recent(now: now)
     }
 }

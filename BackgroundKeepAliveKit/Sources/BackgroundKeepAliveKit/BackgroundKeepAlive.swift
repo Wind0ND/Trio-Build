@@ -264,6 +264,7 @@ public final class BackgroundKeepAlive: ObservableObject {
             audioRetryAfter = 0
             record(.audio, .started)
         }
+        if configuration.mode == .periodic { accountMissedWindows(uptime: uptime, started: audio.isRunning) }
         status = .protecting
 
         armCheck(after: nextCheckDelay(configuration: configuration, now: now, uptime: uptime))
