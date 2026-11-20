@@ -6,6 +6,10 @@ import PrivacyKit
 import UserNotifications
 
 enum TrioPrivacyAlert {
+    static func inAppContent(_ original: Alert.Content?, for alert: Alert, isActive: Bool,
+                             isLocked: Bool, enabled: Bool) -> Alert.Content? {
+        isLocked ? content(original, for: alert, enabled: enabled) : original
+    }
     static func kind(_ alert: LoopKit.Alert, enabled: Bool = PrivacyPreference.alertsEnabled) -> PrivacyGlucoseAlarm? {
         guard enabled else { return nil }
         return PrivacyGlucoseAlarm(identifier: alert.identifier.alertIdentifier)

@@ -135,6 +135,8 @@ import UIKit
         #expect(presentation?.actions == content.actions)
         #expect(TrioPrivacyAlert.content(content, for: alert, enabled: false) == content)
         #expect(alert.backgroundContent == content)
+        #expect(TrioPrivacyAlert.inAppContent(content, for: alert, isActive: false, isLocked: false, enabled: true)?.body == "")
+        #expect(TrioPrivacyAlert.inAppContent(content, for: alert, isActive: true, isLocked: false, enabled: true) == content)
     }
 
     @Test("Private snapshots fit ActivityKit and omit health text") func payloadBudget() throws {
