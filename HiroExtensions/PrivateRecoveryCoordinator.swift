@@ -12,7 +12,7 @@ import UIKit
                   request.isCurrent() else { request.complete(false); return }
             let permit = Permit(sourceRevision: manager.recoverySourceRevision, expiresAt: request.expiresAtUptime)
             var lease: UIBackgroundTaskIdentifier = .invalid
-            func finish(_ success: Bool) {
+            @MainActor func finish(_ success: Bool) {
                 permit.cancel()
                 if lease != .invalid { UIApplication.shared.endBackgroundTask(lease); lease = .invalid }
                 if request.isCurrent() {
@@ -49,7 +49,7 @@ import UIKit
     }
 
     private static func record(_ outcome: String) {
-        NotificationCenter.default.post(name: DiagnosticEventContract.notificationName, object: nil,
+        Foundation.NotificationCenter.default.post(name: DiagnosticEventContract.notificationName, object: nil,
             userInfo: ["schema": 1, "feature": "privacy", "stage": "recovery", "outcome": outcome])
     }
 

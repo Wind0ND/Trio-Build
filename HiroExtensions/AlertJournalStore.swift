@@ -60,7 +60,7 @@ final class HiroAlertJournal: @unchecked Sendable {
         guard before != journal.entries else { lock.unlock(); return }
         persist()
         lock.unlock()
-        DispatchQueue.main.async { NotificationCenter.default.post(name: Self.changed, object: nil) }
+        DispatchQueue.main.async { Foundation.NotificationCenter.default.post(name: Self.changed, object: nil) }
     }
 
     private func persist() {
@@ -71,7 +71,7 @@ final class HiroAlertJournal: @unchecked Sendable {
             var target = url; try target.setResourceValues(excluded)
         } catch {
             // No content or free-form errors enter the default export.
-            NotificationCenter.default.post(name: .init("com.trio.diagnostics.event"), object: nil,
+            Foundation.NotificationCenter.default.post(name: .init("com.trio.diagnostics.event"), object: nil,
                 userInfo: ["schema": 1, "feature": "privacy", "stage": "journal", "outcome": "failed"])
         }
     }

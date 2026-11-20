@@ -1,4 +1,5 @@
 import PrivacyAppKit
+import Foundation
 import PrivacyKit
 import SwiftUI
 
@@ -44,7 +45,7 @@ struct HiroAlertJournalView: View {
         }
         .navigationTitle("Alert History (24 Hours)")
         .onAppear { reload() }
-        .onReceive(NotificationCenter.default.publisher(for: HiroAlertJournal.changed)) { _ in reload() }
+        .onReceive(Foundation.NotificationCenter.default.publisher(for: HiroAlertJournal.changed)) { _ in reload() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { reload() } else { rows = [] } }
         .onChange(of: viewingLock.isLocked) { _, _ in reload() }
     }
