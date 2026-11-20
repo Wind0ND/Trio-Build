@@ -10,8 +10,12 @@ final class PrivacyDisplayOptionsTests: XCTestCase {
         XCTAssertEqual(state.waveformHeights.prefix(5).compactMap { $0 }.count, 5)
         XCTAssertEqual(Array(state.waveformHeights.prefix(5)).compactMap { $0 }, [5.0/12, 6.0/12, 7.0/12, 8.0/12, 9.0/12])
     }
-    func testThreeDistinctPalettesShareAllSixRangesAndContinuousBoundaries() {
-        XCTAssertEqual(PrivacyPalettePreset.allCases.count, 3)
+    func testSixDistinctPalettesShareAllSixRangesAndContinuousBoundaries() {
+        XCTAssertEqual(PrivacyPalettePreset.allCases.count, 6)
+        let unique = Set(PrivacyPalettePreset.allCases.map { preset in
+            preset.colors.map { "\($0.red),\($0.green),\($0.blue)" }.joined(separator: ";")
+        })
+        XCTAssertEqual(unique.count, 6)
         for preset in PrivacyPalettePreset.allCases {
             let palette = PrivacyPalette(preset: preset)
             XCTAssertEqual(preset.colors.count, 6)
