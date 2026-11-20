@@ -1,5 +1,6 @@
 import SwiftUI
 import Swinject
+import PrivacyAppKit
 
 enum Screen: Identifiable, Hashable {
     case loading
@@ -37,6 +38,11 @@ enum Screen: Identifiable, Hashable {
     case therapySettings
     case algorithmSettings
     case featureSettings
+    case hiroExtensions
+    case privacySettings
+    case backgroundProtection
+    case alertJournal
+    case deviceLifetimeExtensions
     case notificationSettings
     case liveActivitySettings
     case liveActivityBottomRowSettings
@@ -143,6 +149,16 @@ extension Screen {
             AlgorithmSettings(resolver: resolver, state: Settings.StateModel())
         case .featureSettings:
             FeatureSettingsView(resolver: resolver, state: Settings.StateModel())
+        case .hiroExtensions:
+            HiroExtensionsSettingsView(resolver: resolver, state: Settings.StateModel())
+        case .privacySettings:
+            PrivacySettingsView()
+        case .backgroundProtection:
+            HiroBackgroundProtectionView()
+        case .alertJournal:
+            HiroAlertJournalView()
+        case .deviceLifetimeExtensions:
+            HiroDeviceLifetimeView(resolver: resolver, state: Settings.StateModel())
         case .notificationSettings:
             NotificationsView(resolver: resolver, state: Settings.StateModel())
         case .liveActivitySettings:

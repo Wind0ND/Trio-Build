@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import PrivacyKit
 import LoopKit
 import Swinject
 import UIKit
@@ -315,6 +316,7 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
     }
 
     func retractAlert(identifier: Alert.Identifier) {
+        HiroAlertJournal.shared.resolve(source: identifier.managerIdentifier, kind: identifier.alertIdentifier)
         queue.async {
             self.liveAlerts.removeValue(forKey: identifier)
         }
@@ -360,6 +362,7 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
     // MARK: - Acknowledgement
 
     func handleAcknowledgement(identifier: Alert.Identifier) {
+        HiroAlertJournal.shared.acknowledge(source: identifier.managerIdentifier, kind: identifier.alertIdentifier)
         modalScheduler.unschedule(identifier: identifier)
         userNotificationScheduler.unschedule(identifier: identifier)
         Task { @MainActor in
@@ -550,6 +553,11 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
             contentBody: alert.foregroundContent?.body ?? alert.backgroundContent.body
         )
         alertHistoryStorage.addAlert(entry)
+        HiroAlertJournal.shared.issue(JournalAlert(
+            source: entry.managerIdentifier, kind: entry.alertIdentifier,
+            title: entry.contentTitle ?? "", body: entry.contentBody ?? "", issuedAt: entry.issuedDate,
+            scheduledFor: alert.trigger.storedInterval.map { entry.issuedDate.addingTimeInterval($0.doubleValue) }
+        ))
     }
 }
 

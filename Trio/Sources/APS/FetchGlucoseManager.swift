@@ -14,6 +14,8 @@ protocol FetchGlucoseManager: SourceInfoProvider {
     func removeCalibrations()
     func newGlucoseFromCgmManager(newGlucose: [BloodGlucose])
     func requestRecovery(completion: @escaping @Sendable (Bool) -> Void)
+    func requestRecovery(isAuthorized: @escaping @Sendable () -> Bool, completion: @escaping @Sendable (Bool) -> Void)
+    var recoverySourceRevision: UUID { get }
     /// Notes to Nightscout a sensor state without reliable glucose, once per
     /// state; see `CGMSensorStateLog`. Call on every reading.
     func reportCGMSensorObservation(_ observation: CGMSensorObservation)
@@ -33,6 +35,11 @@ protocol FetchGlucoseManager: SourceInfoProvider {
 }
 
 extension FetchGlucoseManager {
+    var recoverySourceRevision: UUID { UUID(uuidString: "00000000-0000-0000-0000-000000000000")! }
+    func requestRecovery(isAuthorized: @escaping @Sendable () -> Bool, completion: @escaping @Sendable (Bool) -> Void) {
+        guard isAuthorized() else { completion(false); return }
+        requestRecovery(completion: completion)
+    }
     func requestRecovery(completion: @escaping @Sendable (Bool) -> Void) { completion(false) }
     func updateGlucoseSource(cgmGlucoseSourceType: CGMType, cgmGlucosePluginId: String) {
         updateGlucoseSource(cgmGlucoseSourceType: cgmGlucoseSourceType, cgmGlucosePluginId: cgmGlucosePluginId, newManager: nil)
@@ -40,6 +47,12 @@ extension FetchGlucoseManager {
 }
 
 final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
+    private let recoveryRevisionLock = NSLock()
+    private var recoveryRevision = UUID()
+    var recoverySourceRevision: UUID {
+        recoveryRevisionLock.lock(); defer { recoveryRevisionLock.unlock() }
+        return recoveryRevision
+    }
     private let processQueue = DispatchQueue(label: "BaseGlucoseManager.processQueue")
 
     @Injected() var broadcaster: Broadcaster!
@@ -141,8 +154,16 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
 
     /// Uses the same source and serialized storage path for plugins, xDrip and Nightscout.
     func requestRecovery(completion: @escaping @Sendable (Bool) -> Void) {
+        requestRecovery(isAuthorized: { true }, completion: completion)
+    }
+
+    func requestRecovery(isAuthorized: @escaping @Sendable () -> Bool, completion: @escaping @Sendable (Bool) -> Void) {
+        let revision = recoverySourceRevision
+        let current: @Sendable () -> Bool = { [weak self] in
+            isAuthorized() && self?.recoverySourceRevision == revision
+        }
         processQueue.async { [weak self] in
-            guard let self, let source = self.glucoseSource else { completion(false); return }
+            guard let self, current(), let source = self.glucoseSource else { completion(false); return }
             source.fetch(nil)
                 .prefix(1)
                 .timeout(15, scheduler: self.processQueue)
@@ -153,9 +174,10 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
                     let syncDate = self.glucoseStorage.syncDate()
                     Task {
                         defer { self.glucoseStoreAndHeartLock.signal() }
+                        guard current() else { completion(false); return }
                         do {
-                            try await self.glucoseStoreAndHeartDecision(syncDate: syncDate, glucose: glucose)
-                            completion(true)
+                            try await self.glucoseStoreAndHeartDecision(syncDate: syncDate, glucose: glucose, isAuthorized: current)
+                            completion(current())
                         } catch {
                             warning(.cgm, "Recovery storage failed", error: error)
                             completion(false)
@@ -194,6 +216,7 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
 
     var glucoseSource: GlucoseSource? {
         didSet {
+            recoveryRevisionLock.lock(); recoveryRevision = UUID(); recoveryRevisionLock.unlock()
             // Drop prior subscriptions so source swaps don't dupe emissions.
             cgmStatusSubscriptions.removeAll()
             cgmDisplayState.value = glucoseSource?.cgmDisplayState.value
@@ -329,7 +352,9 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
         return Manager.init(rawState: rawState)
     }
 
-    private func glucoseStoreAndHeartDecision(syncDate: Date, glucose: [BloodGlucose]) async throws {
+    private func glucoseStoreAndHeartDecision(syncDate: Date, glucose: [BloodGlucose],
+                                             isAuthorized: @Sendable () -> Bool = { true }) async throws {
+        guard isAuthorized() else { return }
         // calibration add if required only for sensor
         let newGlucose = overcalibrate(entries: glucose.filter { $0.sgv != nil })
 
@@ -344,6 +369,7 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
         // Check if sensor emitted calibrations
         let calibrations = glucose.filter { $0.mbg != nil }
         if calibrations.isNotEmpty {
+            guard isAuthorized() else { return }
             debug(.cgm, "Storing \(calibrations.count) calibrations")
             try await glucoseStorage.storeGlucose(calibrations)
         }
@@ -354,6 +380,7 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
 
         let backfillGlucose = newGlucose.filter { $0.dateString <= syncDate }
         if backfillGlucose.isNotEmpty {
+            guard isAuthorized() else { return }
             debug(.cgm, "Backfilling \(backfillGlucose.count) glucose readings")
             do {
                 try await glucoseStorage.backfillGlucose(backfillGlucose)
@@ -376,8 +403,10 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
         }
         debug(.cgm, "Storing \(filtered.count) new glucose readings")
 
+        guard isAuthorized() else { return }
         try await glucoseStorage.storeGlucose(filtered)
 
+        guard isAuthorized() else { return }
         if settingsManager.settings.smoothGlucose {
             let smoothingContext = CoreDataStack.shared.newTaskContext()
             smoothingContext.name = "exponentialSmoothingGlucose"
@@ -385,6 +414,7 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
         }
 
         // Push the fresh reading schedule so the pump can align its BLE heartbeat
+        guard isAuthorized() else { return }
         deviceDataManager.updatePumpBLEHeartbeat(
             lastCGMReadingDate: filtered.map(\.dateString).max(),
             expectedCGMReadingInterval: cgmManager?.expectedGlucoseSampleInterval

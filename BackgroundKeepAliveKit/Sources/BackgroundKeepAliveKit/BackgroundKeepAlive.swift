@@ -49,6 +49,8 @@ public final class BackgroundKeepAlive: ObservableObject {
     private var latestStoredSample: (() -> Date?)?
     private var refresh: RefreshHandler?
     private var privateReminderTitle: (() -> String?)?
+    private var interruptionChanged: ((Date?) -> Void)?
+    private var activeOutage: Date?
     private var background = false
     private var playing = false
     private var alertOwnsAudio = false
@@ -102,11 +104,13 @@ public final class BackgroundKeepAlive: ObservableObject {
     }
 
     public func configure(initialSample: Date?, hasSource: @escaping () -> Bool, refresh: RefreshHandler? = nil,
-                          latestStoredSample: (() -> Date?)? = nil, privateReminderTitle: (() -> String?)? = nil) {
+                          latestStoredSample: (() -> Date?)? = nil, privateReminderTitle: (() -> String?)? = nil,
+                          interruptionChanged: ((Date?) -> Void)? = nil) {
         self.hasSource = hasSource
         self.latestStoredSample = latestStoredSample
         self.refresh = refresh
         self.privateReminderTitle = privateReminderTitle
+        self.interruptionChanged = interruptionChanged
         if let initialSample { policy.accept(initialSample, now: Date()) }
         notifications.removePendingNotificationRequests(withIdentifiers: ["background-keep-alive-expired"])
         reevaluate()
@@ -179,6 +183,7 @@ public final class BackgroundKeepAlive: ObservableObject {
             clearReminder()
             stopAudio(.stopped)
             finishRefresh(.stopped)
+            endOutage()
             return
         }
 
@@ -197,6 +202,10 @@ public final class BackgroundKeepAlive: ObservableObject {
             policy.backgroundChanged(background, uptime: uptime)
         }
         let stale = policy.isStale(now: now, interval: configuration.stallInterval)
+        if stale, activeOutage == nil, let deadline {
+            activeOutage = deadline
+            interruptionChanged?(deadline)
+        } else if !stale { endOutage(); interruptionChanged?(nil) }
         if stale { record(.data, .overdue); requestRefresh(now: now) }
 
         guard policy.wantsAudio(configuration: configuration, now: now, background: background,
@@ -345,6 +354,7 @@ public final class BackgroundKeepAlive: ObservableObject {
         content.body = String(localized: "No new glucose readings for \(minutes) minutes. Open Trio and check the CGM connection.", bundle: .main)
         if let privateTitle = plan.privateTitle { content.title = privateTitle; content.body = "" }
         content.sound = .default
+        content.userInfo = ["deadline": deadline.timeIntervalSince1970]
         content.interruptionLevel = .timeSensitive
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, deadline.timeIntervalSinceNow), repeats: false)
         let request = UNNotificationRequest(identifier: Self.reminderID, content: content, trigger: trigger)
@@ -368,6 +378,12 @@ public final class BackgroundKeepAlive: ObservableObject {
         clearedReminder = true
         defaults.removeObject(forKey: Self.acknowledgedDeadlineKey)
         reminderWriter.set(.init(deadline: nil, privateTitle: nil))
+    }
+
+    private func endOutage() {
+        guard activeOutage != nil else { return }
+        activeOutage = nil
+        interruptionChanged?(nil)
     }
 
     private func stopAudio(_ outcome: Outcome, report: Bool = true) {

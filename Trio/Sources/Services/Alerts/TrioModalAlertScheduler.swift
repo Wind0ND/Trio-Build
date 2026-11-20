@@ -3,6 +3,7 @@ import Foundation
 import LoopKit
 import SwiftUI
 import PrivacyKit
+import PrivacyAppKit
 
 protocol TrioModalAlertResponder: AnyObject {
     func handleAcknowledgement(identifier: LoopKit.Alert.Identifier)
@@ -201,6 +202,7 @@ struct TrioAlertBanner: View {
     let onSnooze: (TimeInterval) -> Void
 
     @AppStorage(PrivacyPreference.alertsKey) private var privateAlerts = false
+    @ObservedObject private var viewingLock = PrivacyLockController.shared
     @State private var presentedAt = Date()
     @State private var dragOffset: CGSize = .zero
 
@@ -217,7 +219,8 @@ struct TrioAlertBanner: View {
 
     private var content: LoopKit.Alert.Content? {
         _ = privateAlerts
-        return TrioPrivacyAlert.content(alert.foregroundContent, for: alert)
+        return viewingLock.isLocked
+            ? TrioPrivacyAlert.content(alert.foregroundContent, for: alert) : alert.foregroundContent
     }
 
     private var symbolName: String {

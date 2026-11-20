@@ -15,7 +15,10 @@ struct LiveActivity: Widget {
             let island = DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     if let privacy = context.state.privacy {
-                        PrivacyCoverView(data: privacy.cover, size: 24)
+                        Button(intent: HiroPrivateRecoveryIntent()) {
+                            PrivacyCoverView(data: privacy.cover, size: 24)
+                        }.buttonStyle(.plain)
+                            .accessibilityLabel(Text("Refresh activity"))
                             .frame(width: 28, height: 28)
                     } else {
                     LiveActivityExpandedLeadingView(
@@ -26,7 +29,10 @@ struct LiveActivity: Widget {
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     if let privacy = context.state.privacy {
-                        PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()))
+                        Button(intent: HiroPrivateRecoveryIntent()) {
+                            PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()))
+                        }.buttonStyle(.plain)
+                            .accessibilityLabel(Text("Refresh activity"))
                             .frame(width: 28, height: 28)
                     } else {
                     LiveActivityExpandedTrailingView(

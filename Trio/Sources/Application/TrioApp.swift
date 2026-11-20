@@ -206,6 +206,8 @@ extension Notification.Name {
                 await Task { @MainActor in
                     // Only load services after successful Core Data initialization
                     loadServices()
+                    await HiroAlertJournal.shared.importDeliveredWatchdog()
+                    HiroPrivateRecovery.configure(resolver: resolver)
                     if let settingsManager = resolver.resolve(SettingsManager.self) {
                         BackgroundKeepAlive.shared.configure(
                             initialSample: resolver.resolve(GlucoseStorage.self)?.lastGlucoseDate(),
@@ -221,7 +223,8 @@ extension Notification.Name {
                                 }
                             },
                             latestStoredSample: { resolver.resolve(GlucoseStorage.self)?.lastGlucoseDate() },
-                            privateReminderTitle: { PrivacyPreference.alertsEnabled ? PrivacyText.attention : nil }
+                            privateReminderTitle: { PrivacyPreference.alertsEnabled ? PrivacyText.attention : nil },
+                            interruptionChanged: { HiroAlertJournal.shared.dataInterruption(deadline: $0) }
                         )
                         BackgroundKeepAlive.shared.setBackground(scenePhase == .background)
                     }
@@ -430,7 +433,10 @@ extension Notification.Name {
         }
         .onChange(of: scenePhase) { _, newScenePhase in
             if newScenePhase == .background || newScenePhase == .active {
-                BackgroundKeepAlive.shared.setBackground(newScenePhase == .background)
+                Task { @MainActor in
+                    if newScenePhase == .active { await HiroAlertJournal.shared.importDeliveredWatchdog() }
+                    BackgroundKeepAlive.shared.setBackground(scenePhase == .background)
+                }
             }
             info(.lifecycle, "Scene phase changed to \(newScenePhase)")
 

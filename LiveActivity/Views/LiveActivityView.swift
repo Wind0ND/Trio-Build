@@ -23,9 +23,13 @@ struct LiveActivityView: View {
         if let privacy = context.state.privacy {
             let style = context.state.simpleViewStyle
             HStack {
-                PrivacyCoverView(data: privacy.cover, size: isWatchOS ? 20 : 24)
+                Button(intent: HiroPrivateRecoveryIntent()) {
+                    PrivacyCoverView(data: privacy.cover, size: isWatchOS ? 20 : 24)
+                }.buttonStyle(.plain).accessibilityLabel(Text("Refresh activity"))
                 Spacer()
-                PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()))
+                Button(intent: HiroPrivateRecoveryIntent()) {
+                    PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()))
+                }.buttonStyle(.plain).accessibilityLabel(Text("Refresh activity"))
             }
             // Match the existing simple layout's line height and padding, keeping the meter small.
             .frame(height: UIFontMetrics(forTextStyle: style.fontSize.uiTextStyle).scaledValue(for: style.fontSize.basePointSize) * 1.2)

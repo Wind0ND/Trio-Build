@@ -61,7 +61,8 @@ enum SettingItems {
         SettingItem(
             title: String(localized: "Services", comment: "Services menu item in the Settings main view."),
             view: .serviceSettings
-        )
+        ),
+        SettingItem(title: String(localized: "Extensions"), view: .hiroExtensions)
     ]
 
     static let devicesItems = [
@@ -434,8 +435,18 @@ enum SettingItems {
         SettingItem(title: "Apple Health", view: .healthkit, path: ["Services"])
     ]
 
+    static let extensionItems = [
+        SettingItem(title: "Privacy", view: .privacySettings,
+                    searchContents: ["Color palette", "Waveform style", "PIN", "Viewing lock"], path: ["Extensions"]),
+        SettingItem(title: "Background protection", view: .backgroundProtection,
+                    searchContents: ["Automatic protection", "Periodic audio (experimental)", "Continuous audio fallback"], path: ["Extensions"]),
+        SettingItem(title: "Alert History (24 Hours)", view: .alertJournal, path: ["Extensions"]),
+        SettingItem(title: "Device Lifetime Extensions", view: .deviceLifetimeExtensions, path: ["Extensions"]),
+        SettingItem(title: "Export Diagnostics", view: .hiroExtensions, path: ["Extensions"])
+    ]
+
     static var allItems: [SettingItem] {
-        trioConfig + devicesItems + therapyItems + algorithmItems + trioFeaturesItems + notificationItems + serviceItems
+        trioConfig + devicesItems + therapyItems + algorithmItems + trioFeaturesItems + notificationItems + serviceItems + extensionItems
     }
 
     static func filteredItems(searchText: String) -> [FilteredSettingItem] {

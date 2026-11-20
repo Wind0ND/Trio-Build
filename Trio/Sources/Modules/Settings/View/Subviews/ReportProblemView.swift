@@ -36,13 +36,6 @@ struct ReportProblemView: View {
                     logExport: state.logExport
                 )
 
-                LogShareRow(
-                    title: "Export Diagnostics",
-                    footnote: "Includes app version and feature events for scanning, pairing and background monitoring.",
-                    kinds: [.diagnostics],
-                    logExport: state.logExport
-                )
-
                 NavigationLink(destination: AiDEXProbeView()) {
                     AiDEXProbeLinkRow()
                 }
