@@ -54,4 +54,12 @@ final class RecoveryReviewTests: XCTestCase {
         identity.select("plugin/current", replacing: KeepAliveSourceIdentity.isReplacement(current: manager, proposed: NSObject()))
         XCTAssertNotEqual(identity.id, initial)
     }
+    func testActualRecoveryResetsOldEpisodeEvenIfNewSchedulingFails() {
+        let old = now - 600
+        let recovered = KeepAliveReminderPolicy.acknowledgementAfterSample(old, sample: now, now: now)
+        XCTAssertNil(recovered)
+        XCTAssertTrue(KeepAliveReminderPolicy.shouldNotify(deadline: now + 360, now: now + 361,
+            acknowledged: recovered, privacyChanged: false))
+        XCTAssertEqual(KeepAliveReminderPolicy.acknowledgementAfterSample(old, sample: now - 700, now: now), old)
+    }
 }

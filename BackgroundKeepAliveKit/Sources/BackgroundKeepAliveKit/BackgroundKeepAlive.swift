@@ -208,6 +208,10 @@ public final class BackgroundKeepAlive: ObservableObject {
         // A storage callback can still be queued on the main actor. Read the accepted store before scheduling.
         if let accepted = acceptedSample(now: now) { policy.accept(accepted, now: now) }
         policy.beginMonitoring(at: now)
+        let oldAcknowledgement = defaults.object(forKey: Self.acknowledgedDeadlineKey) as? Date
+        if KeepAliveReminderPolicy.acknowledgementAfterSample(oldAcknowledgement, sample: policy.latestSample, now: now) == nil {
+            defaults.removeObject(forKey: Self.acknowledgedDeadlineKey)
+        }
         let deadline = policy.deadline(interval: configuration.stallInterval)
         if let deadline { scheduleReminder(for: deadline, now: now, interval: configuration.stallInterval) }
 
