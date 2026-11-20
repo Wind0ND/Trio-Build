@@ -2,6 +2,19 @@ import XCTest
 @testable import PrivacyKit
 
 final class PrivateRecoveryBridgeTests: XCTestCase {
+    private func blockMainActor() { Thread.sleep(forTimeInterval: 0.06) }
+    @MainActor func testDeadlineInvalidatesBeforeDelayedMainActorTimerRuns() async {
+        let bridge = PrivateRecoveryBridge(timeout: 0.02)
+        var captured: PrivateRecoveryBridge.Request?
+        bridge.configure { captured = $0 }
+        let task = Task { await bridge.request() }
+        for _ in 0..<10 { await Task.yield() }
+        XCTAssertTrue(captured?.isCurrent() ?? false)
+        blockMainActor()
+        XCTAssertFalse(captured?.isCurrent() ?? true)
+        captured?.complete(false)
+        _ = await task.value
+    }
     @MainActor func testColdRequestWaitsAndConcurrentTapsCoalesce() async {
         let bridge = PrivateRecoveryBridge(timeout: 1)
         var starts = 0
