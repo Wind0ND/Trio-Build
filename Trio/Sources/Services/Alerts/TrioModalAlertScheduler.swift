@@ -2,6 +2,7 @@ import Combine
 import Foundation
 import LoopKit
 import SwiftUI
+import UIKit
 import PrivacyKit
 import PrivacyAppKit
 

@@ -124,7 +124,7 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
                 if let glucoseSource = self.glucoseSource {
                     let owner = freshnessSourceID
                     let revision = recoverySourceRevision
-                    return glucoseSource.fetch(self.timer).map { ($0, owner, revision) }.eraseToAnyPublisher()
+                    return glucoseSource.fetch(self.timer).map { (glucose: $0, owner: owner, revision: revision) }.eraseToAnyPublisher()
                 } else {
                     return Empty(completeImmediately: false).eraseToAnyPublisher()
                 }
