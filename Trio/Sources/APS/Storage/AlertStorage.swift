@@ -20,7 +20,16 @@ protocol AlertHistoryStorage {
 }
 
 final class BaseAlertHistoryStorage: AlertHistoryStorage, Injectable {
-    func removeAlert(managerIdentifier: String, identifier: String) { removeAlert(identifier: identifier) }
+    func removeAlert(managerIdentifier: String, identifier: String) {
+        processQueue.sync {
+            var all = loadAll()
+            all.removeAll { $0.managerIdentifier == managerIdentifier && $0.alertIdentifier == identifier && $0.acknowledgedDate == nil }
+            let cleaned = pruneAndSort(dedupeByIssuedDate(all))
+            saveAll(cleaned)
+            unacknowledgedAlertsPublisher.send(self.unacknowledgedAlertsWithinLast24HoursOnQueue().isNotEmpty)
+            broadcaster.notify(AlertObserver.self, on: processQueue) { $0.AlertDidUpdate(cleaned) }
+        }
+    }
     private let processQueue = DispatchQueue.markedQueue(label: "BaseAlertsStorage.processQueue")
 
     private let defaults: UserDefaults

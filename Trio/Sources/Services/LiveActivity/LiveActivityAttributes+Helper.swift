@@ -32,9 +32,8 @@ extension LiveActivityAttributes.ContentState {
         previous: Self?, settings: TrioSettings,
         cover: Data? = UserDefaults.standard.data(forKey: PrivacyPreference.coverKey)
     ) -> Self {
-        let readings = previous?.detailedViewState.chart.map {
-            PrivacyReading(mgDL: NSDecimalNumber(decimal: $0.value).doubleValue, date: $0.date)
-        } ?? []
+        // A public chart no longer carries manual provenance. Wait for an accepted CGM snapshot.
+        let readings: [PrivacyReading] = []
         let snapshot = previous?.privacy?.replacingCover(cover).replacingMeterStyle(.stored()) ?? PrivacyActivityState(
             readings: readings, now: Date(), palette: .stored(),
             cover: cover, meterStyle: .stored()
@@ -77,6 +76,14 @@ extension LiveActivityAttributes.ContentState {
         privateCover: Data? = UserDefaults.standard.data(forKey: PrivacyPreference.coverKey),
         privateRecoveredAt: Date? = nil
     ) {
+        let now = Date()
+        let privateReadings = chart.filter { !$0.isManual && $0.glucose > 0 && $0.date <= now }
+        let privateSnapshot = privateDisplay ? PrivacyActivityState(
+            readings: privateReadings.map { PrivacyReading(mgDL: Double($0.glucose), date: $0.date) },
+            now: now, palette: .stored(), cover: privateCover,
+            recoveredAt: privateReadings.first?.date == bg.date ? privateRecoveredAt : nil,
+            meterStyle: .stored()
+        ) : nil
         let glucose = bg.glucose
         let formattedBG = glucose.formatted(for: units)
         var rotationDegrees = 0.0
@@ -151,12 +158,8 @@ extension LiveActivityAttributes.ContentState {
             simpleViewStyle: LiveActivityAttributes.SimpleViewStyle(settings: settings),
             detailedViewState: detailedState,
             isInitialState: false,
-            privacy: privateDisplay ? PrivacyActivityState(
-                readings: chart.map { PrivacyReading(mgDL: Double($0.glucose), date: $0.date) },
-                now: Date(), palette: .stored(),
-                cover: privateCover, recoveredAt: privateRecoveredAt, meterStyle: .stored()
-            ) : nil,
-            glucoseMeasuredAt: bg.date
+            privacy: privateSnapshot,
+            glucoseMeasuredAt: privateDisplay ? privateSnapshot?.measuredAt : bg.date
         )
     }
 }

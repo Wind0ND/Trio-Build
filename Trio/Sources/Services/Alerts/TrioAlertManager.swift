@@ -327,7 +327,7 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
             stopCriticalAudio(for: identifier)
             alarmScheduler?.cancelAlarm(for: identifier)
         }
-        alertHistoryStorage.removeAlert(identifier: identifier.alertIdentifier)
+        alertHistoryStorage.removeAlert(managerIdentifier: identifier.managerIdentifier, identifier: identifier.alertIdentifier)
     }
 
     /// Cold-start replay. Deliberately skips `recordIssued` (entry already
