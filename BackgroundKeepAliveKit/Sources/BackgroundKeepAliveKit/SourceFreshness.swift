@@ -33,7 +33,10 @@ struct PeriodicAudioWindows {
 
 /// Opaque source epoch survives relaunch; replacing a manager or changing selection starts a new epoch.
 public final class KeepAliveSourceIdentity: @unchecked Sendable {
-    public static func isReplacement(current: AnyObject?, proposed: AnyObject?) -> Bool { proposed != nil }
+    public static func isReplacement(current: AnyObject?, proposed: AnyObject?) -> Bool {
+        guard let proposed else { return false }
+        return current !== proposed
+    }
     private let lock = NSLock()
     private let defaults: UserDefaults
     private var value = ""

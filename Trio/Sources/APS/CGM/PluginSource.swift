@@ -204,6 +204,7 @@ extension PluginSource: CGMManagerDelegate {
     }
 
     func cgmManagerDidUpdateState(_ cgmManager: CGMManager) {
+        let revision = glucoseManager?.recoverySourceRevision
         processQueue.async { [weak self] in
             guard let self = self else { return }
 
@@ -213,6 +214,11 @@ extension PluginSource: CGMManagerDelegate {
                 debug(.cgm, "CGM state update ignored: no glucose manager")
                 return
             }
+            guard let current = self.cgmManager,
+                  ObjectIdentifier(current as AnyObject) == ObjectIdentifier(cgmManager as AnyObject),
+                  let source = fetchGlucoseManager.glucoseSource,
+                  ObjectIdentifier(source as AnyObject) == ObjectIdentifier(self),
+                  revision == fetchGlucoseManager.recoverySourceRevision else { return }
             // Adjust app-specific NS Upload setting value when CGM setting is changed
             fetchGlucoseManager.settingsManager.settings.uploadGlucose = cgmManager.shouldSyncToRemoteService
 

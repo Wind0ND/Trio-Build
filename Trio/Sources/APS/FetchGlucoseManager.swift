@@ -325,6 +325,7 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
         // if plugin, if not the same pluginID, need to reset the cgmManager
         // if plugin and newManager provides, update cgmManager
         if let manager = newManager {
+            if replacing { glucoseSource = nil }
             cgmManager = manager
             removeCalibrations()
         } else if self.cgmGlucoseSourceType == .plugin, cgmManager == nil, let rawCGMManager = rawCGMManager {
