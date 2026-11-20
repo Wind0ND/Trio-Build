@@ -22,12 +22,17 @@ final class KeepAlivePolicyTests: XCTestCase {
         XCTAssertTrue(KeepAliveReminderPolicy.shouldNotify(deadline: now - 1, now: now, acknowledged: nil, privacyChanged: false))
     }
 
-    func testAutomaticProtectionStartsBeforeTheAppCanBeSuspended() {
+    func testAutomaticAudioOnlyRunsAfterSixMinutesAndStopsAsSoonAsDataRecovers() {
         var policy = KeepAlivePolicy()
         policy.beginMonitoring(at: now)
         policy.accept(now, now: now)
         let config = KeepAlivePolicy.Configuration(mode: "smart", stallMinutes: 5, maxSessionMinutes: 15)
-        XCTAssertTrue(policy.wantsAudio(configuration: config, now: now + 1, background: true, blocked: false, capped: false))
+        XCTAssertFalse(policy.wantsAudio(configuration: config, now: now + 1, background: true, blocked: false, capped: false))
+        XCTAssertFalse(policy.wantsAudio(configuration: config, now: now + 359, background: true, blocked: false, capped: false))
+        XCTAssertTrue(policy.wantsAudio(configuration: config, now: now + 360, background: true, blocked: false, capped: false))
+        XCTAssertTrue(policy.wantsAudio(configuration: config, now: now + 7200, background: true, blocked: false, capped: true))
+        policy.accept(now + 7200, now: now + 7200)
+        XCTAssertFalse(policy.wantsAudio(configuration: config, now: now + 7201, background: true, blocked: false, capped: false))
         XCTAssertFalse(policy.wantsAudio(configuration: config, now: now + 1, background: false, blocked: false, capped: false))
         XCTAssertFalse(policy.wantsAudio(configuration: config, now: now + 301, background: true, blocked: true, capped: false))
         XCTAssertFalse(policy.wantsAudio(configuration: config, now: now + 301, background: true, blocked: false, capped: true))
@@ -73,22 +78,32 @@ final class KeepAlivePolicyTests: XCTestCase {
     func testConfigurationUsesDefaultsAndClampsBeforeConvertingToSeconds() {
         let defaults = KeepAlivePolicy.Configuration(mode: nil, stallMinutes: 0, maxSessionMinutes: 0)
         XCTAssertEqual(defaults.mode, .smart)
-        XCTAssertEqual(defaults.stallInterval, 600)
-        XCTAssertEqual(defaults.capInterval, 2700)
+        XCTAssertEqual(defaults.stallInterval, 360)
         let limits = KeepAlivePolicy.Configuration(mode: "always", stallMinutes: Int.max, maxSessionMinutes: -1)
         XCTAssertEqual(limits.mode, .always)
-        XCTAssertEqual(limits.stallInterval, 3600)
-        XCTAssertEqual(limits.capInterval, 900)
+        XCTAssertEqual(limits.stallInterval, 360)
     }
 
-    func testRecoveryCapUsesUptimeAndResetsOnlyWhenFresh() {
+    func testPeriodicDefaultWindowHasFiveMinutesOnAndTwentyFiveOff() {
         var policy = KeepAlivePolicy()
-        XCTAssertFalse(policy.recoveryCapped(stale: true, uptime: 100, limit: 900))
-        XCTAssertFalse(policy.recoveryCapped(stale: true, uptime: 999, limit: 900))
-        XCTAssertTrue(policy.recoveryCapped(stale: true, uptime: 1000, limit: 900))
-        XCTAssertTrue(policy.recoveryCapped(stale: true, uptime: 1200, limit: 900))
-        XCTAssertFalse(policy.recoveryCapped(stale: false, uptime: 1201, limit: 900))
-        XCTAssertFalse(policy.recoveryCapped(stale: true, uptime: 1300, limit: 900))
+        policy.beginMonitoring(at: now)
+        let config = KeepAlivePolicy.Configuration(mode: "periodic", stallMinutes: 5, maxSessionMinutes: 15)
+        XCTAssertEqual(config.mode.rawValue, "periodic")
+        XCTAssertTrue(policy.wantsAudio(configuration: config, now: now, background: true, blocked: false, capped: false))
+        XCTAssertTrue(policy.wantsAudio(configuration: config, now: now + 299, background: true, blocked: false, capped: false))
+        XCTAssertFalse(policy.wantsAudio(configuration: config, now: now + 300, background: true, blocked: false, capped: false))
+        XCTAssertFalse(policy.wantsAudio(configuration: config, now: now + 1799, background: true, blocked: false, capped: false))
+        XCTAssertTrue(policy.wantsAudio(configuration: config, now: now + 1800, background: true, blocked: false, capped: false))
+    }
+
+    func testHealthyFiveMinuteSamplesNeverReachTheNotificationDeadline() {
+        var policy = KeepAlivePolicy()
+        let config = KeepAlivePolicy.Configuration(mode: "smart", stallMinutes: 5, maxSessionMinutes: 15)
+        for cycle in 0 ..< 12 {
+            let sample = now + Double(cycle) * 300
+            policy.accept(sample, now: sample)
+            XCTAssertFalse(policy.isStale(now: sample + 315, interval: config.stallInterval))
+        }
     }
 
     func testRefreshIsBoundedToOneRequestPerMinute() {
