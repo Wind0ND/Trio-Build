@@ -220,6 +220,7 @@ extension Notification.Name {
                                     }
                                 }
                             },
+                            latestStoredSample: { resolver.resolve(GlucoseStorage.self)?.lastGlucoseDate() },
                             privateReminderTitle: { PrivacyPreference.alertsEnabled ? PrivacyText.attention : nil }
                         )
                         BackgroundKeepAlive.shared.setBackground(scenePhase == .background)

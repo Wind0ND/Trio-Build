@@ -60,6 +60,9 @@ public struct PrivacySettingsView: View {
                     Text(privacyText("Quiet dark")).tag(PrivacyPalettePreset.quiet.rawValue)
                     Text(privacyText("Soft balanced")).tag(PrivacyPalettePreset.balanced.rawValue)
                     Text(privacyText("Muted mist")).tag(PrivacyPalettePreset.mist.rawValue)
+                    Text(privacyText("Teal and gold")).tag(PrivacyPalettePreset.separated.rawValue)
+                    Text(privacyText("Green and muted gold")).tag(PrivacyPalettePreset.gold.rawValue)
+                    Text(privacyText("Soft light")).tag(PrivacyPalettePreset.soft.rawValue)
                 }
                 HStack {
                     ForEach(0 ..< 6, id: \.self) { index in

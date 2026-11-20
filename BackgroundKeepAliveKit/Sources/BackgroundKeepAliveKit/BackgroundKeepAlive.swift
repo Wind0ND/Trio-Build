@@ -9,19 +9,27 @@ import Combine
 @MainActor
 public final class BackgroundKeepAlive: ObservableObject {
     public static let shared = BackgroundKeepAlive()
-    public enum Status: String { case disabled, noSource, foreground, protecting, interrupted, alert, limited, failed }
+    public enum Status: String { case disabled, noSource, foreground, protecting, interrupted, alert, limited, failed, waiting }
     @Published public private(set) var status: Status = .foreground
+    @Published public private(set) var audioSessionSeconds: TimeInterval = 0
+    @Published public private(set) var audioStarts = 0
+    @Published public private(set) var lastCycleDelaySeconds: TimeInterval = 0
 
     public enum SettingsKey {
         public static let mode = "backgroundKeepAlive.mode"
         public static let stallMinutes = "backgroundKeepAlive.stallMinutes"
         public static let maxSessionMinutes = "backgroundKeepAlive.maxSessionMinutes"
+        public static let cycleMinutes = "backgroundKeepAlive.cycleMinutes"
+        public static let audioMinutes = "backgroundKeepAlive.audioMinutes"
     }
 
-    private enum Stage: String { case audio, reminder, data, source, lifecycle, recovery }
+    private enum Stage: String {
+        case audio, reminder, data, source, lifecycle, recovery
+        case audioMinutes = "audio_minutes", audioStarts = "audio_starts", cycleDelay = "cycle_delay_seconds"
+    }
     private enum Outcome: String {
         case started, stopped, failed, interrupted, capped, scheduled, recovered, received, stored
-        case background, foreground, requested, completed, timedOut = "timed_out", reset, overdue
+        case background, foreground, requested, completed, timedOut = "timed_out", reset, overdue, sampled
     }
 
     public static let sourceActivity = Notification.Name("com.trio.cgm.sourceActivity")
@@ -38,13 +46,15 @@ public final class BackgroundKeepAlive: ObservableObject {
     private let defaults = UserDefaults.standard
     private var policy = KeepAlivePolicy()
     private var hasSource: (() -> Bool)?
+    private var latestStoredSample: (() -> Date?)?
     private var refresh: RefreshHandler?
     private var privateReminderTitle: (() -> String?)?
     private var background = false
     private var playing = false
     private var alertOwnsAudio = false
     private var interruption = KeepAliveInterruptionState()
-    private var capReported = false
+    private var audioAccountedAt: TimeInterval?
+    private var periodicConfiguration: String?
     private var audioRetryAfter: TimeInterval = 0
     private var check: Task<Void, Never>?
     private var reminderDeadline: Date?
@@ -56,6 +66,8 @@ public final class BackgroundKeepAlive: ObservableObject {
     private var refreshLease: UIBackgroundTaskIdentifier = .invalid
     private var refreshTimeout: Task<Void, Never>?
     private var reminderIsPrivate: Bool?
+    private struct ReminderPlan: Equatable { let deadline: Date?; let privateTitle: String? }
+    private lazy var reminderWriter = LatestAsyncWriter<ReminderPlan> { [weak self] plan in await self?.applyReminder(plan) }
 
     private init() {
         observers.append(NotificationCenter.default.addObserver(
@@ -89,8 +101,10 @@ public final class BackgroundKeepAlive: ObservableObject {
         })
     }
 
-    public func configure(initialSample: Date?, hasSource: @escaping () -> Bool, refresh: RefreshHandler? = nil, privateReminderTitle: (() -> String?)? = nil) {
+    public func configure(initialSample: Date?, hasSource: @escaping () -> Bool, refresh: RefreshHandler? = nil,
+                          latestStoredSample: (() -> Date?)? = nil, privateReminderTitle: (() -> String?)? = nil) {
         self.hasSource = hasSource
+        self.latestStoredSample = latestStoredSample
         self.refresh = refresh
         self.privateReminderTitle = privateReminderTitle
         if let initialSample { policy.accept(initialSample, now: Date()) }
@@ -99,7 +113,10 @@ public final class BackgroundKeepAlive: ObservableObject {
     }
 
     public func setBackground(_ value: Bool) {
-        if value != background { record(.lifecycle, value ? .background : .foreground) }
+        if value != background {
+            record(.lifecycle, value ? .background : .foreground)
+            policy.backgroundChanged(value, uptime: ProcessInfo.processInfo.systemUptime)
+        }
         background = value
         reevaluate()
     }
@@ -120,7 +137,6 @@ public final class BackgroundKeepAlive: ObservableObject {
         guard policy.accept(timestamp, now: now) else { return }
         record(.data, .stored)
         if !policy.isStale(now: now, interval: interval) {
-            capReported = false
             if wasStale, configuration.mode != .off, hasSource?() == true {
                 record(.data, .recovered)
                 notifications.removeDeliveredNotifications(withIdentifiers: [Self.reminderID])
@@ -144,7 +160,9 @@ public final class BackgroundKeepAlive: ObservableObject {
         .init(
             mode: defaults.string(forKey: SettingsKey.mode),
             stallMinutes: defaults.integer(forKey: SettingsKey.stallMinutes),
-            maxSessionMinutes: defaults.integer(forKey: SettingsKey.maxSessionMinutes)
+            maxSessionMinutes: defaults.integer(forKey: SettingsKey.maxSessionMinutes),
+            cycleMinutes: defaults.object(forKey: SettingsKey.cycleMinutes) as? Int ?? 30,
+            audioMinutes: defaults.object(forKey: SettingsKey.audioMinutes) as? Int ?? 5
         )
     }
 
@@ -157,6 +175,7 @@ public final class BackgroundKeepAlive: ObservableObject {
         guard configuration.mode != .off, hasSource() else {
             status = configuration.mode == .off ? .disabled : .noSource
             policy.endMonitoring()
+            periodicConfiguration = nil
             clearReminder()
             stopAudio(.stopped)
             finishRefresh(.stopped)
@@ -164,31 +183,28 @@ public final class BackgroundKeepAlive: ObservableObject {
         }
 
         let now = Date()
+        // A storage callback can still be queued on the main actor. Read the accepted store before scheduling.
+        if let accepted = latestStoredSample?() { policy.accept(accepted, now: now) }
         policy.beginMonitoring(at: now)
         let deadline = policy.deadline(interval: configuration.stallInterval)
         if let deadline { scheduleReminder(for: deadline, now: now, interval: configuration.stallInterval) }
 
         let uptime = ProcessInfo.processInfo.systemUptime
+        accountAudio(until: uptime)
+        let periodicKey = "\(configuration.mode.rawValue)|\(configuration.cycleInterval)|\(configuration.audioInterval)"
+        if periodicConfiguration != periodicKey {
+            periodicConfiguration = periodicKey
+            policy.backgroundChanged(background, uptime: uptime)
+        }
         let stale = policy.isStale(now: now, interval: configuration.stallInterval)
         if stale { record(.data, .overdue); requestRefresh(now: now) }
-        var capped = false
-        if configuration.mode == .smart {
-            capped = policy.recoveryCapped(stale: stale && background, uptime: uptime, limit: configuration.capInterval)
-            if !stale { capReported = false }
-            if capped {
-                if !capReported {
-                    capReported = true
-                    record(.audio, .capped)
-                }
-            }
-        }
 
         guard policy.wantsAudio(configuration: configuration, now: now, background: background,
-                                blocked: alertOwnsAudio || interruption.blocked, capped: capped) else {
-            status = !background ? .foreground : (alertOwnsAudio ? .alert : (interruption.blocked ? .interrupted : .limited))
+                                blocked: alertOwnsAudio || interruption.blocked, uptime: uptime) else {
+            status = !background ? .foreground : (alertOwnsAudio ? .alert : (interruption.blocked ? .interrupted : .waiting))
             stopAudio(.stopped)
             // Timers are only opportunistic; Bluetooth wakes and foreground events also reevaluate.
-            if background { armCheck(after: 60) }
+            if background { armCheck(after: nextCheckDelay(configuration: configuration, now: now, uptime: uptime)) }
             return
         }
 
@@ -202,17 +218,44 @@ public final class BackgroundKeepAlive: ObservableObject {
                 status = .failed
                 if audioRetryAfter == 0 { record(.audio, .failed) }
                 playing = false
+                audioAccountedAt = nil
                 audioRetryAfter = uptime + 60
                 armCheck(after: 60)
                 return
             }
             playing = true
+            audioStarts += 1
+            audioAccountedAt = uptime
+            record(.audioStarts, .sampled, count: audioStarts, force: true)
+            if configuration.mode == .periodic {
+                lastCycleDelaySeconds = policy.periodicPhase(configuration: configuration, now: now, uptime: uptime)
+                record(.cycleDelay, .sampled, count: Int(lastCycleDelaySeconds), force: true)
+            }
             audioRetryAfter = 0
             record(.audio, .started)
         }
         status = .protecting
 
-        armCheck(after: 60)
+        armCheck(after: nextCheckDelay(configuration: configuration, now: now, uptime: uptime))
+    }
+
+    private func nextCheckDelay(configuration: KeepAlivePolicy.Configuration, now: Date, uptime: TimeInterval) -> TimeInterval {
+        if configuration.mode == .periodic {
+            let phase = policy.periodicPhase(configuration: configuration, now: now, uptime: uptime)
+            let boundary = phase < configuration.audioInterval ? configuration.audioInterval : configuration.cycleInterval
+            return min(60, max(1, boundary - phase))
+        }
+        if let deadline = policy.deadline(interval: configuration.stallInterval), deadline > now {
+            return min(60, max(1, deadline.timeIntervalSince(now)))
+        }
+        return 60
+    }
+
+    private func accountAudio(until uptime: TimeInterval) {
+        guard let previous = audioAccountedAt else { return }
+        audioSessionSeconds += max(0, uptime - previous)
+        audioAccountedAt = uptime
+        record(.audioMinutes, .sampled, count: Int(audioSessionSeconds / 60))
     }
 
     private func requestRefresh(now: Date) {
@@ -268,48 +311,53 @@ public final class BackgroundKeepAlive: ObservableObject {
         let privateTitle = privateReminderTitle?()
         let isPrivate = privateTitle != nil
         let privacyChanged = reminderIsPrivate.map { $0 != isPrivate } ?? false
-        if privacyChanged {
-            reminderDeadline = nil
-            // Remove already-public text silently; replacing a future pending request keeps its original deadline.
-            notifications.removeDeliveredNotifications(withIdentifiers: [Self.reminderID])
-            if deadline <= now { notifications.removePendingNotificationRequests(withIdentifiers: [Self.reminderID]) }
-        }
+        if privacyChanged { reminderDeadline = nil }
         reminderIsPrivate = isPrivate
         if let current = reminderDeadline, current == deadline || (current <= now && deadline <= now) { return }
         if !KeepAliveReminderPolicy.shouldNotify(deadline: deadline, now: now,
             acknowledged: defaults.object(forKey: Self.acknowledgedDeadlineKey) as? Date, privacyChanged: privacyChanged) {
             reminderDeadline = deadline
+            if privacyChanged { reminderWriter.set(.init(deadline: nil, privateTitle: privateTitle)) }
             return
         }
         reminderDeadline = deadline
         clearedReminder = false
+        reminderWriter.set(.init(deadline: deadline, privateTitle: privateTitle), force: reminderOutcome == .failed)
+    }
+
+    private func applyReminder(_ plan: ReminderPlan) async {
+        // Even a late add followed by disable/privacy-change must finish with the newest remove/replace.
+        notifications.removeDeliveredNotifications(withIdentifiers: [Self.reminderID])
+        guard let deadline = plan.deadline else {
+            notifications.removePendingNotificationRequests(withIdentifiers: [Self.reminderID])
+            return
+        }
+        if let latest = latestStoredSample?(), policy.accept(latest, now: Date()) {
+            reevaluate()
+            return
+        }
+        guard hasSource?() == true, configuration.mode != .off,
+              policy.deadline(interval: 360) == deadline else { return }
 
         let content = UNMutableNotificationContent()
-        let minutes = Int(interval / 60)
+        let minutes = 6
         content.title = String(localized: "Glucose Data Interrupted", bundle: .main)
         content.body = String(localized: "No new glucose readings for \(minutes) minutes. Open Trio and check the CGM connection.", bundle: .main)
-        if let privateTitle { content.title = privateTitle; content.body = "" }
+        if let privateTitle = plan.privateTitle { content.title = privateTitle; content.body = "" }
         content.sound = .default
         content.interruptionLevel = .timeSensitive
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, deadline.timeIntervalSince(now)), repeats: false)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, deadline.timeIntervalSinceNow), repeats: false)
         let request = UNNotificationRequest(identifier: Self.reminderID, content: content, trigger: trigger)
-
-        // Adding with the same identifier replaces a pending request atomically.
-        notifications.add(request) { [weak self] error in
-            let success = error == nil
-            Task { @MainActor [weak self] in
-                guard let self, self.reminderDeadline == deadline else { return }
-                if success {
-                    self.defaults.set(deadline, forKey: Self.acknowledgedDeadlineKey)
-                } else {
-                    self.reminderDeadline = nil
-                }
-                let outcome: Outcome = success ? .scheduled : .failed
-                if self.reminderOutcome != outcome {
-                    self.reminderOutcome = outcome
-                    self.record(.reminder, outcome)
-                }
-            }
+        do {
+            try await notifications.add(request)
+            guard reminderDeadline == deadline else { return }
+            defaults.set(deadline, forKey: Self.acknowledgedDeadlineKey)
+            if reminderOutcome != .scheduled { reminderOutcome = .scheduled; record(.reminder, .scheduled) }
+        } catch {
+            guard reminderDeadline == deadline else { return }
+            reminderDeadline = nil
+            reminderOutcome = .failed
+            record(.reminder, .failed)
         }
     }
 
@@ -319,12 +367,14 @@ public final class BackgroundKeepAlive: ObservableObject {
         reminderOutcome = nil
         clearedReminder = true
         defaults.removeObject(forKey: Self.acknowledgedDeadlineKey)
-        notifications.removePendingNotificationRequests(withIdentifiers: [Self.reminderID])
-        notifications.removeDeliveredNotifications(withIdentifiers: [Self.reminderID])
+        reminderWriter.set(.init(deadline: nil, privateTitle: nil))
     }
 
     private func stopAudio(_ outcome: Outcome, report: Bool = true) {
+        accountAudio(until: ProcessInfo.processInfo.systemUptime)
+        audioAccountedAt = nil
         audio.stop()
+        if playing { record(.audioMinutes, .sampled, count: Int(audioSessionSeconds / 60), force: true) }
         if playing, report { record(.audio, outcome) }
         playing = false
     }
@@ -343,13 +393,15 @@ public final class BackgroundKeepAlive: ObservableObject {
         }
     }
 
-    private func record(_ stage: Stage, _ outcome: Outcome) {
+    private func record(_ stage: Stage, _ outcome: Outcome, count: Int? = nil, force: Bool = false) {
         let now = Date()
-        if let (previous, date) = recentEvents[stage], previous == outcome, now.timeIntervalSince(date) < 300 { return }
+        if !force, let (previous, date) = recentEvents[stage], previous == outcome, now.timeIntervalSince(date) < 300 { return }
         recentEvents[stage] = (outcome, now)
-        NotificationCenter.default.post(name: .init("com.trio.diagnostics.event"), object: nil, userInfo: [
+        var info: [String: Any] = [
             "schema": 1, "feature": "keep_alive", "stage": stage.rawValue, "outcome": outcome.rawValue
-        ])
+        ]
+        if let count { info["count"] = min(9_999, max(0, count)) }
+        NotificationCenter.default.post(name: .init("com.trio.diagnostics.event"), object: nil, userInfo: info)
     }
 }
 #endif

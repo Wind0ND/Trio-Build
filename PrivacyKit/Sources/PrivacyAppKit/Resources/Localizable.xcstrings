@@ -679,6 +679,39 @@
           }
         }
       }
+    },
+    "Teal and gold": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "青绿暖金"
+          }
+        }
+      }
+    },
+    "Green and muted gold": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "绿与灰金"
+          }
+        }
+      }
+    },
+    "Soft light": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "柔和浅色"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

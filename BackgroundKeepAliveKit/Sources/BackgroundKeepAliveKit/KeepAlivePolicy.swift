@@ -17,7 +17,7 @@ struct KeepAliveReminderPolicy {
 }
 
 public enum KeepAliveMode: String, CaseIterable, Identifiable {
-    case off, smart, always
+    case off, smart, always, periodic
 
     public var id: String { rawValue }
 }
@@ -26,19 +26,23 @@ struct KeepAlivePolicy {
     struct Configuration {
         let mode: KeepAliveMode
         let stallInterval: TimeInterval
-        let capInterval: TimeInterval
+        let cycleInterval: TimeInterval
+        let audioInterval: TimeInterval
 
-        init(mode: String?, stallMinutes: Int, maxSessionMinutes: Int) {
+        init(mode: String?, stallMinutes: Int = 0, maxSessionMinutes: Int = 0, cycleMinutes: Int = 30, audioMinutes: Int = 5) {
             self.mode = mode.flatMap(KeepAliveMode.init(rawValue:)) ?? .smart
-            stallInterval = TimeInterval(min(60, max(5, stallMinutes == 0 ? 10 : stallMinutes))) * 60
-            capInterval = TimeInterval(min(180, max(15, maxSessionMinutes == 0 ? 45 : maxSessionMinutes))) * 60
+            // Retain the old initializer labels only for preference migration; they no longer control timing.
+            stallInterval = 360
+            let cycle = min(240, max(5, cycleMinutes))
+            cycleInterval = TimeInterval(cycle) * 60
+            audioInterval = TimeInterval(min(cycle - 1, max(1, audioMinutes))) * 60
         }
     }
 
     private(set) var latestSample: Date?
     private var monitoringSince: Date?
     private var lastRefresh: Date?
-    private var recoveryUptime: TimeInterval?
+    private var backgroundUptime: TimeInterval?
 
     mutating func beginMonitoring(at date: Date) {
         if monitoringSince == nil { monitoringSince = date }
@@ -46,7 +50,7 @@ struct KeepAlivePolicy {
 
     mutating func endMonitoring() {
         monitoringSince = nil
-        recoveryUptime = nil
+        backgroundUptime = nil
         lastRefresh = nil
     }
 
@@ -66,9 +70,27 @@ struct KeepAlivePolicy {
         deadline(interval: interval).map { $0 <= now } ?? false
     }
 
-    // Protection starts while the process is still running, not after a sleeping timer expires.
-    func wantsAudio(configuration: Configuration, now: Date, background: Bool, blocked: Bool, capped: Bool) -> Bool {
-        background && !blocked && configuration.mode != .off && (configuration.mode == .always || !capped)
+    mutating func backgroundChanged(_ value: Bool, uptime: TimeInterval) {
+        backgroundUptime = value ? uptime : nil
+    }
+
+    // Periodic timing uses monotonic uptime in the host. The date fallback is useful for a pure policy caller.
+    func periodicPhase(configuration: Configuration, now: Date, uptime: TimeInterval? = nil) -> TimeInterval {
+        let elapsed: TimeInterval
+        if let uptime, let start = backgroundUptime { elapsed = max(0, uptime - start) }
+        else { elapsed = max(0, now.timeIntervalSince(monitoringSince ?? now)) }
+        return elapsed.truncatingRemainder(dividingBy: configuration.cycleInterval)
+    }
+
+    func wantsAudio(configuration: Configuration, now: Date, background: Bool, blocked: Bool, capped: Bool = false,
+                    uptime: TimeInterval? = nil) -> Bool {
+        guard background, !blocked else { return false }
+        switch configuration.mode {
+        case .off: return false
+        case .always: return true
+        case .smart: return isStale(now: now, interval: configuration.stallInterval)
+        case .periodic: return periodicPhase(configuration: configuration, now: now, uptime: uptime) < configuration.audioInterval
+        }
     }
 
     mutating func reserveRefresh(now: Date) -> Bool {
@@ -77,9 +99,4 @@ struct KeepAlivePolicy {
         return true
     }
 
-    mutating func recoveryCapped(stale: Bool, uptime: TimeInterval, limit: TimeInterval) -> Bool {
-        guard stale else { recoveryUptime = nil; return false }
-        if recoveryUptime == nil || uptime < (recoveryUptime ?? uptime) { recoveryUptime = uptime }
-        return uptime - (recoveryUptime ?? uptime) >= limit
-    }
 }

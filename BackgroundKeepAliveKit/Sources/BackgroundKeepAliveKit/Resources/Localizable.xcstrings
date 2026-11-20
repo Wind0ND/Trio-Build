@@ -187,6 +187,94 @@
           }
         }
       }
+    },
+    "Periodic audio (experimental)": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "间歇音频（实验）"
+          }
+        }
+      }
+    },
+    "Audio cycle: %lld minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音频周期：%lld 分钟"
+          }
+        }
+      }
+    },
+    "Audio per cycle: %lld minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每周期播放：%lld 分钟"
+          }
+        }
+      }
+    },
+    "Audio off; waiting for data or the next audio window": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音频已停止，等待数据或下一播放时段"
+          }
+        }
+      }
+    },
+    "Audio session time this launch": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本次启动音频会话累计时长"
+          }
+        }
+      }
+    },
+    "Audio starts this launch": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本次启动音频次数"
+          }
+        }
+      }
+    },
+    "Last audio window delay": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上次播放窗口内延迟"
+          }
+        }
+      }
+    },
+    "Automatic mode keeps audio off while readings update. After six minutes without a valid update, it attempts audio until valid updates resume. Continuous mode attempts audio throughout the background session. Periodic mode follows adjustable on/off windows; iOS suspension can delay or skip them. Session time is an estimate, not a battery measurement.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动模式在读数正常更新时停止音频；连续六分钟无有效更新后尝试启动，恢复有效更新后立即停止。持续模式在后台持续尝试音频辅助。间歇模式按设置的周期启停，iOS 挂起可能导致播放延迟、缩短或跳过。累计时长为音频会话估算，不代表实际耗电。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

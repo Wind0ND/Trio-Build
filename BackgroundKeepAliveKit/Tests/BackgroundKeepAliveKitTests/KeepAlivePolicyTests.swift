@@ -106,6 +106,20 @@ final class KeepAlivePolicyTests: XCTestCase {
         }
     }
 
+    func testPeriodicUsesMonotonicUptimeAndDoesNotExtendAWindowOnEverySample() {
+        var policy = KeepAlivePolicy()
+        policy.beginMonitoring(at: now)
+        policy.backgroundChanged(true, uptime: 100)
+        let config = KeepAlivePolicy.Configuration(mode: "periodic", cycleMinutes: 30, audioMinutes: 5)
+        XCTAssertTrue(policy.wantsAudio(configuration: config, now: now + 99999, background: true, blocked: false, uptime: 399))
+        policy.accept(now + 1, now: now + 1)
+        XCTAssertFalse(policy.wantsAudio(configuration: config, now: now - 99999, background: true, blocked: false, uptime: 400))
+        XCTAssertTrue(policy.wantsAudio(configuration: config, now: now, background: true, blocked: false, uptime: 1900))
+        let bounded = KeepAlivePolicy.Configuration(mode: "periodic", cycleMinutes: 5, audioMinutes: Int.max)
+        XCTAssertEqual(bounded.audioInterval, 240)
+        XCTAssertLessThan(bounded.audioInterval, bounded.cycleInterval)
+    }
+
     func testRefreshIsBoundedToOneRequestPerMinute() {
         var policy = KeepAlivePolicy()
         XCTAssertTrue(policy.reserveRefresh(now: now))
