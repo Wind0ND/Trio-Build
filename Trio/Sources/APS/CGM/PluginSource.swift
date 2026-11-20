@@ -153,9 +153,14 @@ extension PluginSource: CGMManagerDelegate {
         await glucoseManager?.deleteGlucoseSource()
     }
 
-    func cgmManager(_: CGMManager, hasNew readingResult: CGMReadingResult) {
+    func cgmManager(_ manager: CGMManager, hasNew readingResult: CGMReadingResult) {
+        let revision = glucoseManager?.recoverySourceRevision
         processQueue.async { [weak self] in
-            guard let self = self else { return }
+            guard let self, let current = self.cgmManager, let glucoseManager = self.glucoseManager,
+                  ObjectIdentifier(current as AnyObject) == ObjectIdentifier(manager as AnyObject),
+                  let source = glucoseManager.glucoseSource,
+                  ObjectIdentifier(source as AnyObject) == ObjectIdentifier(self),
+                  revision == glucoseManager.recoverySourceRevision else { return }
 
             dispatchPrecondition(condition: .onQueue(self.processQueue))
 
