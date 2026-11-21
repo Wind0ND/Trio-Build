@@ -52,7 +52,7 @@ struct HiroAlertJournalView: View {
     }
 
     private func status(_ row: JournalAlert) -> LocalizedStringKey {
-        if row.triggeredAt != nil && row.resolvedAt != nil { return "Resolved" }
+        if row.triggeredAt != nil && row.resolvedAt != nil { return "Ended" }
         if row.acknowledgedAt != nil { return "Acknowledged" }
         if row.cancelledAt != nil { return "Cancelled" }
         if row.triggeredAt != nil { return "Observed trigger" }
@@ -93,9 +93,10 @@ private struct HiroAlertJournalDetail: View {
                         LabeledContent("Issued at", value: row.issuedAt.formatted())
                         if let date = row.scheduledFor { LabeledContent("Scheduled for", value: date.formatted()) }
                         if let date = row.triggeredAt { LabeledContent("Observed at", value: date.formatted()) }
+                        if let date = row.deliveredAt { LabeledContent("Delivered at", value: date.formatted()) }
                         if let date = row.acknowledgedAt { LabeledContent("Acknowledged at", value: date.formatted()) }
                         if let date = row.cancelledAt { LabeledContent("Cancelled at", value: date.formatted()) }
-                        else if let date = row.resolvedAt { LabeledContent(LocalizedStringKey(row.triggeredAt == nil ? "Ended at" : "Resolved at"), value: date.formatted()) }
+                        else if let date = row.resolvedAt { LabeledContent("Ended at", value: date.formatted()) }
                     }
                 }
             } else { Color.clear }

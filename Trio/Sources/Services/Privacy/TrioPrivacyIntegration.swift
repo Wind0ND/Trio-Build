@@ -27,19 +27,16 @@ enum TrioPrivacyAlert {
 /// Serialize privacy replacement with the existing notification schedule/cancel paths.
 /// An enumeration taken before a cancellation or new alert must never recreate an old alert.
 enum PrivacyNotificationLifecycle {
-    private static let lock = NSRecursiveLock()
+    private static let mutations = NotificationRetirementBarrier()
     private static var generations: [String: UInt64] = [:]
     private static var cancelled = Set<String>()
 
     static var revision: [String: UInt64] {
-        lock.lock()
-        defer { lock.unlock() }
-        return generations
+        mutations.serialized { generations }
     }
 
     static func schedule(_ request: UNNotificationRequest, center: UNUserNotificationCenter, completion: @escaping (Error?) -> Void) {
-        lock.lock()
-        defer { lock.unlock() }
+        mutations.serialized {
         generations[request.identifier, default: 0] &+= 1
         cancelled.remove(request.identifier)
         var outgoing = request
@@ -53,49 +50,57 @@ enum PrivacyNotificationLifecycle {
             content.body = ""
             outgoing = UNNotificationRequest(identifier: request.identifier, content: content, trigger: request.trigger)
         }
-        center.add(outgoing) { error in
-            completion(error)
-            // A privacy change can happen while notification delivery is in flight.
-            if error == nil, PrivacyPreference.alertsEnabled { TrioPrivacyCoordinator.reconcile() }
+        let revision = generations[request.identifier, default: 0]
+        let prepared = outgoing
+        mutations.schedule(request.identifier) {
+            guard generations[prepared.identifier, default: 0] == revision, !cancelled.contains(prepared.identifier) else {
+                completion(CocoaError(.userCancelled)); return
+            }
+            center.add(prepared) { error in
+                completion(error)
+                if error == nil, PrivacyPreference.alertsEnabled { TrioPrivacyCoordinator.reconcile() }
+            }
+        }
         }
     }
 
     static func cancel(_ identifiers: [String], center: UNUserNotificationCenter) {
-        lock.lock()
-        defer { lock.unlock() }
+        mutations.serialized {
         for identifier in identifiers { generations[identifier, default: 0] &+= 1 }
         cancelled.formUnion(identifiers)
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
-        let captured = generations
-        center.getDeliveredNotifications { notes in
-            notes.filter { identifiers.contains($0.request.identifier) }.forEach {
-                HiroAlertJournal.shared.observedNotification($0)
-            }
-            lock.lock()
-            defer { lock.unlock() }
-            let unchanged = identifiers.filter { captured[$0] == generations[$0] && cancelled.contains($0) }
-            center.removeDeliveredNotifications(withIdentifiers: unchanged)
+        for identifier in identifiers {
+            mutations.retire(identifier, capture: { finish in
+                center.getDeliveredNotifications { notes in
+                    notes.filter { $0.request.identifier == identifier }.forEach {
+                        HiroAlertJournal.shared.observedNotification($0)
+                    }
+                    finish()
+                }
+            }, remove: { center.removeDeliveredNotifications(withIdentifiers: [identifier]) })
+        }
         }
     }
 
     static func invalidate(_ identifiers: [String]) {
-        lock.lock()
-        defer { lock.unlock() }
+        mutations.serialized {
         for identifier in identifiers { generations[identifier, default: 0] &+= 1 }
         cancelled.formUnion(identifiers)
+        }
     }
 
     static func replace(_ request: UNNotificationRequest, revision: UInt64, center: UNUserNotificationCenter) {
-        lock.lock()
-        defer { lock.unlock() }
-        guard generations[request.identifier, default: 0] == revision, !cancelled.contains(request.identifier), PrivacyPreference.alertsEnabled else { return }
+        mutations.serialized {
+        guard generations[request.identifier, default: 0] == revision, !cancelled.contains(request.identifier),
+              !mutations.isRetiring(request.identifier), PrivacyPreference.alertsEnabled else { return }
         center.add(request) { _ in
-            lock.lock()
-            defer { lock.unlock() }
-            if cancelled.contains(request.identifier) {
+            mutations.serialized {
+            if cancelled.contains(request.identifier) && !mutations.isRetiring(request.identifier) {
                 center.removePendingNotificationRequests(withIdentifiers: [request.identifier])
                 center.removeDeliveredNotifications(withIdentifiers: [request.identifier])
             }
+            }
+        }
         }
     }
 }

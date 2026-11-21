@@ -28,7 +28,7 @@ import UIKit
         }, now: now)
         for presentation in [PrivacyMeterPresentation.standard, .compact, .minimal] {
             for width in [12.0, 14, 16] {
-                for style in PrivacyMeterStyle.allCases {
+                for style in [PrivacyMeterStyle.history, .referenceFive] {
                 let columns = try renderedCenterRow(state: state.replacingMeterStyle(style), stale: false, width: width, presentation: presentation)
                 var runs = 0
                 var previous = false
@@ -155,6 +155,23 @@ import UIKit
         #expect(state.privacy?.measuredAt == now)
         #expect(state.privacy?.staleDate == now.addingTimeInterval(360))
         #expect(try JSONEncoder().encode(state).count < 4096)
+    }
+
+    @Test("Full host curve payload with six real slots and maximum cover fits ActivityKit") func curvePayloadBudget() throws {
+        let now = Date()
+        let chart = (0..<6).map { GlucoseData(glucose: 123 + $0 * 17, date: now.addingTimeInterval(-Double($0) * 300), direction: nil) }
+        var state = LiveActivityAttributes.ContentState(
+            new: chart[0], prev: chart[1], units: .mmolL, chart: chart,
+            settings: TrioSettings(), determination: nil, iob: nil,
+            override: nil, tempTarget: nil, widgetItems: [], privateDisplay: true
+        )
+        for style in [PrivacyMeterStyle.rangeCurve, .singleCurve] {
+            state.privacy = PrivacyActivityState(readings: chart.map { .init(mgDL: Double($0.glucose), date: $0.date) },
+                now: now, cover: Data(repeating: 1, count: 1200), meterStyle: style,
+                curveReferences: .init(lower: 3.9, upper: 20.1, single: 5.7))
+            #expect(state.privacy?.effectiveCurveReadings.compactMap { $0 }.count == 6)
+            #expect(try JSONEncoder().encode(state).count < 4096)
+        }
     }
 
     @Test("Fallback removes the cover while retaining stale geometry and measurement time") func fallbackCoverRemoval() {

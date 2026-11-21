@@ -267,7 +267,7 @@ final class LiveActivityData: ObservableObject {
                                       isAuthorized: @escaping @MainActor () -> Bool = { true }) async {
         let queue = Self.publicationQueue ?? ActivityPublicationQueue()
         Self.publicationQueue = queue
-        await queue.run { [weak self] in
+        await queue.run(coalescing: true) { [weak self] in
             await self?.pushUpdateInOrder(state, isAuthorized: isAuthorized)
         }
     }
@@ -282,6 +282,11 @@ final class LiveActivityData: ObservableObject {
             return
         }
 
+        // Elect a usable owner before retiring duplicates; the tracked owner may have just ended.
+        if let currentActivity, currentActivity.needsRecreation(updatingPrivateContent: state.privacy != nil) {
+            self.currentActivity = nil
+            activityStateTask?.cancel()
+        }
         if currentActivity == nil {
             // try to restore an existing activity
             currentActivity = Activity<LiveActivityAttributes>.activities

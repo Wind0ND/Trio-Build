@@ -122,7 +122,7 @@ public struct PrivacyActivityState: Codable, Hashable, Sendable {
     public private(set) var curveReferences: PrivacyCurveReferences?
 
     public var effectiveCurveReadings: [Double?] {
-        curveReadings ?? heights.map { $0.map { $0 * 12 } }
+        curveReadings ?? Array(repeating: nil, count: 6)
     }
 
     public init(readings: [PrivacyReading], now: Date, palette: PrivacyPalette = .init(), cover: Data? = nil, recoveredAt: Date? = nil, meterStyle: PrivacyMeterStyle = .history, curveReferences: PrivacyCurveReferences = .stored()) {
@@ -147,7 +147,7 @@ public struct PrivacyActivityState: Codable, Hashable, Sendable {
         self.cover = cover.flatMap { $0.count <= 1200 ? $0 : nil }
         guard let latest = valid.first else {
             heights = Array(repeating: nil, count: 6)
-            curveReadings = meterStyle.isCurve ? Array(repeating: nil, count: 6) : nil
+            curveReadings = Array(repeating: nil, count: 6)
             return
         }
         // Keep five-minute gaps visible rather than packing old readings together.
@@ -158,7 +158,7 @@ public struct PrivacyActivityState: Codable, Hashable, Sendable {
             return sample
         }
         heights = slots.map { $0.map { min(1, max(0.12, $0.mgDL / (12 * 18))) } }
-        curveReadings = meterStyle.isCurve ? slots.map { $0.map { $0.mgDL / 18 } } : nil
+        curveReadings = slots.map { $0.map { $0.mgDL / 18 } }
     }
 
     // Five-minute readings get one minute of presentation grace; this never refreshes measurement age.

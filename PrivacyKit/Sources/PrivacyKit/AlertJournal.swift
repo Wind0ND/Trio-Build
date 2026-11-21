@@ -29,13 +29,14 @@ public struct AlertJournal: Codable, Sendable {
     @discardableResult public mutating func markTriggered(id: UUID, at date: Date, delivered: Bool = false) -> Bool {
         guard let index = entries.firstIndex(where: { $0.id == id }), date >= entries[index].issuedAt else { return false }
         let entry = entries[index]
-        if let planned = entry.scheduledFor, planned.timeIntervalSince(date) > 1 { return false }
+        if !delivered, let planned = entry.scheduledFor, planned.timeIntervalSince(date) > 1 { return false }
         let closed = [entry.cancelledAt, entry.resolvedAt, entry.acknowledgedAt].compactMap { $0 }.min()
-        if let closed, date > closed { return false }
+        if !delivered, let closed, date > closed { return false }
         entries[index].triggeredAt = min(entry.triggeredAt ?? date, date)
+        if delivered { entries[index].deliveredAt = min(entry.deliveredAt ?? date, date) }
         // A delivery before cancellation can legitimately be observed after foreground recovery.
         entries[index].cancelledAt = nil
-        return false
+        return entries[index] != entry
     }
     public func triggeredHistory(now: Date) -> [JournalAlert] {
         recent(now: now).filter { $0.triggeredAt.map { $0 <= now } == true }

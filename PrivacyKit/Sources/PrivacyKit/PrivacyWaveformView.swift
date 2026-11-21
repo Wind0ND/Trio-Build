@@ -48,7 +48,7 @@ public struct PrivacyWaveformView: View {
 
     public var body: some View {
         Group {
-        if !stale, state.measuredAt != nil,
+        if !stale, state.measuredAt != nil, state.curveReadings != nil,
            let style = PrivacyMeterStyle(rawValue: state.meterStyle ?? ""), style.isCurve {
             PrivacyCurveView(state: state, dual: style == .rangeCurve, height: height, presentation: presentation)
         } else {

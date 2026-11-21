@@ -22,6 +22,7 @@ final class TrioUserNotificationAlertScheduler {
         let request = makeRequest(alert: alert, muted: muted, soundURL: soundURL, silenced: silenced)
         PrivacyNotificationLifecycle.schedule(request, center: notificationCenter) { error in
             if let error = error {
+                DiagnosticEventStore.shared.record(feature: "alerts", stage: "plan", outcome: "failed")
                 warning(.alerts, "Scheduling alert notification \(alert.identifier.value) failed", error: error)
             }
         }
