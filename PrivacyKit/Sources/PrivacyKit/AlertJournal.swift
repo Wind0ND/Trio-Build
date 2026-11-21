@@ -11,6 +11,8 @@ public struct JournalAlert: Codable, Identifiable, Equatable, Sendable {
     public let scheduledFor: Date?
     public var acknowledgedAt: Date?
     public var resolvedAt: Date?
+    public var triggeredAt: Date?
+    public var cancelledAt: Date?
 
     public init(id: UUID = UUID(), source: String, kind: String, title: String, body: String,
                 issuedAt: Date, scheduledFor: Date? = nil) {
@@ -22,6 +24,9 @@ public struct JournalAlert: Codable, Identifiable, Equatable, Sendable {
 public struct AlertJournal: Codable, Sendable {
     public private(set) var entries: [JournalAlert] = []
     public init() {}
+    // Regression-first interface: actual evidence transition follows observed RED.
+    public mutating func markTriggered(id: UUID, at date: Date) {}
+    public func triggeredHistory(now: Date) -> [JournalAlert] { recent(now: now) }
     public mutating func issue(_ entry: JournalAlert, now: Date) {
         prune(now: now)
         guard entry.issuedAt <= now, entry.issuedAt >= now.addingTimeInterval(-86_400),
