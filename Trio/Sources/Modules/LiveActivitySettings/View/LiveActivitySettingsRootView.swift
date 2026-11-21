@@ -32,7 +32,7 @@ extension LiveActivitySettings {
             List {
                 Section {
                     NavigationLink(destination: PrivacySettingsView()) {
-                        Label(String(localized: "Privacy"), systemImage: "eye.slash")
+                        Label(String(localized: "Privacy Protection"), systemImage: "eye.slash")
                     }
                 }.listRowBackground(Color.chart)
                 if !systemLiveActivitySetting {

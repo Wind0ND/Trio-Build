@@ -52,7 +52,10 @@ ENV["BUNDLE_ID"] = xcconfig["BUNDLE_IDENTIFIER"]
 # Plain-text excerpt of the newest release notes that scripts/capture-release-notes.sh bundled
 # into the IPA. Mirrors the in-app sheet (ReleaseNotes.swift): summary, callouts, then highlights.
 def bundled_release_notes(ipa_path)
-  json = IO.popen(["unzip", "-p", ipa_path, "Payload/Trio.app/BundledReleaseNotes.json"], err: File::NULL, &:read).force_encoding("UTF-8")
+  names = IO.popen(["unzip", "-Z1", ipa_path], err: File::NULL, &:read).lines.map(&:strip)
+  resource = names.find { |name| name.match?(%r{\APayload/[^/]+\.app/BundledReleaseNotes\.json\z}) }
+  return nil unless resource
+  json = IO.popen(["unzip", "-p", ipa_path, resource], err: File::NULL, &:read).force_encoding("UTF-8")
   release = JSON.parse(json).first
   return nil unless release
 

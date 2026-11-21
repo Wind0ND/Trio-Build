@@ -13,9 +13,9 @@ struct HiroExtensionsSettingsView: BaseView {
     var body: some View {
         Form {
             Section {
-                Text("Privacy").navigationLink(to: .privacySettings, from: self)
+                Text("Privacy Protection").navigationLink(to: .privacySettings, from: self)
                 Text("Background protection").navigationLink(to: .backgroundProtection, from: self)
-                Text("Alert History (24 Hours)").navigationLink(to: .alertJournal, from: self)
+                Text("Alert History").navigationLink(to: .alertJournal, from: self)
                 Text("App Icons").navigationLink(to: .iconConfig, from: self)
             }
             Section {

@@ -66,7 +66,16 @@ enum PrivacyNotificationLifecycle {
         for identifier in identifiers { generations[identifier, default: 0] &+= 1 }
         cancelled.formUnion(identifiers)
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
-        center.removeDeliveredNotifications(withIdentifiers: identifiers)
+        let captured = generations
+        center.getDeliveredNotifications { notes in
+            notes.filter { identifiers.contains($0.request.identifier) }.forEach {
+                HiroAlertJournal.shared.observedNotification($0)
+            }
+            lock.lock()
+            defer { lock.unlock() }
+            let unchanged = identifiers.filter { captured[$0] == generations[$0] && cancelled.contains($0) }
+            center.removeDeliveredNotifications(withIdentifiers: unchanged)
+        }
     }
 
     static func invalidate(_ identifiers: [String]) {

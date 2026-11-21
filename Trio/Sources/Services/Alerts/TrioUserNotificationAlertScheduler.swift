@@ -42,6 +42,9 @@ final class TrioUserNotificationAlertScheduler {
             AlertUserInfoKey.alertIdentifier.rawValue: alert.identifier.alertIdentifier
         ]
         content.interruptionLevel = alert.interruptionLevel.unNotificationLevel
+        if let occurrence = alert.metadata?[HiroAlertJournal.occurrenceKey]?.wrapped as? String {
+            content.userInfo[HiroAlertJournal.occurrenceKey] = occurrence
+        }
         content.sound = silenced ? nil : sound(for: alert, muted: muted, soundURL: soundURL)
         // Surface the four quick-snooze actions (15 min / 1 h / 3 h / 6 h)
         // on both phone and watch lock-screen notifications. The category +

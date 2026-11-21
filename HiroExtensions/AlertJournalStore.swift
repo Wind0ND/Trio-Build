@@ -7,6 +7,7 @@ import UserNotifications
 final class HiroAlertJournal: @unchecked Sendable {
     static let shared = HiroAlertJournal()
     static let changed = Notification.Name("com.hiro.alertJournal.changed")
+    static let occurrenceKey = "hiro.alert.occurrence"
     private let repository: AlertJournalRepository
     private var observer: NSObjectProtocol?
     var unavailable: Bool { repository.unavailable }
@@ -31,32 +32,56 @@ final class HiroAlertJournal: @unchecked Sendable {
 
     deinit { if let observer { Foundation.NotificationCenter.default.removeObserver(observer) } }
     func recent() -> [JournalAlert] { repository.recent(now: Date()) }
-    func issue(_ entry: JournalAlert) { let now = Date(); update { $0.issue(entry, now: now) } }
+    func issue(_ entry: JournalAlert) {
+        let now = Date(); update { $0.issue(entry, now: now) }
+        DiagnosticEventStore.shared.record(feature: "alerts", stage: "plan", outcome: "scheduled")
+    }
+    func triggered(id: UUID, at date: Date = Date(), delivered: Bool = false) {
+        update { $0.markTriggered(id: id, at: date) }
+        DiagnosticEventStore.shared.record(feature: "alerts", stage: delivered ? "delivery" : "trigger",
+                                          outcome: delivered ? "delivered" : "fired")
+    }
+    func observedNotification(_ note: UNNotification) {
+        if note.request.identifier == "background-keep-alive-stall" {
+            let seconds = note.request.content.userInfo["deadline"] as? TimeInterval
+            dataInterruption(deadline: seconds.map(Date.init(timeIntervalSince1970:)) ?? note.date, deliveredAt: note.date)
+        } else if let raw = note.request.content.userInfo[Self.occurrenceKey] as? String,
+                  let id = UUID(uuidString: raw) {
+            triggered(id: id, at: note.date, delivered: true)
+        }
+    }
     func acknowledge(source: String, kind: String) {
         let now = Date(); update { $0.acknowledge(source: source, kind: kind, at: now) }
     }
     func resolve(source: String, kind: String) {
         let now = Date(); update { $0.resolve(source: source, kind: kind, at: now) }
+        DiagnosticEventStore.shared.record(feature: "alerts", stage: "cancel", outcome: "cancelled")
     }
-    func dataInterruption(deadline: Date?) {
+    func dataInterruption(deadline: Date?, deliveredAt: Date? = nil) {
         guard let deadline else { resolve(source: "hiro", kind: "data-interrupted"); return }
         let now = Date()
         update { journal in
-            guard !journal.entries.contains(where: {
-                $0.source == "hiro" && $0.kind == "data-interrupted" && ($0.resolvedAt == nil || $0.issuedAt == deadline)
-            }) else { return }
-            journal.issue(.init(source: "hiro", kind: "data-interrupted",
+            let exact = journal.entries.first {
+                $0.source == "hiro" && $0.kind == "data-interrupted" && abs($0.issuedAt.timeIntervalSince(deadline)) < 1
+            }
+            if let exact {
+                if let deliveredAt { journal.markTriggered(id: exact.id, at: deliveredAt) }
+                return
+            }
+            // A stale check is condition evidence only. OS delivery is tracked separately.
+            if deliveredAt == nil && journal.entries.contains(where: {
+                $0.source == "hiro" && $0.kind == "data-interrupted" && $0.resolvedAt == nil
+            }) { return }
+            let entry = JournalAlert(source: "hiro", kind: "data-interrupted",
                 title: String(localized: "Glucose Data Interrupted"),
                 body: String(localized: "No new glucose readings for 6 minutes. Open Trio and check the CGM connection."),
-                issuedAt: deadline), now: now)
+                issuedAt: deadline)
+            journal.issue(entry, now: now)
+            if let deliveredAt { journal.markTriggered(id: entry.id, at: deliveredAt) }
         }
     }
     @MainActor func importDeliveredWatchdog() async {
-        for note in await UNUserNotificationCenter.current().deliveredNotifications()
-            where note.request.identifier == "background-keep-alive-stall" {
-            let seconds = note.request.content.userInfo["deadline"] as? TimeInterval
-            dataInterruption(deadline: seconds.map(Date.init(timeIntervalSince1970:)) ?? note.date)
-        }
+        for note in await UNUserNotificationCenter.current().deliveredNotifications() { observedNotification(note) }
     }
     private func update(_ change: @escaping (inout AlertJournal) -> Void) {
         repository.update(now: Date(), change)

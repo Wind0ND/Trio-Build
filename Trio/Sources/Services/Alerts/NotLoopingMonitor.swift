@@ -115,7 +115,7 @@ final class NotLoopingMonitor: Injectable {
         let remaining = fireDate.timeIntervalSince(now)
         guard remaining > 0 else { return }
         let content = Alert.Content(
-            title: String(localized: "Trio Not Active"),
+            title: String(localized: "Loop Execution Overdue"),
             body: String(
                 format: String(localized: "Last loop was more than %d min ago"),
                 minutes

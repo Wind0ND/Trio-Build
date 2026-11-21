@@ -1,2 +1,6 @@
 // Independently maintained hiro branding; optional user overrides still take priority.
 APP_ICON = hiroCorgi
+
+APP_DISPLAY_NAME = hiro
+HIRO_PRODUCT_NAME = hiro
+HIRO_MODULE_NAME = Trio

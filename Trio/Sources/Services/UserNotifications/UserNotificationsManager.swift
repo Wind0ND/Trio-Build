@@ -216,6 +216,7 @@ extension BaseUserNotificationsManager: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         let userInfo = notification.request.content.userInfo
+        HiroAlertJournal.shared.observedNotification(notification)
         if userInfo[AlertUserInfoKey.managerIdentifier.rawValue] is String {
             completionHandler([.badge, .sound, .list])
             return
@@ -232,6 +233,7 @@ extension BaseUserNotificationsManager: UNUserNotificationCenterDelegate {
     ) {
         defer { completionHandler() }
 
+        HiroAlertJournal.shared.observedNotification(response.notification)
         let userInfo = response.notification.request.content.userInfo
         if userInfo[AlertUserInfoKey.managerIdentifier.rawValue] is String {
             trioAlertManager.handleNotificationResponse(response)

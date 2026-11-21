@@ -232,7 +232,7 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
         // Override Silence & Focus, day/night window. Everything else
         // (Trio-internal glucose, owned by `GlucoseAlertCoordinator`) is
         // passed through with the level and sound its producer chose.
-        let effective: Alert
+        var effective: Alert
         if let entry = AlertCatalogRegistry.lookup(alert.identifier) {
             // Tier comes from the catalog, never from the post-override
             // level: a Time-Sensitive alarm with "Override Silence & Focus"
@@ -266,8 +266,16 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
             debug(.alerts, "Alert \(effective.identifier.value) throttled")
             return
         }
+        var metadata = effective.metadata ?? [:]
+        let occurrence = UUID()
+        metadata[HiroAlertJournal.occurrenceKey] = .init(occurrence.uuidString)
+        effective = Alert(identifier: effective.identifier, foregroundContent: effective.foregroundContent,
+                          backgroundContent: effective.backgroundContent, trigger: effective.trigger,
+                          interruptionLevel: effective.interruptionLevel, sound: effective.sound,
+                          metadata: metadata, categoryIdentifier: effective.categoryIdentifier)
+        let tracked = effective
         queue.async {
-            self.liveAlerts[effective.identifier] = effective
+            self.liveAlerts[tracked.identifier] = tracked
         }
         recordIssued(effective)
         let muted = muter.shouldMute(at: now)
@@ -287,6 +295,7 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
         // `.delayed`/`.repeating` alerts start their audio when the timer
         // fires (`alertDidFire`), not now — this is only their arm time.
         if case .immediate = effective.trigger {
+            HiroAlertJournal.shared.triggered(id: occurrence)
             playCriticalAudioFallbackIfNeeded(effective, muted: muted)
         }
     }
@@ -311,7 +320,8 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
             // past what the catalog says it is.
             interruptionLevel: config.overridesSilenceAndDND ? .critical : entry.interruptionLevel,
             sound: config.playsSound ? .sound(name: config.soundFilename) : nil,
-            metadata: alert.metadata
+            metadata: alert.metadata,
+            categoryIdentifier: alert.categoryIdentifier
         )
     }
 
@@ -451,6 +461,7 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
                     center.removePendingNotificationRequests(withIdentifiers: ids)
                 }
                 center.getDeliveredNotifications { delivered in
+                    delivered.forEach { HiroAlertJournal.shared.observedNotification($0) }
                     let ids = delivered
                         .filter { $0.request.content.interruptionLevel != .critical }
                         .map(\.request.identifier)
@@ -475,6 +486,7 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
             center.removePendingNotificationRequests(withIdentifiers: ids)
         }
         center.getDeliveredNotifications { delivered in
+            delivered.forEach { HiroAlertJournal.shared.observedNotification($0) }
             let ids = delivered
                 .filter { $0.request.content.interruptionLevel != .critical }
                 .map(\.request.identifier)
@@ -542,7 +554,7 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
     // MARK: - Persistence bridge
 
     private func recordIssued(_ alert: Alert) {
-        let entry = AlertEntry(
+        var entry = AlertEntry(
             alertIdentifier: alert.identifier.alertIdentifier,
             primitiveInterruptionLevel: alert.interruptionLevel.storedValue as? Decimal,
             issuedDate: Date(),
@@ -552,8 +564,11 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
             contentTitle: alert.foregroundContent?.title ?? alert.backgroundContent.title,
             contentBody: alert.foregroundContent?.body ?? alert.backgroundContent.body
         )
+        let occurrence = (alert.metadata?[HiroAlertJournal.occurrenceKey]?.wrapped as? String).flatMap(UUID.init(uuidString:)) ?? UUID()
+        entry.journalOccurrenceID = occurrence
         alertHistoryStorage.addAlert(entry)
         HiroAlertJournal.shared.issue(JournalAlert(
+            id: occurrence,
             source: entry.managerIdentifier, kind: entry.alertIdentifier,
             title: entry.contentTitle ?? "", body: entry.contentBody ?? "", issuedAt: entry.issuedDate,
             scheduledFor: alert.trigger.storedInterval.map { entry.issuedDate.addingTimeInterval($0.doubleValue) }
@@ -612,6 +627,8 @@ extension BaseTrioAlertManager: TrioModalAlertResponder, TrioUserNotificationAle
     }
 
     func alertDidFire(_ alert: Alert) {
+        if let raw = alert.metadata?[HiroAlertJournal.occurrenceKey]?.wrapped as? String,
+           let id = UUID(uuidString: raw) { HiroAlertJournal.shared.triggered(id: id) }
         playCriticalAudioFallbackIfNeeded(alert, muted: muter.shouldMute(at: Date()))
     }
 

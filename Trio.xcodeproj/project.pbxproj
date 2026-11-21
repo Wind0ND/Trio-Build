@@ -1441,7 +1441,7 @@
 		3883583325EEB38000E024B2 /* PumpSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PumpSettings.swift; sourceTree = "<group>"; };
 		388358C725EEF6D200E024B2 /* BasalProfileEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasalProfileEntry.swift; sourceTree = "<group>"; };
 		38887CCD25F5725200944304 /* IOBEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOBEntry.swift; sourceTree = "<group>"; };
-		388E595825AD948C0019842D /* Trio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Trio.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		388E595825AD948C0019842D /* hiro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = hiro.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		388E595B25AD948C0019842D /* TrioApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrioApp.swift; sourceTree = "<group>"; };
 		388E596425AD948E0019842D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		388E596B25AD95110019842D /* OpenAPS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAPS.swift; sourceTree = "<group>"; };
@@ -3367,7 +3367,7 @@
 		388E595925AD948C0019842D /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				388E595825AD948C0019842D /* Trio.app */,
+				388E595825AD948C0019842D /* hiro.app */,
 				38FCF3ED25E9028E0078B0D1 /* TrioTests.xctest */,
 				6B1A8D172B14D91600E76752 /* LiveActivityExtension.appex */,
 				BDFF797C2D25AA870016C40C /* Trio Watch App.app */,
@@ -5458,7 +5458,7 @@
 				BACC00000000000000000002 /* BackgroundKeepAliveKit */,
 			);
 			productName = Trio;
-			productReference = 388E595825AD948C0019842D /* Trio.app */;
+			productReference = 388E595825AD948C0019842D /* hiro.app */;
 			productType = "com.apple.product-type.application";
 		};
 		38FCF3EC25E9028E0078B0D1 /* TrioTests */ = {
@@ -7078,7 +7078,8 @@
 					"-ObjC",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_IDENTIFIER)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = "$(HIRO_MODULE_NAME)";
+				PRODUCT_NAME = "$(HIRO_PRODUCT_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -7123,7 +7124,8 @@
 					"-ObjC",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_IDENTIFIER)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = "$(HIRO_MODULE_NAME)";
+				PRODUCT_NAME = "$(HIRO_PRODUCT_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -7151,7 +7153,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Trio.app/Trio";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/$(HIRO_PRODUCT_NAME).app/$(HIRO_PRODUCT_NAME)";
 			};
 			name = Debug;
 		};
@@ -7172,7 +7174,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Trio.app/Trio";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/$(HIRO_PRODUCT_NAME).app/$(HIRO_PRODUCT_NAME)";
 			};
 			name = Release;
 		};

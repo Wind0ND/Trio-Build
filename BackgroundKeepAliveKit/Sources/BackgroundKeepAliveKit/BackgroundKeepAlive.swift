@@ -56,6 +56,7 @@ public final class BackgroundKeepAlive: ObservableObject {
     private var refresh: RefreshHandler?
     private var privateReminderTitle: (() -> String?)?
     private var interruptionChanged: ((Date?) -> Void)?
+    private var interruptionDelivered: ((Date, Date) -> Void)?
     private var activeOutage: Date?
     private var background = false
     private var playing = false
@@ -111,13 +112,15 @@ public final class BackgroundKeepAlive: ObservableObject {
 
     public func configure(initialSample: Date?, hasSource: @escaping () -> Bool, refresh: RefreshHandler? = nil,
                           latestStoredSample: (() -> Date?)? = nil, privateReminderTitle: (() -> String?)? = nil,
-                          interruptionChanged: ((Date?) -> Void)? = nil, sourceID: (() -> String?)? = nil) {
+                          interruptionChanged: ((Date?) -> Void)? = nil, sourceID: (() -> String?)? = nil,
+                          interruptionDelivered: ((Date, Date) -> Void)? = nil) {
         self.hasSource = hasSource
         self.latestStoredSample = latestStoredSample
         sourceIdentifier = sourceID
         self.refresh = refresh
         self.privateReminderTitle = privateReminderTitle
         self.interruptionChanged = interruptionChanged
+        self.interruptionDelivered = interruptionDelivered
         if sourceID == nil, let initialSample { policy.accept(initialSample, now: Date()) }
         notifications.removePendingNotificationRequests(withIdentifiers: ["background-keep-alive-expired"])
         reevaluate()
@@ -395,7 +398,9 @@ public final class BackgroundKeepAlive: ObservableObject {
         // Even a late add followed by disable/privacy-change must finish with the newest remove/replace.
         await ReminderDeliveryArchive.captureBeforeRemoval(capture: {
             await self.notifications.deliveredNotifications().filter { $0.request.identifier == Self.reminderID }.map {
-                ($0.request.content.userInfo["deadline"] as? TimeInterval).map(Date.init(timeIntervalSince1970:)) ?? $0.date
+                let deadline = ($0.request.content.userInfo["deadline"] as? TimeInterval).map(Date.init(timeIntervalSince1970:)) ?? $0.date
+                self.interruptionDelivered?(deadline, $0.date)
+                return deadline
             }
         }, record: { self.interruptionChanged?($0) }, remove: {
             self.notifications.removeDeliveredNotifications(withIdentifiers: [Self.reminderID])

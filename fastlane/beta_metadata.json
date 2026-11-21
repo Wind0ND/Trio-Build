@@ -1,10 +1,10 @@
 {
   "en-US": {
     "description": "hiro is a personal test build with customizable on-screen presentation, viewing protection and device connectivity.",
-    "whats_new": "hiro now includes six distinct color themes, grouped extension settings, private activity refresh, protected recent alert history and complete small icon assets. Background assistance includes on-demand, continuous and adjustable periodic options. Please test theme switching, activity interactions, viewing protection, notification timing and background behavior."
+    "whats_new": "hiro adds two smooth trend styles with adjustable reference lines. This build improves activity lifecycle recovery, separates upcoming reminder plans from confirmed events, expands redacted diagnostics and unifies public app naming. Please test the new display options, long background sessions, activity interactions, reminder records and notification appearance."
   },
   "zh-Hans": {
     "description": "hiro 是用于个人测试的应用版本，提供可自定义的界面展示、查看保护和设备连接功能。",
-    "whats_new": "本次更新提供六套不同配色，将附加设置集中至扩展，加入活动内后台刷新、受保护的近期提醒记录，并补齐小尺寸图标资源。后台辅助支持按需、持续及可调间歇模式。请验证配色切换、活动点击、查看保护、通知时机和后台表现。"
+    "whats_new": "新增两种平滑趋势样式，参考线数值可调。改进实时活动恢复，将待触发计划与已确认事件分开显示，扩充脱敏诊断，并统一公开应用名称。请验证新显示选项、长时间后台后的活动显示、活动内点击、提醒记录与通知外观。"
   }
 }

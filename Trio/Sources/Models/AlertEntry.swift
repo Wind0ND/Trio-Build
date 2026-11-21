@@ -14,6 +14,7 @@ struct AlertEntry: JSON, Codable, Hashable {
     let contentTitle: String?
     let contentBody: String?
     var errorMessage: String?
+    var journalOccurrenceID: UUID? = nil
 
     static let local = "Trio"
 
@@ -36,6 +37,7 @@ struct AlertEntry: JSON, Codable, Hashable {
         case contentTitle
         case contentBody
         case errorMessage
+        case journalOccurrenceID
     }
 }
 

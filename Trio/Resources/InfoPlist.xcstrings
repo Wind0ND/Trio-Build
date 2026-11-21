@@ -1532,6 +1532,42 @@
           }
         }
       }
+    },
+    "CFBundleDisplayName": {
+      "comment": "Public hiro application name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hiro"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hiro"
+          }
+        }
+      }
+    },
+    "CFBundleName": {
+      "comment": "Public hiro application name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hiro"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hiro"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

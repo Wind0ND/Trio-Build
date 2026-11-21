@@ -137,6 +137,9 @@ extension Notification.Name {
         // Before any service or device manager exists: pairing diagnostics must
         // survive a relaunch even when registration never completes.
         DiagnosticEventStore.shared.startObserving()
+        Icon_.recordBrandingRegistration()
+        DiagnosticEventStore.shared.record(feature: "app", stage: "launch", outcome: "started",
+            count: Int(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "") ?? 0)
         TrioLogger.install(AppLogStore.shared)
         FileProtectionFixer.fixFlagFileProtectionForPropertyPersistentFlags() // TODO: ‼️ REMOVE ME BEFORE PUBLIC BETA / RELEASE
 
@@ -227,7 +230,8 @@ extension Notification.Name {
                             },
                             privateReminderTitle: { PrivacyPreference.alertsEnabled ? PrivacyText.attention : nil },
                             interruptionChanged: { HiroAlertJournal.shared.dataInterruption(deadline: $0) },
-                            sourceID: { resolver.resolve(FetchGlucoseManager.self)?.freshnessSourceID }
+                            sourceID: { resolver.resolve(FetchGlucoseManager.self)?.freshnessSourceID },
+                            interruptionDelivered: { HiroAlertJournal.shared.dataInterruption(deadline: $0, deliveredAt: $1) }
                         )
                         BackgroundKeepAlive.shared.setBackground(scenePhase == .background)
                     }

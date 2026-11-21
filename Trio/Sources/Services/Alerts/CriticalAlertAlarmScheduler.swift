@@ -109,10 +109,12 @@ final class CriticalAlertAlarmScheduler {
             Task {
                 do {
                     _ = try await AlarmManager.shared.schedule(id: id, configuration: configuration)
+                    DiagnosticEventStore.shared.record(feature: "alerts", stage: "alarm", outcome: "scheduled")
                     info(.alerts, "AlarmKit alarm scheduled for \(identifier.value)")
                     try? await Task.sleep(for: .seconds(Self.immediateFireDelay + burst))
                     stopIfAlerting(id: id, identifier: identifier)
                 } catch let scheduleError {
+                    DiagnosticEventStore.shared.record(feature: "alerts", stage: "alarm", outcome: "failed")
                     warning(
                         .alerts,
                         "Scheduling AlarmKit alarm for \(identifier.value) failed, falling back to audio",
@@ -132,7 +134,12 @@ final class CriticalAlertAlarmScheduler {
             guard let alarm = try? AlarmManager.shared.alarms.first(where: { $0.id == id }),
                   alarm.state == .alerting
             else { return }
-            try? AlarmManager.shared.stop(id: id)
+            do {
+                try AlarmManager.shared.stop(id: id)
+                DiagnosticEventStore.shared.record(feature: "alerts", stage: "alarm", outcome: "stopped")
+            } catch {
+                DiagnosticEventStore.shared.record(feature: "alerts", stage: "alarm", outcome: "failed")
+            }
             debug(.alerts, "AlarmKit alarm for \(identifier.value) stopped after its burst")
         #endif
     }
@@ -151,7 +158,9 @@ final class CriticalAlertAlarmScheduler {
                     try AlarmManager.shared.cancel(id: id)
                 }
                 debug(.alerts, "AlarmKit alarm cancelled for \(identifier.value)")
+                DiagnosticEventStore.shared.record(feature: "alerts", stage: "alarm", outcome: "cancelled")
             } catch let cancelError {
+                DiagnosticEventStore.shared.record(feature: "alerts", stage: "alarm", outcome: "failed")
                 warning(.alerts, "Cancelling AlarmKit alarm for \(identifier.value) failed", error: cancelError)
             }
         #endif

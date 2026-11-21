@@ -83,7 +83,8 @@ enum AlertColdStartReplay {
             foregroundContent: content,
             backgroundContent: content,
             trigger: trigger,
-            interruptionLevel: level
+            interruptionLevel: level,
+            metadata: entry.journalOccurrenceID.map { [HiroAlertJournal.occurrenceKey: .init($0.uuidString)] }
         ))
     }
 }

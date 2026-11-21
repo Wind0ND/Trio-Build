@@ -2,6 +2,13 @@ import Foundation
 
 /// Thin adapter between the existing icon picker and the separate branding catalog.
 extension Icon_ {
+    static func recordBrandingRegistration() {
+        let name = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+        let bundleName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
+        let executable = Bundle.main.object(forInfoDictionaryKey: "CFBundleExecutable") as? String
+        let flags = (name == "hiro" ? 1 : 0) | (bundleName == "hiro" ? 2 : 0) | (executable == "hiro" ? 4 : 0)
+        DiagnosticEventStore.shared.record(feature: "branding", stage: "bundle", outcome: flags == 7 ? "consistent" : "mismatch", count: flags)
+    }
     static var primaryAssetName: String {
         let icons = Bundle.main.object(forInfoDictionaryKey: "CFBundleIcons") as? [String: Any]
         let primary = icons?["CFBundlePrimaryIcon"] as? [String: Any]

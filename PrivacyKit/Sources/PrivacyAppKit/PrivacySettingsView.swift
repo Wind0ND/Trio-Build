@@ -30,7 +30,7 @@ public struct PrivacySettingsView: View {
             Section {
                 Toggle(privacyText("Private Live Activity"), isOn: protected($privateDisplay))
                 Toggle(privacyText("Private alert wording"), isOn: protected($privateAlerts))
-                Text(privacyText("Private activities show a cover and six small bars. Public glucose alerts say Attention. The existing alert sounds and schedules still apply."))
+                Text(privacyText("Private activities show a cover and a small trend. Public glucose alerts say Attention. The existing alert sounds and schedules still apply."))
                     .font(.footnote).foregroundStyle(.secondary)
                 Text(privacyText("System alarms already ringing keep their original title until stopped. Enable alert privacy before an alarm starts."))
                     .font(.footnote).foregroundStyle(.secondary)
