@@ -127,6 +127,7 @@ public struct PrivacyActivityState: Codable, Hashable, Sendable {
 
     public init(readings: [PrivacyReading], now: Date, palette: PrivacyPalette = .init(), cover: Data? = nil, recoveredAt: Date? = nil, meterStyle: PrivacyMeterStyle = .history, curveReferences: PrivacyCurveReferences = .stored()) {
         self.meterStyle = meterStyle == .history ? nil : meterStyle.rawValue
+        self.curveReferences = meterStyle.isCurve ? curveReferences : nil
         // A future or invalid reading cannot become the color/freshness anchor.
         let valid = readings.filter { $0.mgDL.isFinite && $0.mgDL > 0 && $0.mgDL <= 1000 && $0.date <= now }
             .sorted { $0.date > $1.date }
@@ -146,15 +147,18 @@ public struct PrivacyActivityState: Codable, Hashable, Sendable {
         self.cover = cover.flatMap { $0.count <= 1200 ? $0 : nil }
         guard let latest = valid.first else {
             heights = Array(repeating: nil, count: 6)
+            curveReadings = meterStyle.isCurve ? Array(repeating: nil, count: 6) : nil
             return
         }
         // Keep five-minute gaps visible rather than packing old readings together.
-        heights = (0 ..< 6).reversed().map { slot in
+        let slots: [PrivacyReading?] = (0 ..< 6).reversed().map { slot in
             let target = latest.date.addingTimeInterval(-Double(slot) * 300)
             let sample = valid.min { abs($0.date.timeIntervalSince(target)) < abs($1.date.timeIntervalSince(target)) }
             guard let sample, abs(sample.date.timeIntervalSince(target)) < 150 else { return nil }
-            return min(1, max(0.12, sample.mgDL / (12 * 18)))
+            return sample
         }
+        heights = slots.map { $0.map { min(1, max(0.12, $0.mgDL / (12 * 18))) } }
+        curveReadings = meterStyle.isCurve ? slots.map { $0.map { $0.mgDL / 18 } } : nil
     }
 
     // Five-minute readings get one minute of presentation grace; this never refreshes measurement age.
@@ -177,6 +181,12 @@ public struct PrivacyActivityState: Codable, Hashable, Sendable {
     public func replacingMeterStyle(_ style: PrivacyMeterStyle) -> Self {
         var copy = self
         copy.meterStyle = style == .history ? nil : style.rawValue
+        return copy
+    }
+
+    public func replacingCurveReferences(_ references: PrivacyCurveReferences) -> Self {
+        var copy = self
+        copy.curveReferences = PrivacyMeterStyle(rawValue: meterStyle ?? "")?.isCurve == true ? references : nil
         return copy
     }
 }

@@ -13,6 +13,34 @@ import Testing
 
     private static let start = Date(timeIntervalSince1970: 1_800_000_000)
 
+    @Test("Activity and alert evidence export without raw content") func activityEvidenceContract() {
+        let store = DiagnosticEventStore(defaults: Self.defaults(), now: { Self.start })
+        for (feature, stage, outcome) in [
+            ("activity", "state", "ended"), ("activity", "lifecycle", "created"),
+            ("activity", "lifecycle", "deferred"), ("alerts", "plan", "scheduled"),
+            ("alerts", "trigger", "fired"), ("alerts", "delivery", "delivered"),
+            ("alerts", "cancel", "cancelled"), ("branding", "bundle", "consistent"),
+            ("app", "launch", "started")
+        ] { #expect(store.record(feature: feature, stage: stage, outcome: outcome)) }
+        #expect(!store.record(feature: "activity", stage: "state", outcome: "raw-error-or-identifier"))
+    }
+
+    @Test("A transport flood cannot erase the only recovery failure") func evidenceSurvivesTransportFlood() throws {
+        let defaults = Self.defaults()
+        var input = [DiagnosticEvent(timestamp: Self.start.addingTimeInterval(-1600), feature: "privacy", stage: "recovery",
+                                    outcome: "failed", attempt: nil, count: nil)]
+        for index in 0 ..< 5000 {
+            input.append(DiagnosticEvent(timestamp: Self.start.addingTimeInterval(-1500 + Double(index) * 0.2),
+                                         feature: "ottai", stage: "transport", outcome: "received", attempt: nil, count: nil))
+        }
+        let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
+        defaults.set(try encoder.encode(input), forKey: DiagnosticEventStore.defaultsKey)
+        let store = DiagnosticEventStore(defaults: defaults, now: { Self.start })
+        #expect(store.allEvents.contains { $0.feature == "privacy" && $0.stage == "recovery" && $0.outcome == "failed" })
+        #expect(store.allEvents.count <= DiagnosticEventStore.maximumEvents)
+        #expect(store.allEvents.contains { $0.timestamp >= Self.start.addingTimeInterval(-501) })
+    }
+
     @Test("Background pipeline phases export through the common bounded contract") func backgroundPipelineEvents() {
         let store = DiagnosticEventStore(defaults: Self.defaults(), now: { Self.start })
         for (feature, stage, outcome) in [

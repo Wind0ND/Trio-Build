@@ -24,9 +24,20 @@ public struct JournalAlert: Codable, Identifiable, Equatable, Sendable {
 public struct AlertJournal: Codable, Sendable {
     public private(set) var entries: [JournalAlert] = []
     public init() {}
-    // Regression-first interface: actual evidence transition follows observed RED.
-    public mutating func markTriggered(id: UUID, at date: Date) {}
-    public func triggeredHistory(now: Date) -> [JournalAlert] { recent(now: now) }
+    /// An observed callback or delivered notification, never merely the passage of time.
+    public mutating func markTriggered(id: UUID, at date: Date) {
+        guard let index = entries.firstIndex(where: { $0.id == id }), date >= entries[index].issuedAt else { return }
+        let entry = entries[index]
+        if let planned = entry.scheduledFor, planned.timeIntervalSince(date) > 1 { return }
+        let closed = [entry.cancelledAt, entry.resolvedAt, entry.acknowledgedAt].compactMap { $0 }.min()
+        if let closed, date > closed { return }
+        entries[index].triggeredAt = min(entry.triggeredAt ?? date, date)
+        // A delivery before cancellation can legitimately be observed after foreground recovery.
+        entries[index].cancelledAt = nil
+    }
+    public func triggeredHistory(now: Date) -> [JournalAlert] {
+        recent(now: now).filter { $0.triggeredAt.map { $0 <= now } == true }
+    }
     public mutating func issue(_ entry: JournalAlert, now: Date) {
         prune(now: now)
         guard entry.issuedAt <= now, entry.issuedAt >= now.addingTimeInterval(-86_400),
@@ -43,11 +54,16 @@ public struct AlertJournal: Codable, Sendable {
         for index in entries.indices where entries[index].source == source && entries[index].kind == kind
             && entries[index].issuedAt <= date && entries[index].resolvedAt == nil {
             entries[index].resolvedAt = date
+            if entries[index].scheduledFor != nil && entries[index].triggeredAt == nil {
+                entries[index].cancelledAt = date
+            }
         }
     }
     public mutating func prune(now: Date) { entries = recent(now: now) }
     public func recent(now: Date) -> [JournalAlert] {
-        entries.filter { $0.issuedAt >= now.addingTimeInterval(-86_400) && $0.issuedAt <= now }
-            .sorted { $0.issuedAt > $1.issuedAt }
+        entries.filter {
+            let anchor = $0.triggeredAt ?? $0.issuedAt
+            return anchor >= now.addingTimeInterval(-86_400) && anchor <= now
+        }.sorted { ($0.triggeredAt ?? $0.issuedAt) > ($1.triggeredAt ?? $1.issuedAt) }
     }
 }
