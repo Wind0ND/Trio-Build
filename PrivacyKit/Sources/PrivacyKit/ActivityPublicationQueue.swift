@@ -16,7 +16,7 @@ public enum ActivityLifecyclePolicy {
     private var tail: Task<Void, Never>?
     private var generation: UInt64 = 0
     public init() {}
-    public func run(_ operation: @escaping @MainActor () async -> Void) async {
+    public func run(coalescing: Bool = false, _ operation: @escaping @MainActor () async -> Void) async {
         generation &+= 1
         let mine = generation
         let previous = tail

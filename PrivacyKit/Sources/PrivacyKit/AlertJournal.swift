@@ -13,6 +13,7 @@ public struct JournalAlert: Codable, Identifiable, Equatable, Sendable {
     public var resolvedAt: Date?
     public var triggeredAt: Date?
     public var cancelledAt: Date?
+    public var deliveredAt: Date?
 
     public init(id: UUID = UUID(), source: String, kind: String, title: String, body: String,
                 issuedAt: Date, scheduledFor: Date? = nil) {
@@ -25,15 +26,16 @@ public struct AlertJournal: Codable, Sendable {
     public private(set) var entries: [JournalAlert] = []
     public init() {}
     /// An observed callback or delivered notification, never merely the passage of time.
-    public mutating func markTriggered(id: UUID, at date: Date) {
-        guard let index = entries.firstIndex(where: { $0.id == id }), date >= entries[index].issuedAt else { return }
+    @discardableResult public mutating func markTriggered(id: UUID, at date: Date, delivered: Bool = false) -> Bool {
+        guard let index = entries.firstIndex(where: { $0.id == id }), date >= entries[index].issuedAt else { return false }
         let entry = entries[index]
-        if let planned = entry.scheduledFor, planned.timeIntervalSince(date) > 1 { return }
+        if let planned = entry.scheduledFor, planned.timeIntervalSince(date) > 1 { return false }
         let closed = [entry.cancelledAt, entry.resolvedAt, entry.acknowledgedAt].compactMap { $0 }.min()
-        if let closed, date > closed { return }
+        if let closed, date > closed { return false }
         entries[index].triggeredAt = min(entry.triggeredAt ?? date, date)
         // A delivery before cancellation can legitimately be observed after foreground recovery.
         entries[index].cancelledAt = nil
+        return false
     }
     public func triggeredHistory(now: Date) -> [JournalAlert] {
         recent(now: now).filter { $0.triggeredAt.map { $0 <= now } == true }

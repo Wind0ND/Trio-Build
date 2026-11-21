@@ -25,7 +25,17 @@ final class CurveSnapshotTests: XCTestCase {
         var old = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         old.removeValue(forKey: "curveReadings"); old.removeValue(forKey: "curveReferences")
         let decoded = try JSONDecoder().decode(PrivacyActivityState.self, from: JSONSerialization.data(withJSONObject: old))
-        XCTAssertEqual(decoded.effectiveCurveReadings[5] ?? -1, 5, accuracy: 0.0001)
+        XCTAssertNil(decoded.effectiveCurveReadings[5])
+        XCTAssertEqual(decoded.staleDate, now.addingTimeInterval(360))
+    }
+    func testClampedLegacyBarsCannotInventCurveValuesOnTheWrongSideOfAReference() throws {
+        let state = PrivacyActivityState(readings: [.init(mgDL: 324, date: now)], now: now)
+        let data = try JSONEncoder().encode(state)
+        var old = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        old.removeValue(forKey: "curveReadings")
+        let decoded = try JSONDecoder().decode(PrivacyActivityState.self, from: JSONSerialization.data(withJSONObject: old))
+            .replacingMeterStyle(.rangeCurve).replacingCurveReferences(.init(upper: 15))
+        XCTAssertTrue(decoded.effectiveCurveReadings.allSatisfy { $0 == nil })
         XCTAssertEqual(decoded.staleDate, now.addingTimeInterval(360))
     }
 }
