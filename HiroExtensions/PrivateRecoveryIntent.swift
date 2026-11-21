@@ -10,7 +10,9 @@ struct HiroPrivateRecoveryIntent: LiveActivityIntent {
     static var authenticationPolicy: IntentAuthenticationPolicy = .alwaysAllowed
 
     @MainActor func perform() async throws -> some IntentResult {
-        _ = await PrivateRecoveryBridge.shared.request()
+        PrivacyPreference.record(stage: "recovery", outcome: "invoked")
+        let success = await PrivateRecoveryBridge.shared.request()
+        PrivacyPreference.record(stage: "recovery", outcome: success ? "completed" : "failed")
         return .result()
     }
 }

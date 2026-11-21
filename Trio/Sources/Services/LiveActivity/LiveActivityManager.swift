@@ -19,13 +19,13 @@ import OttaiKit
              .ended:
             return true
         case .stale:
-            if !updatingPrivateContent { return true }
+            break
         case .active:
             break
         @unknown default:
             return true
         }
-        return -activity.attributes.startDate.timeIntervalSinceNow > TimeInterval(60 * 60)
+        return false
     }
 }
 
@@ -74,6 +74,11 @@ final class LiveActivityData: ObservableObject {
     private var data = LiveActivityData()
     private var recoveredGridReceipt: (measuredAt: Date, receivedAt: Date)?
     private var lastPublicationEvent = Date.distantPast
+    @MainActor private static var publicationQueue: ActivityPublicationQueue?
+    private var activityStateTask: Task<Void, Never>?
+    private var retryTask: Task<Void, Never>?
+    private var creationWindow: TimeInterval = 0
+    private var creationAttempts = 0
 
     /// A dispatch queue for handling Core Data change notifications.
     private let queue = DispatchQueue(label: "LiveActivityBridge.queue", qos: .userInitiated)
@@ -104,6 +109,8 @@ final class LiveActivityData: ObservableObject {
         }.store(in: &subscriptions)
         loadInitialData()
     }
+
+    deinit { activityStateTask?.cancel(); retryTask?.cancel() }
 
     /// Sets up application notifications that trigger live activity updates when the app state changes.
     private func setupNotifications() {
@@ -258,6 +265,15 @@ final class LiveActivityData: ObservableObject {
     /// - Parameter state: The new content state to push to the live activity.
     @MainActor private func pushUpdate(_ state: LiveActivityAttributes.ContentState,
                                       isAuthorized: @escaping @MainActor () -> Bool = { true }) async {
+        let queue = Self.publicationQueue ?? ActivityPublicationQueue()
+        Self.publicationQueue = queue
+        await queue.run { [weak self] in
+            await self?.pushUpdateInOrder(state, isAuthorized: isAuthorized)
+        }
+    }
+
+    @MainActor private func pushUpdateInOrder(_ state: LiveActivityAttributes.ContentState,
+                                             isAuthorized: @escaping @MainActor () -> Bool) async {
         guard isAuthorized() else { return }
         // Reject an older queued update after the user switches display mode.
         guard (state.privacy != nil) == PrivacyPreference.displayEnabled else { return }
@@ -269,18 +285,20 @@ final class LiveActivityData: ObservableObject {
         if currentActivity == nil {
             // try to restore an existing activity
             currentActivity = Activity<LiveActivityAttributes>.activities
+                .filter { $0.activityState == .active || $0.activityState == .stale }
                 .max { $0.attributes.startDate < $1.attributes.startDate }.map {
                     ActiveActivity(activity: $0)
                 }
 
             if let currentActivity {
                 debug(.liveActivity, "Restored Live Activity \(currentActivity.activity.id)")
+                observeState(of: currentActivity.activity)
             }
         }
 
         // End all unknown activities except the current one
         for unknownActivity in Activity<LiveActivityAttributes>.activities
-            .filter({ self.currentActivity?.activity.id != $0.id })
+            .filter({ self.currentActivity?.activity.id != $0.id && ($0.activityState == .active || $0.activityState == .stale) })
         {
             guard isAuthorized() else { return }
             await unknownActivity.end(nil, dismissalPolicy: .immediate)
@@ -288,15 +306,21 @@ final class LiveActivityData: ObservableObject {
 
         guard isAuthorized(), (state.privacy != nil) == PrivacyPreference.displayEnabled else { return }
         if let currentActivity {
-            if currentActivity.needsRecreation(updatingPrivateContent: state.privacy != nil),
-               UIApplication.shared.applicationState == .active {
+            let terminal = currentActivity.needsRecreation(updatingPrivateContent: state.privacy != nil)
+            if terminal && UIApplication.shared.applicationState != .active {
+                self.currentActivity = nil
+                activityStateTask?.cancel()
+                recordLifecycle("deferred")
+                return
+            }
+            if terminal {
                 debug(.liveActivity, "Recreating Live Activity \(currentActivity.activity.id)")
                 await endActivity(isAuthorized: isAuthorized)
                 guard isAuthorized() else { return }
                 // After endActivity(), currentActivity is guaranteed to be nil
                 // No recursive task, but explicitly restart
                 debug(.liveActivity, "Pushing update after recreation")
-                await pushUpdate(state, isAuthorized: isAuthorized)
+                await pushUpdateInOrder(state, isAuthorized: isAuthorized)
             } else {
                 let content = ActivityContent(
                     state: state,
@@ -313,6 +337,15 @@ final class LiveActivityData: ObservableObject {
                 }
             }
         } else {
+            guard ActivityLifecyclePolicy.action(state: nil,
+                foreground: UIApplication.shared.applicationState == .active, enabled: true) == .create else {
+                recordLifecycle("deferred")
+                return
+            }
+            let uptime = ProcessInfo.processInfo.systemUptime
+            if uptime - creationWindow >= 60 { creationWindow = uptime; creationAttempts = 0 }
+            guard creationAttempts < 3 else { scheduleRetry(); recordLifecycle("deferred"); return }
+            creationAttempts += 1
             // ... Activity is newly created ...
             do {
                 let expired = ActivityContent(
@@ -373,6 +406,9 @@ final class LiveActivityData: ObservableObject {
                     pushType: nil
                 )
                 currentActivity = ActiveActivity(activity: activity)
+                observeState(of: activity)
+                retryTask?.cancel(); retryTask = nil
+                recordLifecycle("created")
                 recordPublication()
                 info(.liveActivity, "Started Live Activity \(activity.id)")
 
@@ -388,8 +424,48 @@ final class LiveActivityData: ObservableObject {
                 warning(.liveActivity, "Starting Live Activity failed, will retry on next update", error: error)
                 // Reset currentActivity on error to allow retry on next update
                 currentActivity = nil
+                recordLifecycle("failed")
+                scheduleRetry()
             }
         }
+    }
+
+    @MainActor private func observeState(of activity: Activity<LiveActivityAttributes>) {
+        activityStateTask?.cancel()
+        activityStateTask = Task { [weak self] in
+            for await state in activity.activityStateUpdates {
+                guard !Task.isCancelled, let self, self.currentActivity?.activity.id == activity.id else { return }
+                let outcome: String
+                switch state {
+                case .active: outcome = "active"
+                case .stale: outcome = "stale"
+                case .ended: outcome = "ended"
+                case .dismissed: outcome = "dismissed"
+                @unknown default: outcome = "unknown"
+                }
+                DiagnosticEventStore.shared.record(feature: "activity", stage: "state", outcome: outcome)
+                if state == .ended || state == .dismissed {
+                    self.currentActivity = nil
+                    self.scheduleRetry()
+                    return
+                }
+            }
+        }
+    }
+
+    @MainActor private func scheduleRetry() {
+        guard retryTask == nil else { return }
+        retryTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 30_000_000_000)
+            guard !Task.isCancelled, let self else { return }
+            self.retryTask = nil
+            guard UIApplication.shared.applicationState == .active, self.settings.useLiveActivity, self.systemEnabled else { return }
+            await self.pushCurrentContent()
+        }
+    }
+
+    @MainActor private func recordLifecycle(_ outcome: String) {
+        DiagnosticEventStore.shared.record(feature: "activity", stage: "lifecycle", outcome: outcome)
     }
 
     /// Ends the current live activity and ensures that all unknown activities are terminated.
@@ -399,18 +475,21 @@ final class LiveActivityData: ObservableObject {
 
         if let currentActivity {
             debug(.liveActivity, "Ending Live Activity \(currentActivity.activity.id)")
+            self.currentActivity = nil
+            activityStateTask?.cancel()
             await currentActivity.activity.end(nil, dismissalPolicy: .immediate)
             guard isAuthorized() else { return }
             if self.currentActivity?.activity.id == currentActivity.activity.id { self.currentActivity = nil }
         }
 
-        for unknownActivity in Activity<LiveActivityAttributes>.activities {
+        for unknownActivity in Activity<LiveActivityAttributes>.activities.filter({ $0.activityState == .active || $0.activityState == .stale }) {
             guard isAuthorized() else { return }
             debug(.liveActivity, "Ending untracked Live Activity \(unknownActivity.id)")
             await unknownActivity.end(nil, dismissalPolicy: .immediate)
         }
 
         info(.liveActivity, "All Live Activities ended")
+        recordLifecycle("ended")
     }
 
     /// Restarts the live activity from a Live Activity Intent.
@@ -419,19 +498,9 @@ final class LiveActivityData: ObservableObject {
     /// exists,
     /// ending the current live activity, and starting a new one using the current state.
     @MainActor func restartActivityFromLiveActivityIntent() async {
-        await endActivity()
-
-        while (currentActivity != nil && currentActivity!.activity.activityState != .ended) || Activity<LiveActivityAttributes>
-            .activities.contains(where: { $0.activityState != .ended })
-        {
-            debug(.liveActivity, "Waiting for Live Activity to end")
-            try? await Task.sleep(nanoseconds: 200_000_000) // 0.2s sleep
-        }
-
-        // Add additional delay to ensure iOS has fully cleaned up the previous activity
-        debug(.liveActivity, "Waiting for iOS to clean up the ended Live Activity")
-        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1s additional delay
-
+        let queue = Self.publicationQueue ?? ActivityPublicationQueue()
+        Self.publicationQueue = queue
+        await queue.run { [weak self] in await self?.endActivity() }
         await pushCurrentContent()
 
         info(.liveActivity, "Restarted Live Activity from shortcut")

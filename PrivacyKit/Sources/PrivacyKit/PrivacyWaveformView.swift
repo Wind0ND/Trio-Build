@@ -47,6 +47,11 @@ public struct PrivacyWaveformView: View {
     }
 
     public var body: some View {
+        Group {
+        if !stale, state.measuredAt != nil,
+           let style = PrivacyMeterStyle(rawValue: state.meterStyle ?? ""), style.isCurve {
+            PrivacyCurveView(state: state, dual: style == .rangeCurve, height: height, presentation: presentation)
+        } else {
         PrivacyMeterLayout(heights: state.waveformHeights, height: height, presentation: presentation) {
             if stale || state.measuredAt == nil {
                 Circle().strokeBorder(lineWidth: 1.5)
@@ -60,6 +65,44 @@ public struct PrivacyWaveformView: View {
         .foregroundStyle(state.color.swiftUIColor)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(stale ? "Reading overdue" : "Private activity", bundle: .module))
+        }
+        }
+    }
+}
+
+private struct PrivacyCurveView: View {
+    let state: PrivacyActivityState
+    let dual: Bool
+    let height: CGFloat
+    let presentation: PrivacyMeterPresentation
+
+    var body: some View {
+        Canvas { context, size in
+            let geometry = PrivacyCurveGeometry(values: state.effectiveCurveReadings,
+                width: max(0, size.width - 2), height: max(0, size.height - 2),
+                references: state.curveReferences ?? .init(), dual: dual)
+            func point(_ p: PrivacyCurveGeometry.Point) -> CGPoint { CGPoint(x: p.x + 1, y: p.y + 1) }
+            for y in geometry.referenceY {
+                var path = Path()
+                path.move(to: CGPoint(x: 1, y: y + 1))
+                path.addLine(to: CGPoint(x: size.width - 1, y: y + 1))
+                context.stroke(path, with: .color(Color(white: 0.32)), lineWidth: 0.5)
+            }
+            var curve = Path()
+            for segment in geometry.segments {
+                curve.move(to: point(segment.start))
+                curve.addCurve(to: point(segment.end), control1: point(segment.control1), control2: point(segment.control2))
+            }
+            for p in geometry.isolatedPoints {
+                curve.move(to: point(p))
+                curve.addLine(to: CGPoint(x: p.x + 1.1, y: p.y + 1))
+            }
+            context.stroke(curve, with: .color(state.color.swiftUIColor),
+                           style: StrokeStyle(lineWidth: 1.25, lineCap: .round, lineJoin: .round))
+        }
+        .frame(width: presentation.preferredWidth, height: height)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Private activity", bundle: .module))
     }
 }
 

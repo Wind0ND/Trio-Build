@@ -5,6 +5,28 @@ import SwiftUI
 import WidgetKit
 import UIKit
 
+/// A full-width native intent hit region, shared by lock-screen and expanded presentations.
+struct PrivateActivityControls: View {
+    let privacy: PrivacyActivityState
+    let stale: Bool
+    let coverSize: CGFloat
+
+    var body: some View {
+        Button(intent: HiroPrivateRecoveryIntent()) {
+            HStack {
+                PrivacyCoverView(data: privacy.cover, size: coverSize)
+                Spacer(minLength: 12)
+                PrivacyWaveformView(state: privacy, stale: stale)
+            }
+            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity, minHeight: 32)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("Refresh activity"))
+    }
+}
+
 struct LiveActivityView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.isWatchOS) var isWatchOS
@@ -22,17 +44,9 @@ struct LiveActivityView: View {
     var body: some View {
         if let privacy = context.state.privacy {
             let style = context.state.simpleViewStyle
-            HStack {
-                Button(intent: HiroPrivateRecoveryIntent()) {
-                    PrivacyCoverView(data: privacy.cover, size: isWatchOS ? 20 : 24)
-                }.buttonStyle(.plain).accessibilityLabel(Text("Refresh activity"))
-                Spacer()
-                Button(intent: HiroPrivateRecoveryIntent()) {
-                    PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()))
-                }.buttonStyle(.plain).accessibilityLabel(Text("Refresh activity"))
-            }
+            PrivateActivityControls(privacy: privacy, stale: context.isStale || privacy.isStale(at: Date()), coverSize: isWatchOS ? 20 : 24)
             // Match the existing simple layout's line height and padding, keeping the meter small.
-            .frame(height: UIFontMetrics(forTextStyle: style.fontSize.uiTextStyle).scaledValue(for: style.fontSize.basePointSize) * 1.2)
+            .frame(minHeight: max(32, UIFontMetrics(forTextStyle: style.fontSize.uiTextStyle).scaledValue(for: style.fontSize.basePointSize) * 1.2))
             .addLiveActivityModifiers(isWatchOS: isWatchOS, verticalPadding: style.fontSize.verticalPadding)
         } else if isWatchOS, context.state.useDetailedViewWatchOS {
             VStack {

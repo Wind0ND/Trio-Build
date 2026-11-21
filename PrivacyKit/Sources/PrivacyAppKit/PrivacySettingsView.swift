@@ -19,6 +19,8 @@ public struct PrivacySettingsView: View {
     @State private var loadingCover = false
     @State private var cover = UserDefaults.standard.data(forKey: PrivacyPreference.coverKey)
     @State private var boundaryText = PrivacyPalette.stored().boundaries.map { String(format: "%.1f", $0) }
+    @State private var curveReferenceText = [PrivacyCurveReferences.stored().lower, PrivacyCurveReferences.stored().upper,
+                                            PrivacyCurveReferences.stored().single].map { String(format: "%.1f", $0) }
     @State private var message: String?
 
     public init() {}
@@ -72,9 +74,23 @@ public struct PrivacySettingsView: View {
                 Picker(privacyText("Waveform style"), selection: protectedChoice($meterStyle)) {
                     Text(privacyText("Six recent readings")).tag(PrivacyMeterStyle.history.rawValue)
                     Text(privacyText("Five readings and reference")).tag(PrivacyMeterStyle.referenceFive.rawValue)
+                    Text(privacyText("Curve with two references")).tag(PrivacyMeterStyle.rangeCurve.rawValue)
+                    Text(privacyText("Curve with one reference")).tag(PrivacyMeterStyle.singleCurve.rawValue)
                 }
+                if PrivacyMeterStyle(rawValue: meterStyle)?.isCurve == true {
+                    if meterStyle == PrivacyMeterStyle.rangeCurve.rawValue {
+                        referenceField("Lower reference line", index: 0)
+                        referenceField("Upper reference line", index: 1)
+                    } else {
+                        referenceField("Reference line", index: 2)
+                    }
+                    Button(privacyText("Save curve references"), action: saveCurveReferences)
+                    Text(privacyText("Reference lines guide the display only. They do not change alert thresholds. The curve can cross them; missing readings leave a gap. References above 12 extend the curve scale."))
+                        .font(.footnote).foregroundStyle(.secondary)
+                } else {
                 Text(privacyText("The reference style shows the latest five readings, followed by a fixed 5 mmol/L marker at 41.7% height. The entire group, including the marker, uses the latest reading's color."))
                     .font(.footnote).foregroundStyle(.secondary)
+                }
             }
             Section(privacyText("Color ranges")) {
                 ForEach(0 ..< 5, id: \.self) { index in
@@ -117,7 +133,7 @@ public struct PrivacySettingsView: View {
             }
             if let message { Text(message).font(.footnote).foregroundStyle(.secondary) }
         }
-        .navigationTitle(privacyText("Privacy"))
+        .navigationTitle(privacyText("Privacy Protection"))
         .sheet(isPresented: $showSetup) { PrivacyLockSetup(method: method, controller: lock) }
         .task(id: selectedPhoto) { await loadCover() }
     }
@@ -134,6 +150,31 @@ public struct PrivacySettingsView: View {
 
     private var selectedColors: [PrivacyColor] {
         (PrivacyPalettePreset(rawValue: palette) ?? .quiet).colors
+    }
+
+    private func referenceField(_ title: String, index: Int) -> some View {
+        HStack {
+            Text(privacyText(title))
+            TextField("mmol/L", text: $curveReferenceText[index]).keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+            Text(verbatim: "mmol/L").foregroundStyle(.secondary)
+        }
+    }
+
+    private func saveCurveReferences() {
+        let values = curveReferenceText.compactMap { Double($0.replacingOccurrences(of: ",", with: ".")) }
+        guard values.count == 3, values.allSatisfy({ $0.isFinite && (1 ... 30).contains($0) }), values[1] - values[0] >= 0.099 else {
+            message = privacyText("Enter references from 1 to 30, with the lower line below the upper line.")
+            return
+        }
+        let references = PrivacyCurveReferences(lower: values[0], upper: values[1], single: values[2])
+        lock.requireAuthentication {
+            guard let data = try? JSONEncoder().encode(references) else { return }
+            UserDefaults.standard.set(data, forKey: PrivacyCurveReferences.preferenceKey)
+            message = privacyText("Curve references saved.")
+            PrivacyPreference.record(stage: "settings", outcome: "changed")
+            PrivacyPreference.notifyChanged()
+        }
     }
 
     private func protectedChoice(_ binding: Binding<String>) -> Binding<String> {

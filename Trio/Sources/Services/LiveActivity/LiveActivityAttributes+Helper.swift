@@ -34,7 +34,7 @@ extension LiveActivityAttributes.ContentState {
     ) -> Self {
         // A public chart no longer carries manual provenance. Wait for an accepted CGM snapshot.
         let readings: [PrivacyReading] = []
-        let snapshot = previous?.privacy?.replacingCover(cover).replacingMeterStyle(.stored()) ?? PrivacyActivityState(
+        let snapshot = previous?.privacy?.replacingCover(cover).replacingMeterStyle(.stored()).replacingCurveReferences(.stored()) ?? PrivacyActivityState(
             readings: readings, now: Date(), palette: .stored(),
             cover: cover, meterStyle: .stored()
         )

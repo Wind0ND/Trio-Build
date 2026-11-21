@@ -14,13 +14,7 @@ struct LiveActivity: Widget {
 
             let island = DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    if let privacy = context.state.privacy {
-                        Button(intent: HiroPrivateRecoveryIntent()) {
-                            PrivacyCoverView(data: privacy.cover, size: 24)
-                        }.buttonStyle(.plain)
-                            .accessibilityLabel(Text("Refresh activity"))
-                            .frame(width: 28, height: 28)
-                    } else {
+                    if context.state.privacy == nil {
                     LiveActivityExpandedLeadingView(
                         context: context,
                         glucoseColor: glucoseColor
@@ -28,13 +22,7 @@ struct LiveActivity: Widget {
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    if let privacy = context.state.privacy {
-                        Button(intent: HiroPrivateRecoveryIntent()) {
-                            PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()))
-                        }.buttonStyle(.plain)
-                            .accessibilityLabel(Text("Refresh activity"))
-                            .frame(width: 28, height: 28)
-                    } else {
+                    if context.state.privacy == nil {
                     LiveActivityExpandedTrailingView(
                         context: context,
                         glucoseColor: hasStaticColorScheme ? .primary : glucoseColor
@@ -42,7 +30,10 @@ struct LiveActivity: Widget {
                     }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    if context.state.privacy == nil {
+                    if let privacy = context.state.privacy {
+                        PrivateActivityControls(privacy: privacy, stale: context.isStale || privacy.isStale(at: Date()), coverSize: 24)
+                            .padding(.horizontal, 4)
+                    } else {
                     LiveActivityExpandedBottomView(context: context)
                     }
                 }
@@ -81,13 +72,13 @@ struct LiveActivity: Widget {
                 )
                 }
             }
-            .widgetURL(URL(string: "Trio://"))
             .keylineTint(glucoseColor)
 
             if context.state.privacy != nil {
                 return island
             } else {
                 return island
+                    .widgetURL(URL(string: "Trio://"))
                     .contentMargins(.horizontal, 0, for: .minimal)
                     .contentMargins(.leading, 0, for: .compactTrailing)
             }
