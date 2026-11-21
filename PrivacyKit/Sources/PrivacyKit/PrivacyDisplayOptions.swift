@@ -19,9 +19,10 @@ public enum PrivacyPalettePreset: String, CaseIterable, Identifiable, Sendable {
 }
 
 public enum PrivacyMeterStyle: String, CaseIterable, Identifiable, Sendable {
-    case history, referenceFive
+    case history, referenceFive, rangeCurve, singleCurve
     public var id: String { rawValue }
     public static let referenceHeight = 5.0 / 12
+    public var isCurve: Bool { self == .rangeCurve || self == .singleCurve }
 
     public static func stored(in defaults: UserDefaults = .standard) -> Self {
         defaults.string(forKey: PrivacyPreference.meterStyleKey).flatMap(Self.init(rawValue:)) ?? .history

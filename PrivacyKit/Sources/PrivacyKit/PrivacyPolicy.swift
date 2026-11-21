@@ -118,8 +118,14 @@ public struct PrivacyActivityState: Codable, Hashable, Sendable {
     // Optional string keeps old snapshots decodable and unknown future styles harmless.
     public private(set) var meterStyle: String?
     private let recentHeights: [Double]?
+    public private(set) var curveReadings: [Double?]?
+    public private(set) var curveReferences: PrivacyCurveReferences?
 
-    public init(readings: [PrivacyReading], now: Date, palette: PrivacyPalette = .init(), cover: Data? = nil, recoveredAt: Date? = nil, meterStyle: PrivacyMeterStyle = .history) {
+    public var effectiveCurveReadings: [Double?] {
+        curveReadings ?? heights.map { $0.map { $0 * 12 } }
+    }
+
+    public init(readings: [PrivacyReading], now: Date, palette: PrivacyPalette = .init(), cover: Data? = nil, recoveredAt: Date? = nil, meterStyle: PrivacyMeterStyle = .history, curveReferences: PrivacyCurveReferences = .stored()) {
         self.meterStyle = meterStyle == .history ? nil : meterStyle.rawValue
         // A future or invalid reading cannot become the color/freshness anchor.
         let valid = readings.filter { $0.mgDL.isFinite && $0.mgDL > 0 && $0.mgDL <= 1000 && $0.date <= now }
