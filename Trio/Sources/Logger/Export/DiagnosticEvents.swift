@@ -83,12 +83,18 @@ enum DiagnosticEventContract {
         ),
         "privacy": Feature(
             stages: ["settings", "cover", "authentication", "lock", "activity", "journal", "recovery"],
-            outcomes: ["changed", "succeeded", "failed", "reset", "enabled", "disabled", "published", "requested", "completed"]
+            outcomes: ["changed", "succeeded", "failed", "reset", "enabled", "disabled", "published", "requested", "completed", "invoked"]
         ),
         "keep_alive": Feature(
             stages: ["audio", "reminder", "data", "source", "lifecycle", "recovery", "audio_minutes", "audio_starts", "cycle_delay_seconds", "missed_windows"],
             outcomes: ["started", "stopped", "failed", "interrupted", "capped", "scheduled", "recovered", "received", "stored", "background", "foreground", "requested", "completed", "timed_out", "reset", "overdue", "sampled"]
-        )
+        ),
+        "activity": Feature(stages: ["state", "lifecycle"],
+            outcomes: ["active", "stale", "ended", "dismissed", "unknown", "created", "updated", "deferred", "failed"]),
+        "alerts": Feature(stages: ["plan", "trigger", "delivery", "cancel", "alarm"],
+            outcomes: ["scheduled", "fired", "delivered", "cancelled", "stopped", "failed"]),
+        "branding": Feature(stages: ["bundle"], outcomes: ["consistent", "mismatch"]),
+        "app": Feature(stages: ["launch"], outcomes: ["started"])
     ]
 
     static var allowedFeatures: [String] { features.keys.sorted() }
@@ -141,7 +147,7 @@ final class DiagnosticEventStore: @unchecked Sendable {
     static let shared = DiagnosticEventStore()
 
     static let defaultsKey = "Trio.DiagnosticEvents.v1"
-    static let maximumEvents = 400
+    static let maximumEvents = 4000
     static let retention: TimeInterval = 7 * 24 * 60 * 60
 
     private let lock = NSLock()
@@ -270,7 +276,26 @@ final class DiagnosticEventStore: @unchecked Sendable {
         let cutoff = date.addingTimeInterval(-Self.retention)
         events.removeAll { $0.timestamp < cutoff }
         if events.count > Self.maximumEvents {
-            events.removeFirst(events.count - Self.maximumEvents)
+            // Reserve recent lifecycle/recovery evidence and failures independently of high-volume transport.
+            // Both reservations are finite; this is bounded coverage, not a promise of a complete seven-day log.
+            let critical = Set(events.indices.filter { index in
+                let event = events[index]
+                return ["failed", "timed_out", "mismatch"].contains(event.outcome)
+                    || ["app", "branding"].contains(event.feature)
+                    || (event.feature == "activity" && event.outcome != "updated")
+            }.suffix(256))
+            let evidence = Set(events.indices.filter { index in
+                let event = events[index]
+                return event.feature == "alerts" || event.stage == "recovery"
+                    || (event.feature == "keep_alive" && ["audio", "reminder", "lifecycle"].contains(event.stage))
+            }.suffix(1000))
+            let protected = critical.union(evidence)
+            var excess = events.count - Self.maximumEvents
+            events = events.enumerated().compactMap { index, event in
+                if excess > 0 && !protected.contains(index) { excess -= 1; return nil }
+                return event
+            }
+            if excess > 0 { events.removeFirst(excess) }
         }
     }
 

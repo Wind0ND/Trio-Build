@@ -191,7 +191,8 @@ final class LogExport: Injectable {
     /// event stream plus schema/version/window metadata.
     private func writeDiagnosticLog(window: DateInterval, now: Date, into directory: URL) async throws -> URL {
         let events = diagnosticEvents(window).filter(\.isValid)
-        let header = try Self.diagnosticHeader(window: window, eventCount: events.count, exportedAt: now)
+        let header = try Self.diagnosticHeader(window: window, eventCount: events.count, exportedAt: now,
+                                               earliestEvent: events.map(\.timestamp).min(), latestEvent: events.map(\.timestamp).max())
         let redactor = Redactor(exactValues: storedValues.values)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let url = directory.appendingPathComponent("Trio Diagnostic Events \(Self.fileStamp(now)).txt")
@@ -221,9 +222,13 @@ final class LogExport: Injectable {
         let windowEnd: Date
         let eventCount: Int
         let featureAllowlist: [String]
+        let earliestEvent: Date?
+        let latestEvent: Date?
+        let maximumRetainedEvents: Int
     }
 
-    private static func diagnosticHeader(window: DateInterval, eventCount: Int, exportedAt: Date) throws -> String {
+    private static func diagnosticHeader(window: DateInterval, eventCount: Int, exportedAt: Date,
+                                         earliestEvent: Date? = nil, latestEvent: Date? = nil) throws -> String {
         let info = Bundle.main.infoDictionary
         let header = DiagnosticExportHeader(
             schema: DiagnosticEventContract.exportSchema,
@@ -236,7 +241,9 @@ final class LogExport: Injectable {
             windowStart: window.start,
             windowEnd: window.end,
             eventCount: eventCount,
-            featureAllowlist: DiagnosticEventContract.allowedFeatures
+            featureAllowlist: DiagnosticEventContract.allowedFeatures,
+            earliestEvent: earliestEvent, latestEvent: latestEvent,
+            maximumRetainedEvents: DiagnosticEventStore.maximumEvents
         )
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601

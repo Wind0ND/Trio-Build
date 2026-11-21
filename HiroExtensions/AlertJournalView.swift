@@ -95,7 +95,7 @@ private struct HiroAlertJournalDetail: View {
                         if let date = row.triggeredAt { LabeledContent("Observed at", value: date.formatted()) }
                         if let date = row.acknowledgedAt { LabeledContent("Acknowledged at", value: date.formatted()) }
                         if let date = row.cancelledAt { LabeledContent("Cancelled at", value: date.formatted()) }
-                        else if let date = row.resolvedAt { LabeledContent(row.triggeredAt == nil ? "Ended at" : "Resolved at", value: date.formatted()) }
+                        else if let date = row.resolvedAt { LabeledContent(LocalizedStringKey(row.triggeredAt == nil ? "Ended at" : "Resolved at"), value: date.formatted()) }
                     }
                 }
             } else { Color.clear }

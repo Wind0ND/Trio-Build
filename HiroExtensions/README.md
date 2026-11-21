@@ -12,3 +12,11 @@ Private history content never enters the default diagnostic ZIP. Allowlisted rec
 Background execution remains conditional: timers, silent audio and user actions do not guarantee revival after force-quit or indefinite running. Validate interruption notices, competing audio, locked interactions and battery use on an actual phone.
 
 Apple references: [interactive widgets/Live Activities](https://developer.apple.com/documentation/widgetkit/adding-interactivity-to-widgets-and-live-activities), [LiveActivityIntent](https://developer.apple.com/documentation/appintents/liveactivityintent).
+
+## Curve and recovery update
+
+The two optional curves are implemented in PrivacyKit, with independently persisted display references (defaults4/10 and5, editable1–30). They preserve six real grid slots, disconnect gaps and use bounded monotone cubic segments. References and geometry never change samples or clinical alarms. Old bars, marker style and six palettes remain available.
+
+The host serializes ActivityKit mutations across suspension points, updates active/stale activities in place, observes terminal states and retries foreground creation within a finite budget. Private expanded content lives below the camera, sharing a full-row recovery button with the lock-screen card. A compact/minimal system tap may still open the app; the recovery button is reached by long-pressing first. ActivityKit state and API completion do not prove renderer visibility.
+
+Every newly issued alert carries an independent occurrence UUID through persistence, modal callbacks and notification userInfo. The protected journal separates observed triggers/deliveries, upcoming plans and cancelled/unverified records. Old records without delivery evidence remain unverified; elapsed time alone cannot turn a plan into a fired alert. Delivered notifications are captured before removal; late import is accepted only if the actual delivery predates cancellation. These local UUIDs and original content are never exported in diagnostic events.
