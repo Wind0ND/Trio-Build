@@ -50,4 +50,16 @@ final class AlertJournalEvidenceTests: XCTestCase {
         var journal = AlertJournal(); journal.issue(old, now: now)
         XCTAssertTrue(journal.triggeredHistory(now: now).isEmpty)
     }
+
+    func testObservedDeliveryBeforeCancellationCanBeImportedLater() {
+        var journal = AlertJournal()
+        let plan = JournalAlert(source: "trio.aps", kind: "late-import", title: "", body: "", issuedAt: now,
+                                scheduledFor: now.addingTimeInterval(1200))
+        journal.issue(plan, now: now)
+        journal.resolve(source: plan.source, kind: plan.kind, at: now.addingTimeInterval(1300))
+        journal.markTriggered(id: plan.id, at: now.addingTimeInterval(1201))
+        XCTAssertEqual(journal.triggeredHistory(now: now.addingTimeInterval(1400)).map(\.id), [plan.id])
+        XCTAssertEqual(journal.entries.first?.triggeredAt, now.addingTimeInterval(1201))
+        XCTAssertNil(journal.entries.first?.cancelledAt)
+    }
 }
