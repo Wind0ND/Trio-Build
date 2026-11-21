@@ -78,16 +78,11 @@ private struct PrivacyCurveView: View {
 
     var body: some View {
         Canvas { context, size in
+            // References extend 2pt beyond each end of the curve without enlarging the activity.
             let geometry = PrivacyCurveGeometry(values: state.effectiveCurveReadings,
-                width: max(0, size.width - 2), height: max(0, size.height - 2),
+                width: max(0, size.width - 6), height: max(0, size.height - 2),
                 references: state.curveReferences ?? .init(), dual: dual)
-            func point(_ p: PrivacyCurveGeometry.Point) -> CGPoint { CGPoint(x: p.x + 1, y: p.y + 1) }
-            for y in geometry.referenceY {
-                var path = Path()
-                path.move(to: CGPoint(x: 1, y: y + 1))
-                path.addLine(to: CGPoint(x: size.width - 1, y: y + 1))
-                context.stroke(path, with: .color(Color(white: 0.32)), lineWidth: 0.5)
-            }
+            func point(_ p: PrivacyCurveGeometry.Point) -> CGPoint { CGPoint(x: p.x + 3, y: p.y + 1) }
             var curve = Path()
             for segment in geometry.segments {
                 curve.move(to: point(segment.start))
@@ -95,10 +90,17 @@ private struct PrivacyCurveView: View {
             }
             for p in geometry.isolatedPoints {
                 curve.move(to: point(p))
-                curve.addLine(to: CGPoint(x: p.x + 1.1, y: p.y + 1))
+                curve.addLine(to: CGPoint(x: p.x + 3.1, y: p.y + 1))
             }
             context.stroke(curve, with: .color(state.color.swiftUIColor),
                            style: StrokeStyle(lineWidth: 1.25, lineCap: .round, lineJoin: .round))
+            // Draw references last so they stay above the curve at crossings and overlaps.
+            for y in geometry.referenceY {
+                var path = Path()
+                path.move(to: CGPoint(x: 1, y: y + 1))
+                path.addLine(to: CGPoint(x: size.width - 1, y: y + 1))
+                context.stroke(path, with: .color(Color(white: 0.45)), lineWidth: 1)
+            }
         }
         .frame(width: presentation.preferredWidth, height: height)
         .accessibilityElement(children: .ignore)
