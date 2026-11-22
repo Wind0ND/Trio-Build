@@ -562,7 +562,7 @@ extension BaseDeviceDataManager: PumpManagerDelegate {
     }
 
     func pumpManagerWantsDeletion(_ pumpManager: PumpManager) async {
-        await withCheckedContinuation { continuation in
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             processQueue.async {
                 defer { continuation.resume() }
                 guard self.pumpManager === pumpManager else { return }
