@@ -6,6 +6,34 @@ final class MedtrumExtendedLifePolicyTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
     private let session = Data([1, 0, 0, 0])
 
+    func testCrossingIsLatchedBeforeTheNextDeviceReportAndSurvivesRollback() throws {
+        var policy = MedtrumExtendedLifePolicy()
+        policy.observe(age: 431_999, sessionID: session, at: now)
+        XCTAssertEqual(policy.evaluate(extended: true, activeSession: true, sessionID: session, activatedAt: nil,
+                                       now: now.addingTimeInterval(2)), .extendedAgeLimit)
+        let restored = try JSONDecoder().decode(MedtrumExtendedLifePolicy.self, from: JSONEncoder().encode(policy))
+        XCTAssertEqual(restored.restriction(extended: true, activeSession: true, sessionID: session,
+                                           activatedAt: nil, now: now), .extendedAgeLimit)
+    }
+
+    func testRepeatedEqualReportDoesNotMoveTheBoundaryLater() {
+        var policy = MedtrumExtendedLifePolicy()
+        policy.observe(age: 431_999, sessionID: session, at: now)
+        policy.observe(age: 431_999, sessionID: session, at: now.addingTimeInterval(5))
+        XCTAssertEqual(policy.restriction(extended: true, activeSession: true, sessionID: session,
+                                         activatedAt: nil, now: now.addingTimeInterval(5)), .extendedAgeLimit)
+    }
+
+    func testUnconfirmedLifetimePreferenceCannotReopenTheSameExtendedPatch() {
+        var policy = MedtrumExtendedLifePolicy()
+        _ = policy.evaluate(extended: true, activeSession: true, sessionID: session,
+                            activatedAt: now.addingTimeInterval(-500_000), now: now)
+        XCTAssertEqual(policy.restriction(extended: false, activeSession: true, sessionID: session,
+                                         activatedAt: now.addingTimeInterval(-500_000), now: now), .extendedAgeLimit)
+        XCTAssertEqual(policy.restriction(extended: false, activeSession: true, sessionID: Data([2]),
+                                         activatedAt: now, now: now), .none)
+    }
+
     func testExtendedSessionChangesAtExactly120Hours() {
         let policy = MedtrumExtendedLifePolicy()
         for (age, expected) in [(431_999.0, false), (432_000.0, true), (432_001.0, true), (800_000.0, true)] {

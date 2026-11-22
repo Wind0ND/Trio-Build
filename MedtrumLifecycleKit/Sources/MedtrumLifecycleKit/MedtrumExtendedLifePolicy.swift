@@ -23,6 +23,12 @@ public struct MedtrumExtendedLifePolicy: Codable, Equatable {
         observedAt = at
     }
 
+    public mutating func evaluate(
+        extended: Bool, activeSession: Bool, sessionID: Data, activatedAt: Date?, now: Date
+    ) -> Restriction {
+        restriction(extended: extended, activeSession: activeSession, sessionID: sessionID, activatedAt: activatedAt, now: now)
+    }
+
     public func restriction(
         extended: Bool, activeSession: Bool, sessionID: Data,
         activatedAt: Date?, now: Date
