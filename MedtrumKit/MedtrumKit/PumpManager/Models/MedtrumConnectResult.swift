@@ -37,7 +37,7 @@ public enum MedtrumConnectError: LocalizedError {
         case .isSuspended:
             return String(localized: "Bolus issue. Patch is suspended. Resume delivery", comment: "MedtrumError patch suspended")
         case .automaticBolusUnavailable:
-            return String(localized: "Automatic bolus unavailable. Check patch status.", comment: "Medtrum automatic bolus capability restriction")
+            return String(localized: "Automatic bolus unavailable. Check patch status.", bundle: Bundle(for: MedtrumPumpManager.self), comment: "Medtrum automatic bolus capability restriction")
         }
     }
 

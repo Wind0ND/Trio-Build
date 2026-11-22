@@ -72,8 +72,8 @@ struct MedtrumKitSettings: View {
 
                 if viewModel.isBasalOnly {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Basal only").font(.headline)
-                        Text("Automatic SMB is disabled after five days. Automatic basal adjustment remains available in closed loop.")
+                        Text("Basal only", bundle: Bundle(for: MedtrumPumpManager.self)).font(.headline)
+                        Text("Automatic SMB is disabled after five days. Automatic basal adjustment remains available in closed loop.", bundle: Bundle(for: MedtrumPumpManager.self))
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                 }

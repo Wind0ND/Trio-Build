@@ -401,7 +401,7 @@ extension MedtrumKitSettingsViewModel {
         patchState = state.pumpState
         useSilentTones = state.useSilentTones
         isBasalOnly = state.isExtendedBasalOnly()
-        patchStateString = isBasalOnly ? String(localized: "Basal only") : state.pumpState.description
+        patchStateString = isBasalOnly ? String(localized: "Basal only", bundle: Bundle(for: MedtrumPumpManager.self)) : state.pumpState.description
         pumpTime = state.pumpTime
         pumpTimeSyncedAt = state.pumpTimeSyncedAt
         reservoirLevel = patchState != .reservoirEmpty ? state.reservoir : 0

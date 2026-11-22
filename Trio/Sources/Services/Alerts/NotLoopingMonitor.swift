@@ -28,6 +28,9 @@ final class NotLoopingMonitor: Injectable {
     @Injected() private var broadcaster: Broadcaster!
 
     private var lastLoopDate = Date()
+    private var hasLoopAnchor = false
+    private var remindersEnabled = true
+    private let alarmLock = NSRecursiveLock()
 
     /// Minutes of staleness for each Time-Sensitive warning step.
     private static let warningMinutes: [Int] = [20, 40, 60, 80, 100]
@@ -58,29 +61,50 @@ final class NotLoopingMonitor: Injectable {
 
     init(resolver: Resolver) {
         injectServices(resolver)
+        lastLoopDate = apsManager.lastLoopDate
+        hasLoopAnchor = true
         subscribe(to: apsManager.lastLoopDateSubject.eraseToAnyPublisher())
+        subscribe(to: HiroLoopReminderPreferences.shared.$enabled.eraseToAnyPublisher())
         broadcaster.register(SnoozeObserver.self, observer: self)
+        broadcaster.register(SettingsObserver.self, observer: self)
     }
 
     /// Publisher-only seam for tests: assigns the alert manager directly and
     /// subscribes to a supplied loop-date publisher, avoiding the need to stub
     /// the full `APSManager` protocol.
     init(loopDates: AnyPublisher<Date, Never>, trioAlertManager: TrioAlertManager,
-         remindersEnabled _: AnyPublisher<Bool, Never> = Just(true).eraseToAnyPublisher()) {
+         remindersEnabled: AnyPublisher<Bool, Never> = Just(true).eraseToAnyPublisher()) {
         self.trioAlertManager = trioAlertManager
         subscribe(to: loopDates)
+        subscribe(to: remindersEnabled)
     }
 
     private func subscribe(to loopDates: AnyPublisher<Date, Never>) {
         loopDates
             .sink { [weak self] date in
-                self?.lastLoopDate = date
-                self?.rescheduleAlarm()
+                guard let self else { return }
+                self.alarmLock.withLock {
+                    self.lastLoopDate = date
+                    self.hasLoopAnchor = true
+                    self.rescheduleAlarm()
+                }
             }
             .store(in: &subscriptions)
     }
 
+    private func subscribe(to enabled: AnyPublisher<Bool, Never>) {
+        enabled.removeDuplicates().sink { [weak self] value in
+            guard let self else { return }
+            self.alarmLock.withLock {
+                self.remindersEnabled = value
+                if self.hasLoopAnchor { self.rescheduleAlarm() }
+            }
+        }.store(in: &subscriptions)
+    }
+
     private func rescheduleAlarm() {
+        alarmLock.lock()
+        defer { alarmLock.unlock() }
         // Retract first — clears pending UN, modal timer, and throttler so the
         // next issueAlert isn't blocked by 5-min duplicate suppression.
         for identifier in Self.allIDs {
@@ -93,7 +117,8 @@ final class NotLoopingMonitor: Injectable {
         // Looping" alarm would just be noise. nil injection (publisher-only
         // test seam) passes so the existing tests still exercise the
         // retract/reschedule plumbing.
-        guard settingsManager?.settings.dosingMode.automation != AutomationLevel.off,
+        guard hasLoopAnchor, remindersEnabled,
+              settingsManager?.settings.dosingMode.automation != AutomationLevel.off,
               apsManager?.isManualTempBasal != true,
               apsManager?.isSuspended != true
         else { return }
@@ -143,4 +168,8 @@ extension NotLoopingMonitor: SnoozeObserver {
     @MainActor func snoozeDidChange(_: Date) {
         rescheduleAlarm()
     }
+}
+
+extension NotLoopingMonitor: SettingsObserver {
+    func settingsDidChange(_: TrioSettings) { rescheduleAlarm() }
 }

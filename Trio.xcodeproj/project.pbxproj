@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA2311230000000000000011 /* LoopTimeoutReminderPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2311230000000000000012 /* LoopTimeoutReminderPreferences.swift */; };
 		AA9300000000000000000011 /* ExtensionsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9300000000000000000001 /* ExtensionsSettingsView.swift */; };
 		AA9300000000000000000012 /* AlertJournalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9300000000000000000002 /* AlertJournalStore.swift */; };
 		AA9300000000000000000013 /* AlertJournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9300000000000000000003 /* AlertJournalView.swift */; };
@@ -1290,6 +1291,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AA2311230000000000000012 /* LoopTimeoutReminderPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopTimeoutReminderPreferences.swift; sourceTree = "<group>"; };
 		AA9300000000000000000001 /* ExtensionsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionsSettingsView.swift; sourceTree = "<group>"; };
 		AA9300000000000000000002 /* AlertJournalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertJournalStore.swift; sourceTree = "<group>"; };
 		AA9300000000000000000003 /* AlertJournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertJournalView.swift; sourceTree = "<group>"; };
@@ -2538,6 +2540,7 @@
 			isa = PBXGroup;
 			children = (
 				AA9300000000000000000001 /* ExtensionsSettingsView.swift */,
+				AA2311230000000000000012 /* LoopTimeoutReminderPreferences.swift */,
 				AA9300000000000000000002 /* AlertJournalStore.swift */,
 				AA9300000000000000000003 /* AlertJournalView.swift */,
 			);
@@ -5888,6 +5891,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA9300000000000000000011 /* ExtensionsSettingsView.swift in Sources */,
+				AA2311230000000000000011 /* LoopTimeoutReminderPreferences.swift in Sources */,
 				AA9300000000000000000012 /* AlertJournalStore.swift in Sources */,
 				AA9300000000000000000013 /* AlertJournalView.swift in Sources */,
 				AA9200000000000000000004 /* HiroAppIcon.swift in Sources */,

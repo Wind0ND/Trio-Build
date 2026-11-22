@@ -7,6 +7,7 @@ import Swinject
 struct HiroExtensionsSettingsView: BaseView {
     let resolver: Resolver
     @ObservedObject var state: Settings.StateModel
+    @StateObject private var alertStore = HiroLoopReminderPreferences.shared
     @Environment(\.colorScheme) var colorScheme
     @Environment(AppState.self) var appState
 
@@ -20,6 +21,11 @@ struct HiroExtensionsSettingsView: BaseView {
             }
             Section {
                 Text("Device Lifetime Extensions").navigationLink(to: .deviceLifetimeExtensions, from: self)
+            }
+            Section {
+                Toggle("Loop timeout reminders", isOn: $alertStore.enabled)
+            } footer: {
+                Text("Notify when automatic dosing has not completed for 20 minutes or longer. Turning this off also disables the two-hour escalation for this reminder. Other alerts remain enabled.")
             }
             Section {
                 LogShareRow(

@@ -1,10 +1,10 @@
 {
   "en-US": {
     "description": "hiro is a personal test build with customizable on-screen presentation, viewing protection and device connectivity.",
-    "whats_new": "Restores the earlier Live Activity presentation and simplifies the available styles. Please check the Dynamic Island after opening hiro and returning to the Home Screen."
+    "whats_new": "Improves extended device-session handling and adds an independent timeout reminder option in Extensions. Please check device status, reminder preferences and normal background use."
   },
   "zh-Hans": {
     "description": "hiro 是用于个人测试的应用版本，提供可自定义的界面展示、查看保护和设备连接功能。",
-    "whats_new": "恢复早期实时活动展示，简化样式选择。请打开 hiro 后回到主屏幕，检查灵动岛显示。"
+    "whats_new": "改进设备长时间会话处理，在扩展中新增独立的超时提醒选项。请检查设备状态、提醒设置及日常后台使用表现。"
   }
 }

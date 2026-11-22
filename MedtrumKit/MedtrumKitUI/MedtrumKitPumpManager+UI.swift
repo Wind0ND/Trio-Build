@@ -108,7 +108,7 @@ extension MedtrumPumpManager: PumpManagerUI {
         } else if state.isExtendedBasalOnly() && !inSignalLoss {
             return PumpStatusHighlight(
                 localizedMessage: String(
-                    localized: "Basal only",
+                    localized: "Basal only", bundle: Bundle(for: MedtrumPumpManager.self),
                     comment: "Status highlight when extended patch has expired, i.e. lifetime past 120 hours."
                 ),
                 imageName: "exclamationmark.circle.fill",

@@ -78,6 +78,20 @@ final class SpyAlertManager: TrioAlertManager {
         return spy
     }
 
+    @Test("The loop reminder defaults on and preserves an explicit opt-out across restart")
+    func reminderChoiceSurvivesRestart() throws {
+        let name = "LoopReminderTests." + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let store = HiroLoopReminderPreferences(defaults: defaults)
+        #expect(store.enabled)
+        store.enabled = false
+        #expect(!store.allows(criticalID))
+        for step in 1 ... 5 { #expect(!store.allows(warningID(step))) }
+        #expect(store.allows(Alert.Identifier(managerIdentifier: "Medtrum", alertIdentifier: "occlusion")))
+        #expect(!HiroLoopReminderPreferences(defaults: defaults).enabled)
+    }
+
     @Test("Disabling the loop reminder retracts the entire ladder without disabling other alerts")
     func disablingReminderClearsPlans() {
         let dates = PassthroughSubject<Date, Never>()

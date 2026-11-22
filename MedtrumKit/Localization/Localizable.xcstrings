@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Basal only" : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "仅基础率"}}}},
+    "Automatic SMB is disabled after five days. Automatic basal adjustment remains available in closed loop." : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "药贴使用满五天后停用自动 SMB。闭环模式下仍可自动调整基础率。"}}}},
+    "Automatic bolus unavailable. Check patch status." : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "当前无法自动输注大剂量，请检查药贴状态。"}}}},
     "The pump base rejected authorization (code 7). Disconnect the base from power for 10 seconds, then retry." : {
       "extractionState" : "manual",
       "localizations" : {

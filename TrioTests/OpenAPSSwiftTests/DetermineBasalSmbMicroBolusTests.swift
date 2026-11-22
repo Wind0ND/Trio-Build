@@ -3,13 +3,13 @@ import Testing
 @testable import Trio
 
 @Suite("determineBasal SMB microbolus behavior") struct DetermineBasalSmbMicroBolusTests {
-    @Test("Device SMB restriction selects the complete native basal-only algorithm", arguments: [1, 2, 5])
-    func deviceRestrictionMatchesNativeBasalOnly(delta: Decimal) throws {
+    @Test("Device SMB restriction selects the complete native basal-only algorithm", arguments: [-3, -1, 0, 1, 2, 5], [80, 95, 110, 140, 190])
+    func deviceRestrictionMatchesNativeBasalOnly(delta: Decimal, glucose: Decimal) throws {
         let inputs = buildInputs(lastBolusOffsetMinutes: 10)
         var profile = inputs.profile
         profile.skipNeutralTemps = false
         let glucoseStatus = GlucoseStatus(
-            delta: delta, glucose: 140, noise: 1, shortAvgDelta: delta, longAvgDelta: delta,
+            delta: delta, glucose: glucose, noise: 1, shortAvgDelta: delta, longAvgDelta: delta,
             date: inputs.currentTime, lastCalIndex: nil, device: "test"
         )
         let iobForecast = (0 ..< 48).map { index -> IobResult in
@@ -38,13 +38,12 @@ import Testing
         let restrictedResult = try calculate(deviceAllowsSMB: false, userDisablesSMB: false)
         let native = try #require(nativeResult)
         let restricted = try #require(restrictedResult)
-        print("Basal-only diagnostic delta=\(delta) native=\(native.rate as Any)/\(native.duration as Any): \(native.reason)")
-        print("Device-restricted diagnostic delta=\(delta) actual=\(restricted.rate as Any)/\(restricted.duration as Any): \(restricted.reason)")
         #expect(native.units == nil)
         #expect(restricted.units == nil)
         #expect(restricted.rate == native.rate)
         #expect(restricted.duration == native.duration)
         #expect(restricted.iob == native.iob)
+        #expect(restricted.reason == native.reason)
     }
 
     private func buildInputs(lastBolusOffsetMinutes: Decimal) -> (

@@ -435,9 +435,16 @@ public extension MedtrumPumpManager {
             }
             if activationType == .automatic, self.automaticBolusContext() != originalContext {
                 self.deliveryLock.withLock {
-                    self.state.bolusDose = nil
-                    self.state.awaitingBolusReply = false
+                    if self.state.bolusDose === dose {
+                        self.state.bolusDose = nil
+                        self.state.awaitingBolusReply = false
+                    }
                     self.notifyStateDidChange()
+                }
+                // No command was sent: do not leave a persisted pending bolus after restart.
+                do { try self.checkpointDelivery() } catch {
+                    finish(.configuration(MedtrumWriteError.persistenceFailed))
+                    return
                 }
                 finish(.deviceState(MedtrumConnectError.automaticBolusUnavailable))
                 return

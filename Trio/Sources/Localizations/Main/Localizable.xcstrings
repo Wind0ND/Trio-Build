@@ -1,6 +1,8 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Loop timeout reminders" : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "闭环超时提醒"}}}},
+    "Notify when automatic dosing has not completed for 20 minutes or longer. Turning this off also disables the two-hour escalation for this reminder. Other alerts remain enabled." : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "自动输注超过 20 分钟未成功完成时提醒。关闭后也将停用此提醒的两小时升级警报，其他警报不受影响。"}}}},
     "External insulin was recorded." : { "localizations" : { "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已记录外部胰岛素。" } } } },
     "The insulin calculation could not be refreshed." : { "localizations" : { "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "胰岛素计算未能更新。" } } } },
     "The external insulin entry could not be saved." : { "localizations" : { "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "外部胰岛素记录保存失败。" } } } },

@@ -385,6 +385,11 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
         )
         let muted = muter.shouldMute(at: now)
         for entry in entries {
+            let identifier = Alert.Identifier(managerIdentifier: entry.managerIdentifier, alertIdentifier: entry.alertIdentifier)
+            guard HiroLoopReminderPreferences.shared.allows(identifier) else {
+                alertHistoryStorage.acknowledgeAlert(entry.issuedDate, nil)
+                continue
+            }
             switch AlertColdStartReplay.decision(
                 for: entry,
                 now: now,

@@ -90,8 +90,11 @@ import Testing
         current.automaticBolusAllowed = false
         #expect(!captured.permitsDelivery(current: current, deliverAt: now, now: now))
         #expect(current.permitsDelivery(current: current, deliverAt: now, now: now))
+        #expect(captured.canRecalculateBasalOnly(current: current))
+        #expect(!current.canRecalculateBasalOnly(current: current))
         current = captured
         current.pumpSessionID = Data([2, 0, 0, 0])
+        #expect(!captured.canRecalculateBasalOnly(current: current))
         #expect(!captured.permitsDelivery(current: current, deliverAt: now, now: now))
         current = captured
         current.pumpSessionStartedAt = now
