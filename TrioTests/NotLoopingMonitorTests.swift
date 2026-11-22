@@ -148,6 +148,17 @@ final class SpyAlertManager: TrioAlertManager {
         _ = monitor
     }
 
+    @Test("Snoozing another alert in open loop cannot arm the automated-loop watchdog")
+    @MainActor func openLoopSnoozeDoesNotArmWatchdog() {
+        let dates = PassthroughSubject<Date, Never>()
+        let spy = SpyAlertManager()
+        let monitor = NotLoopingMonitor(loopDates: dates.eraseToAnyPublisher(), trioAlertManager: spy)
+        monitor.settingsDidChange(TrioSettings(dosingMode: .open))
+        dates.send(Date())
+        monitor.snoozeDidChange(Date().addingTimeInterval(900))
+        #expect(spy.issuedAlerts.isEmpty)
+    }
+
     @Test("A loop success arms five warnings and one critical") func armsFullLadder() {
         let spy = armLadder()
         #expect(spy.issuedAlerts.count == 6)

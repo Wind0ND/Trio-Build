@@ -72,6 +72,7 @@ final class NotLoopingMonitor: Injectable {
         subscribe(to: HiroLoopReminderPreferences.shared.$enabled.eraseToAnyPublisher())
         broadcaster.register(SnoozeObserver.self, observer: self)
         broadcaster.register(SettingsObserver.self, observer: self)
+        if settingsManager.settings.dosingMode.automation == .off { retractAll() }
     }
 
     /// Publisher-only seam for tests: assigns the alert manager directly and
@@ -112,6 +113,11 @@ final class NotLoopingMonitor: Injectable {
         }.store(in: &subscriptions)
     }
 
+    private var expectsAutomaticDosing: Bool {
+        let mode = settingsManager?.settings.dosingMode ?? lastDosingMode
+        return mode?.automation != AutomationLevel.off && apsManager?.isManualTempBasal != true && apsManager?.isSuspended != true
+    }
+
     private func retractAll() {
         for identifier in Self.allIDs { trioAlertManager.retractAlert(identifier: identifier) }
     }
@@ -129,11 +135,7 @@ final class NotLoopingMonitor: Injectable {
         // Looping" alarm would just be noise. nil injection (publisher-only
         // test seam) passes so the existing tests still exercise the
         // retract/reschedule plumbing.
-        guard hasLoopAnchor, remindersEnabled,
-              settingsManager?.settings.dosingMode.automation != AutomationLevel.off,
-              apsManager?.isManualTempBasal != true,
-              apsManager?.isSuspended != true
-        else { return }
+        guard hasLoopAnchor, remindersEnabled, expectsAutomaticDosing else { return }
 
         let now = Date()
         for (index, minutes) in Self.warningMinutes.enumerated() {
@@ -189,7 +191,7 @@ extension NotLoopingMonitor: SnoozeObserver {
     /// drops the steps that fall inside the window and keeps the rest.
     @MainActor func snoozeDidChange(_: Date) {
         alarmLock.withLock {
-            guard remindersEnabled, hasLoopAnchor else { return }
+            guard remindersEnabled, hasLoopAnchor, expectsAutomaticDosing else { return }
             // Snooze clears warning notifications; preserve critical alarms and their history.
             let now = Date()
             for (index, minutes) in Self.warningMinutes.enumerated() {
