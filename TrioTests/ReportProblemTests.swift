@@ -7,6 +7,11 @@ import UniformTypeIdentifiers
 @testable import Trio
 
 @Suite("Report a Problem Tests") struct ReportProblemTests {
+    @Test("New reports require explicit consent to attach device logs")
+    func optionalAttachments() {
+        #expect(!ReportDraft().attachLogs)
+    }
+
     private static let context = ProblemReport.Context(
         appVersion: "1.0.0",
         buildNumber: "1",
@@ -180,14 +185,14 @@ import UniformTypeIdentifiers
     }
 
     @Test("Lengths are counted in code points like the server") func codePointLengths() {
-        let thumb = "👍🏽"
+        let thumb = "馃憤馃徑"
         #expect(thumb.count == 1 && thumb.unicodeScalars.count == 2)
         let limit = ReportDraft.maxDescriptionLength / 2
         #expect(ReportDraft(description: String(repeating: thumb, count: limit)).canSubmit)
         #expect(!ReportDraft(description: String(repeating: thumb, count: limit + 1)).canSubmit)
 
         var draft = ReportDraft(title: String(repeating: thumb, count: 150), description: "x", isAnonymous: false)
-        draft.contact = ProblemReport.Contact(name: String(repeating: "é", count: 250), email: "user@example.test")
+        draft.contact = ProblemReport.Contact(name: String(repeating: "茅", count: 250), email: "user@example.test")
         let report = draft.report(context: Self.context, attachments: [])
         #expect(report.title?.unicodeScalars.count == ReportDraft.maxTitleLength)
         #expect(report.contact?.name.unicodeScalars.count == ReportDraft.maxContactLength)

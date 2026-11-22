@@ -139,6 +139,27 @@ import Testing
         #expect(store.allEvents.last?.count == DiagnosticEventStore.maximumEvents + 4)
     }
 
+    @Test("Appending a small burst preserves the stored checkpoint and survives relaunch")
+    func boundedPersistenceWrites() throws {
+        let defaults = Self.defaults()
+        let seeded = Array(repeating: DiagnosticEvent(timestamp: Self.start, feature: "activity",
+            stage: "lifecycle", outcome: "created", attempt: nil, count: nil), count: 512)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        defaults.set(try encoder.encode(seeded), forKey: DiagnosticEventStore.defaultsKey)
+        let store = DiagnosticEventStore(defaults: defaults, now: { Self.start })
+        let checkpoint = defaults.data(forKey: DiagnosticEventStore.defaultsKey)
+        for _ in 0..<4 {
+            #expect(store.record(feature: "alerts", stage: "delivery", outcome: "delivered"))
+        }
+        #expect(defaults.data(forKey: DiagnosticEventStore.defaultsKey) == checkpoint)
+        let reopened = DiagnosticEventStore(defaults: defaults, now: { Self.start })
+        #expect(reopened.allEvents.count == 516)
+        #expect(reopened.allEvents.suffix(4).allSatisfy { $0.stage == "delivery" })
+        reopened.removeAll()
+        #expect(DiagnosticEventStore(defaults: defaults, now: { Self.start }).allEvents.isEmpty)
+    }
+
     @Test("Events persist across store instances so pre-registration pairing survives a relaunch") func persistence() {
         let defaults = Self.defaults()
         let first = DiagnosticEventStore(defaults: defaults, now: { Self.start })
