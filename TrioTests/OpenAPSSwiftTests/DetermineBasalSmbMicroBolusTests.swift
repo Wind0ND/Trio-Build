@@ -38,6 +38,8 @@ import Testing
         let restrictedResult = try calculate(deviceAllowsSMB: false, userDisablesSMB: false)
         let native = try #require(nativeResult)
         let restricted = try #require(restrictedResult)
+        print("Basal-only diagnostic delta=\(delta) native=\(native.rate as Any)/\(native.duration as Any): \(native.reason)")
+        print("Device-restricted diagnostic delta=\(delta) actual=\(restricted.rate as Any)/\(restricted.duration as Any): \(restricted.reason)")
         #expect(native.units == nil)
         #expect(restricted.units == nil)
         #expect(restricted.rate == native.rate)

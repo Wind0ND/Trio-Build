@@ -34,7 +34,9 @@ jobs:
         run: swift --version
 
       - name: Run algorithm tests
-        run: time swift test --package-path AlgorithmPackage
+        run: |
+          swift test --package-path MedtrumLifecycleKit
+          time swift test --package-path AlgorithmPackage
 
       - name: Save cache
         # PRs read the dev cache but never write it — avoids churning the
