@@ -23,6 +23,7 @@ import Foundation
             try await request.performRestart()
         } catch {
             warning(.liveActivity, "Restarting Live Activity from shortcut failed", error: error)
+            throw error
         }
         return .result(value: String(localized: "Trio Live Activity restarted successfully."))
     }

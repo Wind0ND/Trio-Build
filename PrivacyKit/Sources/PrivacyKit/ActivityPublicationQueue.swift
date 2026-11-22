@@ -5,8 +5,20 @@ public enum ActivityLifecycleAction: Equatable, Sendable { case update, create, 
 public enum ActivityLifecyclePolicy {
     public static let sessionDuration: TimeInterval = 8 * 60 * 60
 
+    /// Disabling must work before data loads and while only a scheduled session exists.
+    @MainActor public static func applyPreferences(enabled: Bool, handoffEnabled: Bool,
+        endAll: () async -> Void, cancelPending: () async -> Void) async -> Bool {
+        guard enabled else { await endAll(); return false }
+        if !handoffEnabled { await cancelPending() }
+        return true
+    }
+
     public static func shouldRenew(start: Date, now: Date, foreground: Bool) -> Bool {
         foreground && now.timeIntervalSince(start) >= 3600
+    }
+
+    public static func reusePending(start: Date, target: Date, sameCover: Bool, foreground: Bool) -> Bool {
+        abs(start.timeIntervalSince(target)) < 1 && (sameCover || !foreground)
     }
 
     /// Foreground registration is required. Keep just the next session pending.

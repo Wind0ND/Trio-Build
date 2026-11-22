@@ -49,6 +49,30 @@ final class CurveAndLifecycleTests: XCTestCase {
         }
     }
 
+    @MainActor func testDisablingRetiresPendingSessionsBeforeLookingForDataOrAnOwner() async {
+        for enabled in [false, true] {
+            var pending = true
+            var endedAll = false
+            let publish = await ActivityLifecyclePolicy.applyPreferences(enabled: enabled, handoffEnabled: false,
+                endAll: { endedAll = true; pending = false }, cancelPending: { pending = false })
+            XCTAssertFalse(pending)
+            XCTAssertEqual(endedAll, !enabled)
+            XCTAssertEqual(publish, enabled)
+        }
+    }
+
+    func testPendingSessionUsesTheCurrentOwnerDeadlineAndCover() {
+        let target = Date()
+        XCTAssertTrue(ActivityLifecyclePolicy.reusePending(start: target, target: target,
+            sameCover: true, foreground: true))
+        XCTAssertFalse(ActivityLifecyclePolicy.reusePending(start: target, target: target,
+            sameCover: false, foreground: true))
+        XCTAssertTrue(ActivityLifecyclePolicy.reusePending(start: target, target: target,
+            sameCover: false, foreground: false))
+        XCTAssertFalse(ActivityLifecyclePolicy.reusePending(start: target.addingTimeInterval(3600), target: target,
+            sameCover: true, foreground: false))
+    }
+
     func testSuccessorUsesOriginalSessionStartAcrossProcessRelaunch() {
         let start = Date(timeIntervalSince1970: 1000)
         let deadline = start.addingTimeInterval(8 * 3600)
