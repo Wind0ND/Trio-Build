@@ -22,8 +22,10 @@ import Testing
                 trioCustomOrefVariables: variables, currentTime: inputs.currentTime
             )
         }
-        let native = try #require(calculate(deviceAllowsSMB: true, userDisablesSMB: true))
-        let restricted = try #require(calculate(deviceAllowsSMB: false, userDisablesSMB: false))
+        let nativeResult = try calculate(deviceAllowsSMB: true, userDisablesSMB: true)
+        let restrictedResult = try calculate(deviceAllowsSMB: false, userDisablesSMB: false)
+        let native = try #require(nativeResult)
+        let restricted = try #require(restrictedResult)
         #expect(native.units == nil)
         #expect(restricted.units == nil)
         #expect(restricted.rate == native.rate)
