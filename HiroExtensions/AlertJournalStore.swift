@@ -7,7 +7,7 @@ import UserNotifications
 final class HiroAlertJournal: @unchecked Sendable {
     static let shared = HiroAlertJournal()
     static let changed = Notification.Name("com.hiro.alertJournal.changed")
-    static let occurrenceKey = "hiro.alert.occurrence"
+    static let occurrenceKey = AlertUserInfoKey.occurrence.rawValue
     private let repository: AlertJournalRepository
     private var observer: NSObjectProtocol?
     var unavailable: Bool { repository.unavailable }

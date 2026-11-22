@@ -4,6 +4,7 @@ import UserNotifications
 enum AlertUserInfoKey: String {
     case managerIdentifier = "trio.alert.managerIdentifier"
     case alertIdentifier = "trio.alert.alertIdentifier"
+    case occurrence = "hiro.alert.occurrence"
 }
 
 enum NotificationCategoryIdentifier: String {
@@ -20,7 +21,7 @@ enum NotificationCategoryIdentifier: String {
     }
 }
 
-enum NotificationResponseAction: String, CaseIterable {
+enum NotificationResponseAction: String, CaseIterable, Codable {
     case snooze15 = "Trio.snooze15"
     case snooze1hr = "Trio.snooze1hr"
     case snooze3hr = "Trio.snooze3hr"
@@ -54,6 +55,37 @@ enum NotificationResponseAction: String, CaseIterable {
         case .snooze6hr:
             return String(localized: "Snooze 6 hrs", comment: "Snooze glucose alerts for 6 hours")
         }
+    }
+}
+
+/// A mirrored notification action carries only the originating occurrence and
+/// the tap time; queued delivery must never restart its snooze interval.
+struct WatchAlertSnooze: Codable {
+    static let messageKey = "watchAlertSnooze"
+    let managerIdentifier: String
+    let alertIdentifier: String
+    private let occurrence: UUID
+    private let action: NotificationResponseAction
+    private let requestedAt: Date
+
+    init?(content: UNNotificationContent, action: NotificationResponseAction, at date: Date) {
+        guard let manager = content.userInfo[AlertUserInfoKey.managerIdentifier.rawValue] as? String,
+              let slug = content.userInfo[AlertUserInfoKey.alertIdentifier.rawValue] as? String,
+              let raw = content.userInfo[AlertUserInfoKey.occurrence.rawValue] as? String,
+              let id = UUID(uuidString: raw) else { return nil }
+        managerIdentifier = manager
+        alertIdentifier = slug
+        occurrence = id
+        let category = NotificationCategoryIdentifier.alert(isCritical: content.interruptionLevel == .critical, slug: slug)
+        self.action = category == .quickSnoozeOnly ? .snooze15 : action
+        requestedAt = date
+    }
+
+    func until(currentOccurrence: UUID?, isCritical: Bool, now: Date) -> Date? {
+        guard currentOccurrence == occurrence, requestedAt.timeIntervalSince(now) <= 30 else { return nil }
+        let category = NotificationCategoryIdentifier.alert(isCritical: isCritical, slug: alertIdentifier)
+        let deadline = min(requestedAt, now).addingTimeInterval(category.limitSnooze(action.duration))
+        return deadline > now ? deadline : nil
     }
 }
 

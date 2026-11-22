@@ -5,7 +5,7 @@ import SwiftUI
 import WidgetKit
 import UIKit
 
-/// A full-width native intent hit region, shared by lock-screen and expanded presentations.
+/// The lock-screen card can request a refresh independently of the Dynamic Island.
 struct PrivateActivityControls: View {
     let privacy: PrivacyActivityState
     let stale: Bool

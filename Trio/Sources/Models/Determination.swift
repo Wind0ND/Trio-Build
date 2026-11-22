@@ -36,6 +36,7 @@ struct Determination: JSON, Equatable {
     /// Remaining COB per 5 min forecast step; display-only,
     /// not part of CodingKeys so the serialized JSON is unchanged.
     var cobProjection: [Decimal]? = nil
+    var isSimulated = false
 }
 
 struct Predictions: JSON, Equatable {

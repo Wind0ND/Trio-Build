@@ -11,7 +11,7 @@ extension LiveActivityManager {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: GlucoseStored.self,
             onContext: context,
-            predicate: NSPredicate.predicateForSixHoursAgo,
+            predicate: glucoseStorage.activeReadings(matching: NSPredicate.predicateForSixHoursAgo),
             key: "date",
             ascending: false
         )
@@ -35,7 +35,7 @@ extension LiveActivityManager {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: OrefDetermination.self,
             onContext: context,
-            predicate: NSPredicate.predicateFor30MinAgoForDetermination,
+            predicate: glucoseStorage.activeDeterminations(matching: NSPredicate.predicateFor30MinAgoForDetermination),
             key: "deliverAt",
             ascending: false,
             fetchLimit: 1,

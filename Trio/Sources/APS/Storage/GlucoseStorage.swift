@@ -8,8 +8,9 @@ import SwiftDate
 import SwiftUI
 import Swinject
 
-protocol GlucoseStorage {
-    var permitsSimulatedTherapy: Bool { get set }
+protocol GlucoseStorage: AnyObject {
+    var mockPumpConnected: Bool? { get set }
+    func sourcePredicate(forHistory: Bool) -> NSPredicate
     var updatePublisher: AnyPublisher<Void, Never> { get }
     @discardableResult func storeGlucose(_ glucose: [BloodGlucose]) async throws -> [BloodGlucose]
     @discardableResult func backfillGlucose(_ glucose: [BloodGlucose]) async throws -> [BloodGlucose]
@@ -31,6 +32,22 @@ protocol GlucoseStorage {
     func deleteGlucose(_ treatmentObjectID: NSManagedObjectID) async
 }
 
+extension GlucoseStorage {
+    /// Legacy determinations cannot identify their pump or glucose origin. A new
+    /// tagged determination is required before using a cached treatment recommendation.
+    func activeDeterminations(matching predicate: NSPredicate, forHistory: Bool = false) -> NSPredicate {
+        let source: NSPredicate
+        if mockPumpConnected == true { source = NSPredicate(format: "isSimulated == YES") }
+        else if forHistory { source = NSPredicate(format: "isSimulated == NO OR isSimulated == nil") }
+        else { source = NSPredicate(format: "isSimulated == NO AND isSimulated != nil") }
+        return NSCompoundPredicate(andPredicateWithSubpredicates: [predicate, source])
+    }
+
+    func activeReadings(matching predicate: NSPredicate, forHistory: Bool = false) -> NSPredicate {
+        NSCompoundPredicate(andPredicateWithSubpredicates: [predicate, sourcePredicate(forHistory: forHistory)])
+    }
+}
+
 final class BaseGlucoseStorage: GlucoseStorage, Injectable {
     private let processQueue = DispatchQueue(label: "BaseGlucoseStorage.processQueue")
     @Injected() private var storage: FileStorage!
@@ -48,13 +65,21 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
         static let minimumGlucose: Int = 39
     }
 
-    @SyncAccess var permitsSimulatedTherapy = false
+    @SyncAccess var mockPumpConnected: Bool?
+
+    func sourcePredicate(forHistory: Bool) -> NSPredicate {
+        let useSimulator = settingsManager.settings.cgm == .simulator && mockPumpConnected != false
+        if forHistory, !useSimulator { return NSPredicate(format: "isSimulated == NO OR isSimulated == nil") }
+        return Self.provenancePredicate(simulated: useSimulator)
+    }
+
     private let writeContext: NSManagedObjectContext
     private let makeContext: () -> NSManagedObjectContext
 
     init(resolver: Resolver, contextProvider: (() -> NSManagedObjectContext)? = nil) {
-        makeContext = contextProvider ?? { CoreDataStack.shared.newTaskContext() }
-        writeContext = makeContext()
+        let factory = contextProvider ?? { CoreDataStack.shared.newTaskContext() }
+        makeContext = factory
+        writeContext = factory()
         writeContext.name = "glucoseStorageWriter"
         injectServices(resolver)
         // One-off cleanup: a future-dated row saved by an older build must go even if no
@@ -450,7 +475,7 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
     func filterTooFrequentGlucose(_ glucose: [BloodGlucose], at date: Date) -> [BloodGlucose] {
         var lastDate = date
         var filtered: [BloodGlucose] = []
-        let sorted = glucose.sorted { $0.date < $1.date }
+        let sorted = glucose.sorted { $0.dateString < $1.dateString }
 
         for entry in sorted {
             guard entry.dateString.addingTimeInterval(-Config.filterTime) > lastDate else {
@@ -464,7 +489,7 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
     }
 
     func fetchLatestGlucose(context: NSManagedObjectContext) throws -> GlucoseStored? {
-        let predicate = NSPredicate.predicateFor20MinAgo
+        let predicate = activeReadings(matching: .predicateFor20MinAgo)
         return (try CoreDataStack.shared.fetchEntities(
             ofType: GlucoseStored.self,
             onContext: context,
@@ -482,7 +507,7 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
     /// uses the default 24h because its sensitivity algorithm needs that full window.
     func getGlucoseForAlgorithm(shouldSmoothGlucose: Bool, fetchHours: Decimal) async throws -> [BloodGlucose] {
         let simulated = settingsManager.settings.cgm == .simulator
-        guard !simulated || permitsSimulatedTherapy else { return [] }
+        guard !simulated || mockPumpConnected == true else { return [] }
         let context = makeContext()
         let cutoff = Date().addingTimeInterval(-(Double(truncating: fetchHours as NSNumber) * 3600))
 
@@ -515,8 +540,16 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
                 raiseOnDivideByZero: false
             )
 
-            return glucoseResults.map {
-                Self.mapToBloodGlucose($0, shouldSmoothGlucose: shouldSmoothGlucose, roundingBehavior: roundingBehavior)
+            let lastLegacySimulation = UserDefaults.standard.getValue(Date.self, forKey: "GlucoseSimulatorLastFetchDate")
+            return glucoseResults.enumerated().compactMap { index, row in
+                // Keep the newest quality marker for the algorithm's explicit stop branch.
+                guard index == 0 || (row.noise?.intValue ?? 0) < 3 else { return nil }
+                // A legacy smoothed reading shortly after a simulator run may still include
+                // simulator values in its 24-hour smoothing window. Use its original value.
+                let legacyWindow = row.isSimulated == nil && lastLegacySimulation.map { legacy in
+                    (row.date ?? .distantPast).timeIntervalSince(legacy) < 24 * 3600
+                } == true
+                return Self.mapToBloodGlucose(row, shouldSmoothGlucose: shouldSmoothGlucose && !legacyWindow, roundingBehavior: roundingBehavior)
             }
         }
     }
@@ -574,7 +607,8 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
             dateString: dateString,
             noise: glucose.noise?.intValue,
             glucose: isManual ? Int(glucoseValue) : nil,
-            type: "sgv"
+            type: "sgv",
+            transmitterID: glucose.isSimulated?.boolValue == true ? "SIMULATOR" : nil
         )
     }
 
@@ -587,7 +621,9 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: GlucoseStored.self,
             onContext: context,
-            predicate: NSPredicate.glucoseNotYetUploadedToNightscout,
+            predicate: NSCompoundPredicate(andPredicateWithSubpredicates: [
+                NSPredicate.glucoseNotYetUploadedToNightscout, Self.provenancePredicate(simulated: false)
+            ]),
             key: "date",
             ascending: false
         )
@@ -645,7 +681,9 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: GlucoseStored.self,
             onContext: context,
-            predicate: NSPredicate.glucoseNotYetUploadedToHealth,
+            predicate: NSCompoundPredicate(andPredicateWithSubpredicates: [
+                NSPredicate.glucoseNotYetUploadedToHealth, Self.provenancePredicate(simulated: false)
+            ]),
             key: "date",
             ascending: false
         )
@@ -680,7 +718,9 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: GlucoseStored.self,
             onContext: context,
-            predicate: NSPredicate.manualGlucoseNotYetUploadedToHealth,
+            predicate: NSCompoundPredicate(andPredicateWithSubpredicates: [
+                NSPredicate.manualGlucoseNotYetUploadedToHealth, Self.provenancePredicate(simulated: false)
+            ]),
             key: "date",
             ascending: false
         )
@@ -715,7 +755,9 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: GlucoseStored.self,
             onContext: context,
-            predicate: NSPredicate.glucoseNotYetUploadedToTidepool,
+            predicate: NSCompoundPredicate(andPredicateWithSubpredicates: [
+                NSPredicate.glucoseNotYetUploadedToTidepool, Self.provenancePredicate(simulated: false)
+            ]),
             key: "date",
             ascending: false
         )
@@ -751,7 +793,9 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: GlucoseStored.self,
             onContext: context,
-            predicate: NSPredicate.manualGlucoseNotYetUploadedToTidepool,
+            predicate: NSCompoundPredicate(andPredicateWithSubpredicates: [
+                NSPredicate.manualGlucoseNotYetUploadedToTidepool, Self.provenancePredicate(simulated: false)
+            ]),
             key: "date",
             ascending: false
         )

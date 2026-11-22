@@ -11,7 +11,7 @@ import UIKit
 
 protocol FetchGlucoseManager: SourceInfoProvider {
     func updateGlucoseSource(cgmGlucoseSourceType: CGMType, cgmGlucosePluginId: String, newManager: CGMManagerUI?)
-    func deleteGlucoseSource() async
+    func deleteGlucoseSource(ifManager: ObjectIdentifier?, source: ObjectIdentifier?, revision: UUID?) async
     func removeCalibrations()
     func newGlucoseFromCgmManager(newGlucose: [BloodGlucose], revision: UUID, completion: @escaping (Bool) -> Void)
     func requestRecovery(completion: @escaping @Sendable (Bool) -> Void)
@@ -37,6 +37,7 @@ protocol FetchGlucoseManager: SourceInfoProvider {
 }
 
 extension FetchGlucoseManager {
+    func deleteGlucoseSource() async { await deleteGlucoseSource(ifManager: nil, source: nil, revision: nil) }
     var freshnessSourceID: String { cgmGlucoseSourceType.rawValue }
     var recoverySourceRevision: UUID { UUID(uuidString: "00000000-0000-0000-0000-000000000000")! }
     func requestRecovery(isAuthorized: @escaping @Sendable () -> Bool, completion: @escaping @Sendable (Bool) -> Void) {
@@ -50,6 +51,7 @@ extension FetchGlucoseManager {
 }
 
 final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
+    private let sourceChangeLock = NSRecursiveLock()
     private let freshnessIdentity = KeepAliveSourceIdentity()
     var freshnessSourceID: String { freshnessIdentity.id }
     private typealias SourceResult = (glucose: [BloodGlucose], owner: String, revision: UUID)
@@ -274,15 +276,28 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
         if changed { removeCalibrations() }
     }
 
-    @MainActor func deleteGlucoseSource() async {
-        cgmManager = nil
-        glucoseSource = nil
-        settingsManager.settings.cgm = cgmDefaultModel.type
-        settingsManager.settings.cgmPluginIdentifier = cgmDefaultModel.id
-        updateGlucoseSource(
-            cgmGlucoseSourceType: cgmDefaultModel.type,
-            cgmGlucosePluginId: cgmDefaultModel.id
-        )
+    static func ownsPluginCallback(
+        manager: ObjectIdentifier?, currentManager: ObjectIdentifier?, source: ObjectIdentifier?, currentSource: ObjectIdentifier?,
+        revision: UUID?, currentRevision: UUID
+    ) -> Bool {
+        manager != nil && manager == currentManager && source != nil && source == currentSource && revision == currentRevision
+    }
+
+    @MainActor func deleteGlucoseSource(ifManager expected: ObjectIdentifier?, source: ObjectIdentifier?, revision: UUID?) async {
+        sourceChangeLock.perform {
+            if let expected {
+                guard Self.ownsPluginCallback(
+                    manager: expected, currentManager: cgmManager.map { ObjectIdentifier($0 as AnyObject) },
+                    source: source, currentSource: glucoseSource.map { ObjectIdentifier($0 as AnyObject) },
+                    revision: revision, currentRevision: recoverySourceRevision
+                ) else { return }
+            }
+            cgmManager = nil
+            glucoseSource = nil
+            settingsManager.settings.cgm = cgmDefaultModel.type
+            settingsManager.settings.cgmPluginIdentifier = cgmDefaultModel.id
+            updateGlucoseSource(cgmGlucoseSourceType: cgmDefaultModel.type, cgmGlucosePluginId: cgmDefaultModel.id)
+        }
     }
 
     func saveConfigManager() {
@@ -305,6 +320,8 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
     }
 
     func updateGlucoseSource(cgmGlucoseSourceType: CGMType, cgmGlucosePluginId: String, newManager: CGMManagerUI?) {
+        sourceChangeLock.lock()
+        defer { sourceChangeLock.unlock() }
         let replacing = KeepAliveSourceIdentity.isReplacement(
             current: cgmManager.map { $0 as AnyObject }, proposed: newManager.map { $0 as AnyObject }
         )
@@ -334,8 +351,12 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
             }
             cgmManager = manager
         } else if self.cgmGlucoseSourceType == .plugin, cgmManager == nil, let rawCGMManager = rawCGMManager {
-            cgmManager = cgmManagerFromRawValue(rawCGMManager)
-            updateManagerUnits(cgmManager)
+            if let restored = cgmManagerFromRawValue(rawCGMManager) {
+                cgmManager = restored
+                updateManagerUnits(restored)
+            } else {
+                warning(.cgm, "CGM state could not be restored; preserved its saved configuration")
+            }
 
         } else {
             saveConfigManager()

@@ -416,7 +416,7 @@ final class GlucoseAlertCoordinator: Injectable {
             let results = try await CoreDataStack.shared.fetchEntitiesAsync(
                 ofType: GlucoseStored.self,
                 onContext: context,
-                predicate: predicate,
+                predicate: glucoseStorage.activeReadings(matching: predicate),
                 key: "date",
                 ascending: false,
                 fetchLimit: 1
@@ -435,8 +435,9 @@ final class GlucoseAlertCoordinator: Injectable {
 extension GlucoseAlertCoordinator: DeterminationObserver {
     func determinationDidUpdate(_ determination: Determination) {
         evaluationQueue.async { [weak self] in
-            self?.evaluateForecast(determination)
-            self?.evaluateCarbsRequired(determination)
+            guard let self, determination.isSimulated == (self.glucoseStorage.mockPumpConnected == true) else { return }
+            self.evaluateForecast(determination)
+            self.evaluateCarbsRequired(determination)
         }
     }
 }

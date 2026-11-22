@@ -32,37 +32,38 @@ final class OpenAPS {
     }()
 
     // Helper function to convert a Decimal? to NSDecimalNumber?
-    func decimalToNSDecimalNumber(_ value: Decimal?) -> NSDecimalNumber? {
+    private static func decimalToNSDecimalNumber(_ value: Decimal?) -> NSDecimalNumber? {
         guard let value = value else { return nil }
         return NSDecimalNumber(decimal: value)
     }
 
     // Use the helper function for cleaner code
-    func processDetermination(_ determination: Determination, on context: NSManagedObjectContext) async throws -> NSManagedObjectID {
+    static func processDetermination(_ determination: Determination, on context: NSManagedObjectContext) async throws -> NSManagedObjectID {
         try await context.perform {
             let newOrefDetermination = OrefDetermination(context: context)
             newOrefDetermination.id = UUID()
-            newOrefDetermination.insulinSensitivity = self.decimalToNSDecimalNumber(determination.isf)
-            newOrefDetermination.currentTarget = self.decimalToNSDecimalNumber(determination.current_target)
+            newOrefDetermination.insulinSensitivity = Self.decimalToNSDecimalNumber(determination.isf)
+            newOrefDetermination.currentTarget = Self.decimalToNSDecimalNumber(determination.current_target)
             newOrefDetermination.eventualBG = determination.eventualBG.map(NSDecimalNumber.init)
             newOrefDetermination.deliverAt = determination.deliverAt
-            newOrefDetermination.carbRatio = self.decimalToNSDecimalNumber(determination.carbRatio)
-            newOrefDetermination.glucose = self.decimalToNSDecimalNumber(determination.bg)
-            newOrefDetermination.reservoir = self.decimalToNSDecimalNumber(determination.reservoir)
-            newOrefDetermination.insulinReq = self.decimalToNSDecimalNumber(determination.insulinReq)
+            newOrefDetermination.carbRatio = Self.decimalToNSDecimalNumber(determination.carbRatio)
+            newOrefDetermination.glucose = Self.decimalToNSDecimalNumber(determination.bg)
+            newOrefDetermination.reservoir = Self.decimalToNSDecimalNumber(determination.reservoir)
+            newOrefDetermination.insulinReq = Self.decimalToNSDecimalNumber(determination.insulinReq)
             newOrefDetermination.temp = determination.temp?.rawValue ?? "absolute"
-            newOrefDetermination.rate = self.decimalToNSDecimalNumber(determination.rate)
+            newOrefDetermination.rate = Self.decimalToNSDecimalNumber(determination.rate)
             newOrefDetermination.reason = determination.reason
-            newOrefDetermination.duration = self.decimalToNSDecimalNumber(determination.duration)
-            newOrefDetermination.iob = self.decimalToNSDecimalNumber(determination.iob)
-            newOrefDetermination.threshold = self.decimalToNSDecimalNumber(determination.threshold)
-            newOrefDetermination.minDelta = self.decimalToNSDecimalNumber(determination.minDelta)
-            newOrefDetermination.sensitivityRatio = self.decimalToNSDecimalNumber(determination.sensitivityRatio)
-            newOrefDetermination.expectedDelta = self.decimalToNSDecimalNumber(determination.expectedDelta)
+            newOrefDetermination.duration = Self.decimalToNSDecimalNumber(determination.duration)
+            newOrefDetermination.iob = Self.decimalToNSDecimalNumber(determination.iob)
+            newOrefDetermination.threshold = Self.decimalToNSDecimalNumber(determination.threshold)
+            newOrefDetermination.minDelta = Self.decimalToNSDecimalNumber(determination.minDelta)
+            newOrefDetermination.sensitivityRatio = Self.decimalToNSDecimalNumber(determination.sensitivityRatio)
+            newOrefDetermination.expectedDelta = Self.decimalToNSDecimalNumber(determination.expectedDelta)
             newOrefDetermination.cob = Int16(Int(determination.cob ?? 0))
             newOrefDetermination.smbToDeliver = determination.units.map { NSDecimalNumber(decimal: $0) }
             newOrefDetermination.carbsRequired = Int16(Int(determination.carbsReq ?? 0))
-            newOrefDetermination.isUploadedToNS = false
+            newOrefDetermination.isSimulated = NSNumber(value: determination.isSimulated)
+            newOrefDetermination.isUploadedToNS = determination.isSimulated
 
             if let predictions = determination.predictions {
                 ["iob": predictions.iob, "zt": predictions.zt, "cob": predictions.cob, "uam": predictions.uam]
@@ -89,11 +90,11 @@ final class OpenAPS {
         }
     }
 
-    private func fetchPumpHistoryObjectIDs(on context: NSManagedObjectContext) async throws -> [NSManagedObjectID]? {
+    private func fetchPumpHistoryObjectIDs(on context: NSManagedObjectContext, simulatedPump: Bool) async throws -> [NSManagedObjectID]? {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: PumpEventStored.self,
             onContext: context,
-            predicate: NSPredicate.pumpHistoryLast1440Minutes,
+            predicate: NSPredicate.forPump(.pumpHistoryLast1440Minutes, simulated: simulatedPump),
             key: "timestamp",
             ascending: false,
             batchSize: 50
@@ -111,6 +112,7 @@ final class OpenAPS {
     private func parsePumpHistory(
         on context: NSManagedObjectContext,
         _ pumpHistoryObjectIDs: [NSManagedObjectID],
+        simulatedPump: Bool,
         simulatedBolusAmount: Decimal? = nil
     ) async throws -> [PumpHistoryEvent] {
         // Empty history returns an empty array, which also drops any simulated bolus.
@@ -122,7 +124,7 @@ final class OpenAPS {
         // the oldest event in pump history can be a resume with no preceding pump
         // activity. oref interprets this as the end of a suspend that never started,
         // which drives negative IOB and can cause excessive insulin delivery.
-        let orphanedResumes = try await fetchOrphanedResumes(on: context)
+        let orphanedResumes = try await fetchOrphanedResumes(on: context, simulatedPump: simulatedPump)
 
         // Execute all operations on the background context
         return await context.perform {
@@ -171,11 +173,11 @@ final class OpenAPS {
     }
 
     /// Detects a cold-start orphaned resume: returns the resume's object ID if it's an orphaned resume
-    private func fetchOrphanedResumes(on context: NSManagedObjectContext) async throws -> [NSManagedObjectID] {
+    private func fetchOrphanedResumes(on context: NSManagedObjectContext, simulatedPump: Bool) async throws -> [NSManagedObjectID] {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: PumpEventStored.self,
             onContext: context,
-            predicate: NSPredicate.pumpHistoryLast48h,
+            predicate: NSPredicate.forPump(.pumpHistoryLast48h, simulated: simulatedPump),
             key: "timestamp",
             ascending: true,
             batchSize: 250
@@ -222,6 +224,7 @@ final class OpenAPS {
 
     func determineBasal(
         for dosingMode: DosingMode,
+        simulatedPump: Bool,
         currentTemp: TempBasal,
         supportedBasalRates: [Decimal],
         shouldSmoothGlucose: Bool,
@@ -234,7 +237,7 @@ final class OpenAPS {
         let context = newContext("determineBasal")
 
         // Perform asynchronous calls in parallel
-        async let pumpHistoryObjectIDs = fetchPumpHistoryObjectIDs(on: context) ?? []
+        async let pumpHistoryObjectIDs = fetchPumpHistoryObjectIDs(on: context, simulatedPump: simulatedPump) ?? []
         async let carbsFetch = carbsStorage.getCarbsForAlgorithm(
             additionalCarbs: simulatedCarbsAmount ?? 0,
             carbsDate: simulatedCarbsDate
@@ -249,11 +252,11 @@ final class OpenAPS {
             fetchHours: glucoseFetchHours
         )
 
-        async let prepareTrioCustomOrefVariables = prepareTrioCustomOrefVariables(on: context)
+        async let prepareTrioCustomOrefVariables = prepareTrioCustomOrefVariables(on: context, simulatedPump: simulatedPump)
         async let profileAsync = loadFileFromStorageAsync(name: Settings.profile)
         async let basalAsync = loadFileFromStorageAsync(name: Settings.basalProfile)
-        async let autosenseAsync = loadFileFromStorageAsync(name: Settings.autosense)
-        async let hasSufficientTddForDynamic = tddStorage.hasSufficientTDD()
+        async let autosenseAsync = loadFileFromStorageAsync(name: Settings.autosenseCache(simulated: simulatedPump))
+        async let hasSufficientTddForDynamic = tddStorage.hasSufficientTDD(simulated: simulatedPump)
 
         // Await the results of asynchronous tasks
         let (
@@ -266,7 +269,7 @@ final class OpenAPS {
             rawAutosens,
             hasSufficientTdd
         ) = await (
-            try parsePumpHistory(on: context, await pumpHistoryObjectIDs, simulatedBolusAmount: simulatedBolusAmount),
+            try parsePumpHistory(on: context, await pumpHistoryObjectIDs, simulatedPump: simulatedPump, simulatedBolusAmount: simulatedBolusAmount),
             try carbsFetch,
             try glucoseFetch,
             try prepareTrioCustomOrefVariables,
@@ -293,7 +296,7 @@ final class OpenAPS {
             basalProfile: basalProfile,
             clock: clock,
             carbs: carbs,
-            glucose: glucose
+            glucose: glucose.filter { ($0.noise ?? 0) < 3 }
         )
 
         // IOB calculation
@@ -306,7 +309,7 @@ final class OpenAPS {
 
         // TODO: refactor this to core data
         if !simulation {
-            storage.save(iob, as: Monitor.iob)
+            storage.save(iob, as: Monitor.iobFile(simulated: simulatedPump))
         }
 
         if !hasSufficientTdd, preferences.useNewFormula || (preferences.useNewFormula && preferences.sigmoid) {
@@ -337,16 +340,17 @@ final class OpenAPS {
             // set both timestamp and deliverAt to the SAME date; this will be updated for timestamp once it is enacted
             // AAPS does it the same way! we'll follow their example!
             determination.timestamp = deliverAt
+            determination.isSimulated = simulatedPump || glucose.contains(where: \.isSimulated)
 
             if !simulation {
                 // TODO: refactor this to core data
                 let cobEntries = (determination.cobProjection ?? []).enumerated().map { index, cob in
                     CobEntry(cob: cob, time: deliverAt.addingTimeInterval(Double(index) * 300))
                 }
-                storage.save(cobEntries, as: Monitor.cob)
+                storage.save(cobEntries, as: Monitor.cobFile(simulated: simulatedPump))
 
                 // save to core data asynchronously
-                let storedID = try await processDetermination(determination, on: context)
+                let storedID = try await Self.processDetermination(determination, on: context)
                 return (determination, storedID)
             }
 
@@ -357,7 +361,7 @@ final class OpenAPS {
         }
     }
 
-    func prepareTrioCustomOrefVariables(on context: NSManagedObjectContext) async throws -> RawJSON {
+    func prepareTrioCustomOrefVariables(on context: NSManagedObjectContext, simulatedPump: Bool) async throws -> RawJSON {
         try await context.perform {
             // Retrieve user preferences
             let userPreferences = self.storage.retrieve(OpenAPS.Settings.preferences, as: Preferences.self)
@@ -368,7 +372,7 @@ final class OpenAPS {
             // Fetch historical events for Total Daily Dose (TDD) calculation
             let tenDaysAgo = Date().addingTimeInterval(-10.days.timeInterval)
             let twoHoursAgo = Date().addingTimeInterval(-2.hours.timeInterval)
-            let historicalTDDData = try self.fetchHistoricalTDDData(from: tenDaysAgo, on: context)
+            let historicalTDDData = try self.fetchHistoricalTDDData(from: tenDaysAgo, on: context, simulatedPump: simulatedPump)
 
             // Fetch the last active Override
             let activeOverrides = try self.fetchActiveOverrides(on: context)
@@ -423,11 +427,11 @@ final class OpenAPS {
         }
     }
 
-    func autosense(shouldSmoothGlucose: Bool) async throws -> Autosens? {
+    func autosense(shouldSmoothGlucose: Bool, simulatedPump: Bool) async throws -> Autosens? {
         let context = newContext("autosense")
 
         // Perform asynchronous calls in parallel
-        async let pumpHistoryObjectIDs = fetchPumpHistoryObjectIDs(on: context) ?? []
+        async let pumpHistoryObjectIDs = fetchPumpHistoryObjectIDs(on: context, simulatedPump: simulatedPump) ?? []
         async let carbsFetch = carbsStorage.getCarbsForAlgorithm(additionalCarbs: nil, carbsDate: nil)
         // Autosens needs the full 24h window for its sensitivity algorithm.
         async let glucoseFetch = glucoseStorage.getGlucoseForAlgorithm(
@@ -440,7 +444,7 @@ final class OpenAPS {
 
         // Await the results of asynchronous tasks
         let (pumpHistory, carbs, glucose, rawProfile, rawBasalProfile, rawTempTargets) = await (
-            try parsePumpHistory(on: context, await pumpHistoryObjectIDs),
+            try parsePumpHistory(on: context, await pumpHistoryObjectIDs, simulatedPump: simulatedPump),
             try carbsFetch,
             try glucoseFetch,
             getProfile,
@@ -454,8 +458,10 @@ final class OpenAPS {
         let tempTargets = try JSONBridge.tempTargets(from: rawTempTargets)
 
         // Autosense
+        let reliableGlucose = glucose.filter { ($0.noise ?? 0) < 3 }
+        guard !reliableGlucose.isEmpty else { return nil }
         var autosens = try autosense(
-            glucose: glucose,
+            glucose: reliableGlucose,
             pumpHistory: pumpHistory,
             basalProfile: basalProfile,
             profile: profile,
@@ -466,7 +472,8 @@ final class OpenAPS {
 
         debug(.algorithm, "Autosens ratio \(autosens.ratio)")
         autosens.timestamp = Date()
-        await storage.saveAsync(autosens, as: Settings.autosense)
+        let simulated = simulatedPump || glucose.contains(where: \.isSimulated)
+        await storage.saveAsync(autosens, as: Settings.autosenseCache(simulated: simulated))
 
         return autosens
     }
@@ -772,11 +779,11 @@ extension OpenAPS {
         ) as? [OverrideStored] ?? []
     }
 
-    func fetchHistoricalTDDData(from date: Date, on context: NSManagedObjectContext) throws -> [[String: Any]] {
+    func fetchHistoricalTDDData(from date: Date, on context: NSManagedObjectContext, simulatedPump: Bool) throws -> [[String: Any]] {
         try CoreDataStack.shared.fetchEntities(
             ofType: TDDStored.self,
             onContext: context,
-            predicate: NSPredicate(format: "date > %@ AND total > 0", date as NSDate),
+            predicate: NSPredicate.forPump(NSPredicate(format: "date > %@ AND total > 0", date as NSDate), simulated: simulatedPump),
             key: "date",
             ascending: true,
             propertiesToFetch: ["date", "total"]

@@ -36,11 +36,10 @@ final class WatchNotificationHandler: NSObject, UNUserNotificationCenterDelegate
     ) {
         defer { completionHandler() }
 
-        guard let action = NotificationResponseAction(rawValue: response.actionIdentifier) else { return }
-        let content = response.notification.request.content
-        let category = NotificationCategoryIdentifier.alert(isCritical: content.interruptionLevel == .critical,
-            slug: content.userInfo[AlertUserInfoKey.alertIdentifier.rawValue] as? String ?? "")
-        sendSnoozeRequest(minutes: Int(category.limitSnooze(action.duration) / 60))
+        guard let action = NotificationResponseAction(rawValue: response.actionIdentifier),
+              let snooze = WatchAlertSnooze(content: response.notification.request.content, action: action, at: Date()),
+              let data = try? PropertyListEncoder().encode(snooze) else { return }
+        send([WatchAlertSnooze.messageKey: data])
     }
 
     /// Sends snooze request to iPhone via WatchConnectivity.
@@ -49,9 +48,12 @@ final class WatchNotificationHandler: NSObject, UNUserNotificationCenterDelegate
     /// session activation and delegate management.
     /// A duration of 0 ends the active snooze.
     func sendSnoozeRequest(minutes: Int) {
+        send([WatchMessageKeys.snoozeDuration: minutes])
+    }
+
+    private func send(_ payload: [String: Any]) {
         guard WCSession.isSupported() else { return }
 
-        let payload: [String: Any] = [WatchMessageKeys.snoozeDuration: minutes]
         let session = WCSession.default
 
         // Try sendMessage first if session is reachable and activated (faster, immediate delivery)

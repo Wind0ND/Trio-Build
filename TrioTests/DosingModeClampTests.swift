@@ -81,9 +81,9 @@ import Testing
         let replacement = NSObject()
         let revision = UUID()
         let now = Date()
-        func context(_ mode: DosingMode = .closed, _ epoch: UUID = revision, _ device: NSObject = pump,
+        func context(_ mode: DosingMode = .closed, _ epoch: UUID? = nil, _ device: NSObject? = nil,
                      simulated: Bool = false, mock: Bool = false) -> AutomaticDeliveryContext {
-            AutomaticDeliveryContext(mode: mode, sourceRevision: epoch, pumpID: ObjectIdentifier(device),
+            AutomaticDeliveryContext(mode: mode, modeRevision: revision, sourceRevision: epoch ?? revision, pumpID: ObjectIdentifier(device ?? pump),
                                      simulatorSource: simulated, mockPump: mock)
         }
         let start = context()

@@ -154,7 +154,8 @@ extension PluginSource: CGMManagerDelegate {
 
     func cgmManagerWantsDeletion(_ manager: CGMManager) async {
         info(.cgm, "CGM \(manager.pluginIdentifier) requested removal")
-        await glucoseManager?.deleteGlucoseSource()
+        let revision = glucoseManager?.recoverySourceRevision
+        await glucoseManager?.deleteGlucoseSource(ifManager: ObjectIdentifier(manager as AnyObject), source: ObjectIdentifier(self), revision: revision)
     }
 
     func cgmManager(_ manager: CGMManager, hasNew readingResult: CGMReadingResult) {

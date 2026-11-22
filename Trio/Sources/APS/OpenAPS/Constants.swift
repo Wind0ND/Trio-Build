@@ -2,7 +2,10 @@ extension OpenAPS {
     enum Settings {
         static let preferences = "preferences.json"
         static let autotune = "settings/autotune.json"
-        static let autosense = "settings/autosense.json"
+        static let autosense = "settings/autosense.json" // bundled neutral default
+        static func autosenseCache(simulated: Bool) -> String {
+            simulated ? "settings/autosense-simulator.json" : "settings/autosense-physical.json"
+        }
         static let profile = "settings/profile.json"
         static let pumpProfile = "settings/pumpprofile.json"
         static let settings = "settings/settings.json"

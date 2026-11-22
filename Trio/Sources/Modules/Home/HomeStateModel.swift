@@ -1048,8 +1048,9 @@ extension Home.StateModel:
         enableQuickPickTreatments = settingsManager.settings.enableQuickPickTreatments
         forecastDisplayType = settingsManager.settings.forecastDisplayType
         homeStatsPanelRange = settingsManager.settings.homeStatsPanelRange
-        // range, face or time-in-range type may have changed
+        // Source changes also invalidate the current reading and chart selection.
         Task { @MainActor in
+            updateGlucoseFromController()
             refreshExtendedStatsPanel(force: true)
         }
         cgmAvailable = (fetchGlucoseManager.cgmGlucoseSourceType != CGMType.none)

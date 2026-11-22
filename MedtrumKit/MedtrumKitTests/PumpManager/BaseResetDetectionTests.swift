@@ -153,3 +153,48 @@ extension BaseResetDetectionTests {
         XCTAssertTrue(manager.status.deliveryIsUncertain)
     }
 }
+
+extension BaseResetDetectionTests {
+    func testCheckpointPrecedesBasalCommandAndSurvivesRelaunch() {
+        let manager = MedtrumPumpManager(state: makeState(pumpState: .active))
+        let dose = UnfinalizedDose(decisionId: UUID(), tempRate: 1.5, duration: 1800, insulinType: nil, automatic: true)
+        for request in [dose, nil] as [UnfinalizedDose?] {
+            var saved: MedtrumPumpState?
+            manager.persistPendingDelivery = { saved = MedtrumPumpState(rawValue: manager.rawState) }
+            XCTAssertNoThrow(try manager.checkpointBasal(requested: request))
+            XCTAssertEqual(saved?.basalDeliveryUncertain, true)
+            XCTAssertEqual(saved?.pendingTempBasal?.value, request?.value)
+        }
+        manager.persistPendingDelivery = { throw CocoaError(.fileWriteUnknown) }
+        XCTAssertThrowsError(try manager.checkpointBasal(requested: dose))
+        XCTAssertFalse(manager.state.awaitingBasalReply)
+        XCTAssertNil(manager.state.pendingTempBasal)
+    }
+
+    func testTempBasalCannotBeReconciledFromAnOlderOrDifferentPatchRate() throws {
+        let start = Date(timeIntervalSince1970: 1700000000)
+        let dose = UnfinalizedDose(decisionId: UUID(), tempRate: 1, duration: 1800, insulinType: nil,
+                                   automatic: true, startDate: start)
+        func basal(_ at: Date, rate: Double) -> BasalData {
+            BasalData(type: .ABSOLUTE_TEMP, sequence: 5, patchId: 256, startTime: at, rate: rate, delivery: 0)
+        }
+        let now = start.addingTimeInterval(60)
+        XCTAssertNil(StateSyncer.confirmedTempBasal(dose, basal: basal(start.addingTimeInterval(-1), rate: 1), observedAt: now))
+        XCTAssertNil(StateSyncer.confirmedTempBasal(dose, basal: basal(start, rate: 2), observedAt: now))
+        let matched = try XCTUnwrap(StateSyncer.confirmedTempBasal(dose, basal: basal(start, rate: 1), observedAt: now))
+        XCTAssertEqual(matched.decisionId, dose.decisionId)
+        XCTAssertEqual(matched.estimatedEndDate, start.addingTimeInterval(1800))
+    }
+
+    func testPatchReminderHonorsElapsedWearAndExpiry() {
+        let activation = Date()
+        let reminder = MedtrumAlert.patchReminder(activatedAt: activation, afterActivation: 72 * 3600,
+                                                  now: activation.addingTimeInterval(12 * 3600))
+        guard case let .patchExpiredNotification(after, remaining) = reminder else { XCTFail(); return }
+        XCTAssertEqual(after, 60 * 3600)
+        XCTAssertEqual(remaining, 8 * 3600)
+        XCTAssertEqual(reminder.alert.trigger, .delayed(interval: 60 * 3600))
+        XCTAssertEqual(MedtrumAlert.baseResetNotification.alert.interruptionLevel, .critical)
+        XCTAssertNotNil(MedtrumAlert.baseResetNotification.alert.sound)
+    }
+}

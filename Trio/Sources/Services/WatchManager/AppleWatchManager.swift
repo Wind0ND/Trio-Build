@@ -27,6 +27,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
     @Injected() private var bolusCalculationManager: BolusCalculationManager!
     @Injected() private var iobService: IOBService!
     @Injected() private var notificationsManager: UserNotificationsManager!
+    @Injected() private var trioAlertManager: TrioAlertManager!
 
     private var units: GlucoseUnits = .mgdL
     private var glucoseColorScheme: GlucoseColorScheme = .staticColor
@@ -435,7 +436,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: GlucoseStored.self,
             onContext: context,
-            predicate: NSPredicate.glucose,
+            predicate: glucoseStorage.activeReadings(matching: NSPredicate.glucose),
             key: "date",
             ascending: false
         )
@@ -647,9 +648,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
                 return
             }
 
-            if let snoozeMinutes = message[WatchMessageKeys.snoozeDuration] as? Int {
-                info(.watch, "Watch requested alert snooze for \(snoozeMinutes) min")
-                await self.notificationsManager.applySnooze(for: TimeInterval(snoozeMinutes * 60))
+            if await self.handleWatchSnooze(message) {
                 return
             } else if let bolusAmount = message[WatchMessageKeys.bolus] as? Double,
                       message[WatchMessageKeys.carbs] == nil,
@@ -770,13 +769,21 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
             WatchLogIngest.legacyRecords(from: logs).forEach(TrioLogger.sink.accept)
         }
 
-        if let snoozeMinutes = userInfo[WatchMessageKeys.snoozeDuration] as? Int {
-            info(.watch, "Watch requested alert snooze for \(snoozeMinutes) min")
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                await self.notificationsManager.applySnooze(for: TimeInterval(snoozeMinutes * 60))
-            }
+        Task { @MainActor [weak self] in
+            _ = await self?.handleWatchSnooze(userInfo)
         }
+    }
+
+    @MainActor private func handleWatchSnooze(_ message: [String: Any]) async -> Bool {
+        if let scoped = message[WatchAlertSnooze.messageKey] {
+            if let data = scoped as? Data, let request = try? PropertyListDecoder().decode(WatchAlertSnooze.self, from: data) {
+                trioAlertManager.handleWatchSnooze(request)
+            }
+            return true
+        }
+        guard let minutes = message[WatchMessageKeys.snoozeDuration] as? Int else { return false }
+        await notificationsManager.applySnooze(for: TimeInterval(minutes) * 60)
+        return true
     }
 
     func session(_: WCSession, didReceive file: WCSessionFile) {

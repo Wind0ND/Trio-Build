@@ -1,7 +1,13 @@
 import LoopKit
 
 enum MedtrumAlert {
-    case patchExpiredNotification(after: TimeInterval)
+    case patchExpiredNotification(after: TimeInterval, remaining: TimeInterval = 0)
+
+    static func patchReminder(activatedAt: Date, afterActivation: TimeInterval, now: Date) -> MedtrumAlert {
+        let trigger = max(now, activatedAt.addingTimeInterval(afterActivation))
+        let expires = activatedAt.addingTimeInterval(ExpiryMode.default.lifespan + ExpiryMode.default.gracePeriod)
+        return .patchExpiredNotification(after: trigger.timeIntervalSince(now), remaining: max(0, expires.timeIntervalSince(trigger)))
+    }
     case lowReservoir(level: Double)
     case patchDailyMaxNotification
     case patchHourlyMaxNotification
@@ -107,7 +113,7 @@ enum MedtrumAlert {
 
     private var alertContent: Alert.Content {
         switch self {
-        case let .patchExpiredNotification(after):
+        case let .patchExpiredNotification(_, remaining):
             return Alert.Content(
                 title: String(
                     localized: "Your patch will expire soon!",
@@ -118,7 +124,7 @@ enum MedtrumAlert {
                         localized: "Your patch has %lld hours left",
                         comment: "Body expire reminder notification"
                     ),
-                    Int(80 - after.hours)
+                    Int(remaining.hours)
                 ),
                 acknowledgeActionButtonLabel: String(
                     localized: "OK",
@@ -202,8 +208,8 @@ enum MedtrumAlert {
 
     private var trigger: Alert.Trigger {
         switch self {
-        case let .patchExpiredNotification(after):
-            return Alert.Trigger.delayed(interval: after)
+        case let .patchExpiredNotification(after, _):
+            return after > 0 ? .delayed(interval: after) : .immediate
         default:
             return Alert.Trigger.immediate
         }

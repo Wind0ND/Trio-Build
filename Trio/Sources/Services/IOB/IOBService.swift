@@ -19,6 +19,7 @@ protocol IOBService {
 // TODO: Calculate IoB using APSManager after enough time has elapsed from the last file or determination data
 final class BaseIOBService: IOBService, Injectable {
     @Injected() private var fileStorage: FileStorage!
+    @Injected() private var glucoseStorage: GlucoseStorage!
     @Injected() private var determinationStorage: DeterminationStorage!
     @Injected() private var apsManager: APSManager!
 
@@ -74,6 +75,7 @@ final class BaseIOBService: IOBService, Injectable {
         context.performAndWait {
             let request = OrefDetermination.fetchRequest() as NSFetchRequest<OrefDetermination>
             request.sortDescriptors = [NSSortDescriptor(key: "deliverAt", ascending: false)]
+            request.predicate = self.glucoseStorage.activeDeterminations(matching: NSPredicate(value: true))
             request.fetchLimit = 1
             if let determination = try? context.fetch(request).first {
                 iob = determination.iob as? Decimal

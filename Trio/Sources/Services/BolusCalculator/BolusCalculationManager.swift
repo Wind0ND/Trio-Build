@@ -17,6 +17,7 @@ protocol BolusCalculationManager {
 
 final class BaseBolusCalculationManager: BolusCalculationManager, Injectable {
     @Injected() private var apsManager: APSManager!
+    @Injected() private var glucoseStorage: GlucoseStorage!
     @Injected() private var settingsManager: SettingsManager!
     @Injected() private var fileStorage: FileStorage!
     @Injected() private var determinationStorage: DeterminationStorage!
@@ -192,7 +193,7 @@ final class BaseBolusCalculationManager: BolusCalculationManager, Injectable {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: GlucoseStored.self,
             onContext: context,
-            predicate: NSPredicate.glucose,
+            predicate: glucoseStorage.activeReadings(matching: NSPredicate.glucose),
             key: "date",
             ascending: false
         )

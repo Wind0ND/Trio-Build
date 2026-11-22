@@ -145,7 +145,7 @@ final class BaseUserNotificationsManager: NSObject, UserNotificationsManager, In
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: GlucoseStored.self,
             onContext: context,
-            predicate: NSPredicate.predicateFor20MinAgo,
+            predicate: glucoseStorage.activeReadings(matching: NSPredicate.predicateFor20MinAgo),
             key: "date",
             ascending: false,
             fetchLimit: 3

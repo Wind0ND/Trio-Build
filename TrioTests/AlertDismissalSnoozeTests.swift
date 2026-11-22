@@ -6,6 +6,27 @@ import UserNotifications
 @testable import Trio
 
 @Suite("Trio Alerts: dismissing an alert snoozes it") struct AlertDismissalSnoozeTests {
+    @Test("A queued Watch action retains its occurrence and absolute expiry, with a phone-side critical cap")
+    func queuedWatchSnooze() throws {
+        let tap = Date(timeIntervalSince1970: 100_000)
+        let occurrence = UUID()
+        let content = UNMutableNotificationContent()
+        content.userInfo = [AlertUserInfoKey.managerIdentifier.rawValue: "Trio", AlertUserInfoKey.alertIdentifier.rawValue: "glucose.high.a",
+                            AlertUserInfoKey.occurrence.rawValue: occurrence.uuidString]
+        let request = try #require(WatchAlertSnooze(content: content, action: .snooze6hr, at: tap))
+        let decoded = try PropertyListDecoder().decode(WatchAlertSnooze.self, from: PropertyListEncoder().encode(request))
+        #expect(decoded.managerIdentifier == "Trio")
+        #expect(decoded.alertIdentifier == "glucose.high.a")
+        #expect(decoded.until(currentOccurrence: occurrence, isCritical: true, now: tap.addingTimeInterval(600)) == tap.addingTimeInterval(900))
+        #expect(decoded.until(currentOccurrence: occurrence, isCritical: false, now: tap.addingTimeInterval(600)) == tap.addingTimeInterval(21_600))
+        #expect(decoded.until(currentOccurrence: occurrence, isCritical: true, now: tap.addingTimeInterval(900)) == nil)
+        #expect(decoded.until(currentOccurrence: UUID(), isCritical: true, now: tap) == nil)
+        #expect(decoded.until(currentOccurrence: nil, isCritical: false, now: tap) == nil)
+        #expect(decoded.until(currentOccurrence: occurrence, isCritical: false, now: tap.addingTimeInterval(-3600)) == nil)
+        content.userInfo.removeValue(forKey: AlertUserInfoKey.occurrence.rawValue)
+        #expect(WatchAlertSnooze(content: content, action: .snooze15, at: tap) == nil)
+    }
+
     @Test("Critical and urgent-low notifications offer and accept only the short snooze")
     func criticalActions() {
         let quick = NotificationCategoryIdentifier.quickSnoozeOnly

@@ -75,8 +75,7 @@ extension OttaiCGMManager {
             if sample.source == .realtime, trueDate < Date().addingTimeInterval(-30 * 60) {
                 // Recover the timestamp only when the independent minute index agrees with
                 // receipt time. A replayed or mis-sliced frame cannot be made fresh by arrival.
-                let indexedDate = activatedAt.addingTimeInterval((Double(sample.sequence) + 1) * 60)
-                guard indexedDate <= receivedAt, receivedAt.timeIntervalSince(indexedDate) <= 120 else {
+                guard let indexedDate = Self.verifiedGridDate(sequence: sample.sequence, activatedAt: activatedAt, receivedAt: receivedAt) else {
                     logger.info("withheld live frame with inconsistent sensor clocks: seq=\(sample.sequence)")
                     return
                 }
@@ -86,7 +85,7 @@ extension OttaiCGMManager {
                 date: trueDate, valueMgDL: sample.valueMgDL, trend: sample.trend,
                 rateOfChangeMgDLPerMinute: sample.rateOfChangeMgDLPerMinute,
                 sequence: sample.sequence, rawBaseMgDL: sample.rawBaseMgDL,
-                rawCurrent: sample.rawCurrent, elapsedSeconds: elapsedSeconds,
+                rawCurrent: sample.rawCurrent, elapsedSeconds: trueDate.timeIntervalSince(activatedAt),
                 condition: sample.condition, hasBlockingIssue: sample.hasBlockingIssue,
                 source: sample.source
             )
@@ -342,6 +341,11 @@ extension OttaiCGMManager {
     static func isWarmup(elapsedSeconds: TimeInterval?, preheatDuration: TimeInterval?) -> Bool {
         guard let elapsedSeconds, let preheatDuration else { return false }
         return elapsedSeconds <= preheatDuration
+    }
+
+    static func verifiedGridDate(sequence: UInt16, activatedAt: Date, receivedAt: Date) -> Date? {
+        let date = activatedAt.addingTimeInterval((Double(sequence) + 1) * 60)
+        return (0 ... 120).contains(receivedAt.timeIntervalSince(date)) ? date : nil
     }
 
     static func acceptsForHost(elapsed: TimeInterval?, wallAge: TimeInterval?, warmup: TimeInterval?, ratedWear: TimeInterval?) -> Bool {

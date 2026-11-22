@@ -6,6 +6,7 @@ public extension TDDStored {
         NSFetchRequest<TDDStored>(entityName: "TDDStored")
     }
 
+    @NSManaged var isSimulated: NSNumber?
     @NSManaged var id: UUID?
     @NSManaged var date: Date?
     @NSManaged var total: NSDecimalNumber?

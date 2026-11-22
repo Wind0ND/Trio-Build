@@ -116,8 +116,13 @@ public class MedtrumPumpState: RawRepresentable {
             alarmSetting = .BeepOnly
         }
 
-        bolusDeliveryUncertain = rawValue["bolusDeliveryUncertain"] as? Bool ?? false
-        basalDeliveryUncertain = rawValue["basalDeliveryUncertain"] as? Bool ?? false
+        awaitingBolusReply = rawValue["awaitingBolusReply"] as? Bool ?? false
+        bolusDeliveryUncertain = awaitingBolusReply || (rawValue["bolusDeliveryUncertain"] as? Bool ?? false)
+        awaitingBasalReply = rawValue["awaitingBasalReply"] as? Bool ?? false
+        basalDeliveryUncertain = awaitingBasalReply || (rawValue["basalDeliveryUncertain"] as? Bool ?? false)
+        // In memory only: no request can still be awaiting its BLE reply after a restart.
+        awaitingBasalReply = false
+        awaitingBolusReply = false
         pendingTempBasal = (rawValue["pendingTempBasal"] as? UnfinalizedDose.RawValue).flatMap(UnfinalizedDose.init(rawValue:))
 
         if let rawDoseEntry = rawValue["bolusDose"] as? UnfinalizedDose.RawValue {
@@ -199,7 +204,9 @@ public class MedtrumPumpState: RawRepresentable {
         value["initialReservoir"] = initialReservoir
         value["bolusDose"] = bolusDose?.rawValue
         value["bolusDeliveryUncertain"] = bolusDeliveryUncertain
+        value["awaitingBolusReply"] = awaitingBolusReply
         value["basalDeliveryUncertain"] = basalDeliveryUncertain
+        value["awaitingBasalReply"] = awaitingBasalReply
         value["pendingTempBasal"] = pendingTempBasal?.rawValue
         value["basalDose"] = basalDose.rawValue
         value["reservoir"] = reservoir
@@ -301,7 +308,9 @@ public class MedtrumPumpState: RawRepresentable {
     // **** END ****
 
     public var bolusDose: UnfinalizedDose?
+    var awaitingBolusReply = false
     var bolusDeliveryUncertain = false
+    var awaitingBasalReply = false
     var basalDeliveryUncertain = false
     /// Present for an unacknowledged set command. A cancellation targets the existing basal dose.
     var pendingTempBasal: UnfinalizedDose?

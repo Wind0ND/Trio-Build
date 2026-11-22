@@ -21,6 +21,7 @@ protocol TrioAlertManager: AnyObject {
 
     func handleAcknowledgement(identifier: Alert.Identifier)
     func handleNotificationResponse(_ response: UNNotificationResponse)
+    @MainActor func handleWatchSnooze(_ request: WatchAlertSnooze)
     func acknowledgeAllOutstanding()
     /// Canonical snooze entry point used by every snooze surface:
     /// Snooze module, phone UN action, watch UN action, in-app banner.
@@ -74,6 +75,9 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
     private let userNotificationScheduler: TrioUserNotificationAlertScheduler
 
     private let queue = DispatchQueue(label: "BaseTrioAlertManager.queue")
+    // Retraction and replacement use the same identifier. Keep occurrence
+    // validation and its acknowledgement together across producer queues.
+    private let occurrenceLock = NSRecursiveLock()
     private var responders: [String: WeakRef] = [:]
     private var soundVendors: [String: WeakRef] = [:]
     private var liveAlerts: [Alert.Identifier: Alert] = [:]
@@ -247,6 +251,8 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
     // MARK: - Issue / Retract
 
     func issueAlert(_ alert: Alert) {
+        occurrenceLock.lock()
+        defer { occurrenceLock.unlock() }
         info(.alerts, "Alert \(alert.identifier.value) issued, level \(alert.interruptionLevel)")
 
         let now = Date()
@@ -353,6 +359,8 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
     }
 
     func retractAlert(identifier: Alert.Identifier) {
+        occurrenceLock.lock()
+        defer { occurrenceLock.unlock() }
         HiroAlertJournal.shared.resolve(source: identifier.managerIdentifier, kind: identifier.alertIdentifier)
         queue.async {
             self.liveAlerts.removeValue(forKey: identifier)
@@ -373,6 +381,8 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
     /// termination at OS level), the throttler (a genuine producer re-issue
     /// must still deliver fully), and critical audio.
     func replayUnacknowledgedAlerts() {
+        occurrenceLock.lock()
+        defer { occurrenceLock.unlock() }
         let now = Date()
         let entries = AlertColdStartReplay.newestPerIdentifier(
             alertHistoryStorage.unacknowledgedAlertsWithinLast24Hours()
@@ -400,6 +410,8 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
     // MARK: - Acknowledgement
 
     func handleAcknowledgement(identifier: Alert.Identifier) {
+        occurrenceLock.lock()
+        defer { occurrenceLock.unlock() }
         HiroAlertJournal.shared.acknowledge(source: identifier.managerIdentifier, kind: identifier.alertIdentifier)
         modalScheduler.unschedule(identifier: identifier)
         userNotificationScheduler.unschedule(identifier: identifier)
@@ -478,6 +490,32 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
             )
             handleAcknowledgement(identifier: identifier)
         }
+    }
+
+    @MainActor func handleWatchSnooze(_ request: WatchAlertSnooze) {
+        occurrenceLock.lock()
+        defer { occurrenceLock.unlock() }
+        let id = Alert.Identifier(managerIdentifier: request.managerIdentifier, alertIdentifier: request.alertIdentifier)
+        let occurrence: UUID?
+        let critical: Bool
+        if let live = queue.sync(execute: { liveAlerts[id] }) {
+            occurrence = (live.metadata?[HiroAlertJournal.occurrenceKey]?.wrapped as? String).flatMap(UUID.init(uuidString:))
+            critical = live.interruptionLevel == .critical
+        } else {
+            // The system notification survives process death. Inspect the
+            // newest occurrence including closed ones; an older pending row
+            // must not become eligible just because its replacement was closed.
+            let newest = HiroAlertJournal.shared.recent().filter {
+                $0.source == id.managerIdentifier && $0.kind == id.alertIdentifier
+            }.max { $0.issuedAt < $1.issuedAt }
+            guard let newest, newest.acknowledgedAt == nil, newest.resolvedAt == nil, newest.cancelledAt == nil else { return }
+            occurrence = newest.id
+            let entry = alertHistoryStorage.unacknowledgedAlertsWithinLast24Hours().first { $0.journalOccurrenceID == newest.id }
+            let level = entry?.primitiveInterruptionLevel.flatMap { Alert.InterruptionLevel(storedValue: NSDecimalNumber(decimal: $0)) }
+            critical = (level ?? .critical) == .critical
+        }
+        guard let until = request.until(currentOccurrence: occurrence, isCritical: critical, now: Date()) else { return }
+        requestSnooze(identifier: id, until: until, allowGlobalFallback: false)
     }
 
     private func clearPendingNonCriticalNotificationsAndWait() async {
@@ -612,9 +650,13 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
 
 extension BaseTrioAlertManager: TrioModalAlertResponder, TrioUserNotificationAlertResponder {
     func requestSnooze(identifier: Alert.Identifier, duration: TimeInterval) {
+        let until = duration > 0 ? Date().addingTimeInterval(duration) : .distantPast
+        requestSnooze(identifier: identifier, until: until, allowGlobalFallback: true)
+    }
+
+    private func requestSnooze(identifier: Alert.Identifier, until untilDate: Date, allowGlobalFallback: Bool) {
         // Dismissal is the user's response — full ack (history + device) first.
         handleAcknowledgement(identifier: identifier)
-        let untilDate = duration > 0 ? Date().addingTimeInterval(duration) : .distantPast
         if let glucoseType = GlucoseAlertType(slug: identifier.alertIdentifier) {
             broadcaster.notify(GlucoseSnoozeObserver.self, on: .main) { (observer: GlucoseSnoozeObserver) in
                 observer.snoozeGlucoseType(glucoseType, until: untilDate)
@@ -626,9 +668,9 @@ extension BaseTrioAlertManager: TrioModalAlertResponder, TrioUserNotificationAle
             guard !entry.concept.isEscalationStep else { return }
             DeviceAlertsStore.shared.snoozeTier(tier, until: untilDate)
             dismissAlertsInTier(tier, excluding: identifier)
-        } else {
+        } else if allowGlobalFallback {
             Task { @MainActor [weak self] in
-                await self?.applySnooze(for: duration)
+                await self?.applySnooze(for: max(0, untilDate.timeIntervalSinceNow))
             }
         }
     }

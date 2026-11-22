@@ -18,18 +18,14 @@ struct LiveActivity: Widget {
             let island = DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     if let privacy {
-                        recoveryButton {
-                            islandCover(privacy, size: 24)
-                        }
+                        islandCover(privacy, size: 24)
                     } else {
                         LiveActivityExpandedLeadingView(context: context, glucoseColor: glucoseColor)
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     if let privacy {
-                        recoveryButton {
-                            islandMeter(privacy, stale: stale, presentation: .standard, coverHeight: 24)
-                        }
+                        islandMeter(privacy, stale: stale, presentation: .standard, coverHeight: 24)
                     } else {
                         LiveActivityExpandedTrailingView(context: context, glucoseColor: hasStaticColorScheme ? .primary : glucoseColor)
                     }
@@ -95,12 +91,6 @@ struct LiveActivity: Widget {
         } else {
             PrivacyWaveformView(state: state, stale: stale, presentation: presentation, coverHeight: coverHeight)
         }
-    }
-
-    private func recoveryButton<Label: View>(@ViewBuilder label: () -> Label) -> some View {
-        Button(intent: HiroPrivateRecoveryIntent()) { label().padding(4).contentShape(Rectangle()) }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("Refresh activity"))
     }
 
 }

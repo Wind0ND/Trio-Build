@@ -123,6 +123,7 @@ private actor LoopGuard {
 
 struct AutomaticDeliveryContext: Equatable {
     let mode: DosingMode
+    let modeRevision: UUID
     let sourceRevision: UUID
     let pumpID: ObjectIdentifier?
     let simulatorSource: Bool
@@ -390,6 +391,7 @@ final class BaseAPSManager: APSManager, Injectable {
         let settings = settingsManager.settings
         return AutomaticDeliveryContext(
             mode: settings.dosingMode,
+            modeRevision: settingsManager.dosingModeRevision,
             sourceRevision: deviceDataManager.glucoseSourceRevision,
             pumpID: pump.map { ObjectIdentifier($0) },
             simulatorSource: settings.cgm == .simulator,
@@ -399,7 +401,7 @@ final class BaseAPSManager: APSManager, Injectable {
 
     private func executeLoop(loopStatRecord: inout LoopStats) async throws {
         let inputs = automaticDeliveryContext
-        let determinationID = try await calculateDetermination(for: inputs.mode)
+        let determinationID = try await calculateDetermination(for: inputs.mode, simulatedPump: inputs.mockPump)
         if inputs.mode.automation != .off {
             do {
                 let enacted = try await enactDetermination(determinationID, inputs: inputs)
@@ -481,11 +483,15 @@ final class BaseAPSManager: APSManager, Injectable {
     }
 
     func autosense() async throws -> Bool {
-        guard let autosense = await storage.retrieveAsync(OpenAPS.Settings.autosense, as: Autosens.self),
+        try await autosense(simulatedPump: pumpManager is MockPumpManager)
+    }
+
+    private func autosense(simulatedPump: Bool) async throws -> Bool {
+        guard let autosense = await storage.retrieveAsync(OpenAPS.Settings.autosenseCache(simulated: simulatedPump), as: Autosens.self),
               (autosense.timestamp ?? .distantPast).addingTimeInterval(30.minutes.timeInterval) > Date()
         else {
             let result = try await openAPS.autosense(
-                shouldSmoothGlucose: settingsManager.settings.smoothGlucose
+                shouldSmoothGlucose: settingsManager.settings.smoothGlucose, simulatedPump: simulatedPump
             )
             return result != nil
         }
@@ -502,19 +508,27 @@ final class BaseAPSManager: APSManager, Injectable {
         // Calculate TDD; uncovered gaps are inferred from the basal profile in memory
         let tddResult = try await tddStorage.calculateTDD(
             pumpManager: pumpManager,
-            pumpHistory: pumpHistoryStorage.getPumpHistory(),
+            pumpHistory: pumpHistoryStorage.getPumpHistory(simulated: pumpManager is MockPumpManager),
             basalProfile: basalProfile
         )
 
         // Store TDD in Core Data
-        await tddStorage.storeTDD(tddResult)
+        await tddStorage.storeTDD(tddResult, simulated: pumpManager is MockPumpManager)
     }
 
     func determineBasal() async throws {
-        _ = try await calculateDetermination(for: settingsManager.settings.dosingMode)
+        _ = try await calculateDetermination(for: settingsManager.settings.dosingMode, simulatedPump: pumpManager is MockPumpManager)
     }
 
-    private func calculateDetermination(for mode: DosingMode) async throws -> NSManagedObjectID {
+    static func validationGlucosePredicate(simulated: Bool, now: Date) -> NSPredicate {
+        NSCompoundPredicate(andPredicateWithSubpredicates: [
+            NSPredicate(format: "date >= %@ AND date <= %@", now.addingTimeInterval(-3600) as NSDate,
+                        now.addingTimeInterval(300) as NSDate),
+            BaseGlucoseStorage.provenancePredicate(simulated: simulated)
+        ])
+    }
+
+    private func calculateDetermination(for mode: DosingMode, simulatedPump: Bool) async throws -> NSManagedObjectID {
         try await calculateAndStoreTDD()
 
         var invalidGlucoseError: String?
@@ -530,7 +544,7 @@ final class BaseAPSManager: APSManager, Injectable {
             do {
                 glucose = try self.fetchGlucose(
                     on: validationContext,
-                    predicate: NSPredicate.predicateForOneHourAgo,
+                    predicate: Self.validationGlucosePredicate(simulated: self.settings.cgm == .simulator, now: Date()),
                     fetchLimit: 6
                 )
             } catch {
@@ -564,11 +578,12 @@ final class BaseAPSManager: APSManager, Injectable {
 
             // put profile creation up front since autosens needs it
             try await openAPS.createProfiles(for: mode)
-            let currentTemp = try await fetchCurrentTempBasal(date: now)
-            _ = try await autosense()
+            let currentTemp = try await fetchCurrentTempBasal(date: now, simulatedPump: simulatedPump)
+            _ = try await autosense(simulatedPump: simulatedPump)
 
             let (determination, storedID) = try await openAPS.determineBasal(
                 for: mode,
+                simulatedPump: simulatedPump,
                 currentTemp: currentTemp,
                 supportedBasalRates: supportedBasalRates,
                 shouldSmoothGlucose: settingsManager.settings.smoothGlucose,
@@ -629,9 +644,11 @@ final class BaseAPSManager: APSManager, Injectable {
         simulatedCarbsDate: Date? = nil
     ) async -> Determination? {
         do {
-            let temp = try await fetchCurrentTempBasal(date: Date.now)
+            let simulatedPump = pumpManager is MockPumpManager
+            let temp = try await fetchCurrentTempBasal(date: Date.now, simulatedPump: simulatedPump)
             return try await openAPS.determineBasal(
                 for: settingsManager.settings.dosingMode,
+                simulatedPump: simulatedPump,
                 currentTemp: temp,
                 supportedBasalRates: supportedBasalRates,
                 shouldSmoothGlucose: settingsManager.settings.smoothGlucose,
@@ -765,13 +782,13 @@ final class BaseAPSManager: APSManager, Injectable {
         clearBolusReporter()
     }
 
-    private func fetchCurrentTempBasal(date: Date) async throws -> TempBasal {
+    private func fetchCurrentTempBasal(date: Date, simulatedPump: Bool) async throws -> TempBasal {
         let context = CoreDataStack.shared.newTaskContext()
         context.name = "fetchCurrentTempBasal"
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: PumpEventStored.self,
             onContext: context,
-            predicate: NSPredicate.recentPumpHistory,
+            predicate: NSPredicate.forPump(.recentPumpHistory, simulated: simulatedPump),
             key: "timestamp",
             ascending: false,
             fetchLimit: 1,
@@ -830,7 +847,7 @@ final class BaseAPSManager: APSManager, Injectable {
                 throw APSError.apsError(message: "Determination expired or delivery settings changed")
             }
             guard !pump.status.deliveryIsUncertain else { throw PumpManagerError.uncertainDelivery }
-            guard !isManualTempBasal, !pump.status.pumpStatus.suspended else {
+            guard !isManualTempBasal, !pump.status.pumpStatus.suspended, !pump.status.pumpStatus.bolusing else {
                 throw APSError.invalidPumpState(message: "Pump delivery state changed")
             }
         }

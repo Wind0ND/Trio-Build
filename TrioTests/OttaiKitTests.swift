@@ -17,6 +17,14 @@ import Testing
         #expect(restored.pendingHistoryGrid.isEmpty)
     }
 
+    @Test("A stale M8 counter needs independent sequence timing before a live frame can be re-dated") func liveCounterDrift() {
+        let activation = now.addingTimeInterval(-12_070)
+        let valid = OttaiCGMManager.verifiedGridDate(sequence: 200, activatedAt: activation, receivedAt: now)
+        #expect(valid == now.addingTimeInterval(-10))
+        #expect(OttaiCGMManager.verifiedGridDate(sequence: 20, activatedAt: activation, receivedAt: now) == nil)
+        #expect(OttaiCGMManager.verifiedGridDate(sequence: 300, activatedAt: activation, receivedAt: now) == nil)
+    }
+
     @Test("Rated wear and warmup are independent of displayed extension and drifting clocks") func ratedWindow() {
         #expect(OttaiCGMManager.acceptsForHost(elapsed: 1801, wallAge: 2000, warmup: 1800, ratedWear: 10000))
         #expect(!OttaiCGMManager.acceptsForHost(elapsed: 1800, wallAge: 9000, warmup: 1800, ratedWear: 10000))

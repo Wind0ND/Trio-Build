@@ -11,14 +11,21 @@ protocol PumpHistoryObserver {
 
 protocol PumpHistoryStorage {
     var updatePublisher: AnyPublisher<Void, Never> { get }
-    func getPumpHistory() async throws -> [PumpHistoryEvent]
+    func getPumpHistory(simulated: Bool) async throws -> [PumpHistoryEvent]
     /// Returns the ids of purged events that were already uploaded to NS,
     /// so the caller can delete the now-withdrawn treatments remotely.
-    @discardableResult func storePumpEvents(_ events: [NewPumpEvent], replacePendingEvents: Bool) async throws -> [String]
+    @discardableResult func storePumpEvents(_ events: [NewPumpEvent], replacePendingEvents: Bool, simulated: Bool) async throws -> [String]
     func storeExternalInsulinEvent(amount: Decimal, timestamp: Date) async
     func getPumpHistoryNotYetUploadedToNightscout() async throws -> [NightscoutTreatment]
     func getPumpHistoryNotYetUploadedToHealth() async throws -> [PumpHistoryEvent]
     func getPumpHistoryNotYetUploadedToTidepool() async throws -> [PumpHistoryEvent]
+}
+
+extension PumpHistoryStorage {
+    func getPumpHistory() async throws -> [PumpHistoryEvent] { try await getPumpHistory(simulated: false) }
+    @discardableResult func storePumpEvents(_ events: [NewPumpEvent], replacePendingEvents: Bool) async throws -> [String] {
+        try await storePumpEvents(events, replacePendingEvents: replacePendingEvents, simulated: false)
+    }
 }
 
 final class BasePumpHistoryStorage: PumpHistoryStorage, Injectable {
@@ -60,7 +67,7 @@ final class BasePumpHistoryStorage: PumpHistoryStorage, Injectable {
         ).map { Decimal($0) as NSDecimalNumber }
     }
 
-    @discardableResult func storePumpEvents(_ events: [NewPumpEvent], replacePendingEvents: Bool) async throws -> [String] {
+    @discardableResult func storePumpEvents(_ events: [NewPumpEvent], replacePendingEvents: Bool, simulated: Bool) async throws -> [String] {
         let context = makeContext()
         context.name = "storePumpEvents"
         // on constraint conflicts the persisted row wins: finalized rows never change
@@ -68,13 +75,17 @@ final class BasePumpHistoryStorage: PumpHistoryStorage, Injectable {
         return try await context.perform {
             // upsert candidates: dose syncIdentifier, timestamp+type as fallback
             // LoopKit derives dose.syncIdentifier from raw; empty raw must not become a shared identity
-            let syncIdentifiers = events.compactMap(\.dose?.syncIdentifier).filter { !$0.isEmpty }
+            func identifier(_ raw: String?) -> String? {
+                guard let raw, !raw.isEmpty else { return nil }
+                return simulated ? "simulator:" + raw : raw
+            }
+            let syncIdentifiers = events.compactMap { identifier($0.dose?.syncIdentifier) }
             let timestamps = events.map(\.date)
             let request = PumpEventStored.fetchRequest() as NSFetchRequest<PumpEventStored>
-            request.predicate = NSCompoundPredicate(orPredicateWithSubpredicates: [
+            request.predicate = .forPump(NSCompoundPredicate(orPredicateWithSubpredicates: [
                 NSPredicate(format: "syncIdentifier IN %@", syncIdentifiers),
                 NSPredicate(format: "timestamp IN %@", timestamps)
-            ])
+            ]), simulated: simulated)
             request.relationshipKeyPathsForPrefetching = ["tempBasal"]
             let existingRows = try context.fetch(request)
 
@@ -125,6 +136,7 @@ final class BasePumpHistoryStorage: PumpHistoryStorage, Injectable {
                 }
 
                 let newPumpEvent = PumpEventStored(context: context)
+                newPumpEvent.isSimulated = NSNumber(value: simulated)
                 newPumpEvent.id = UUID().uuidString
                 // restrict entry to now or past
                 newPumpEvent.timestamp = min(event.date, Date())
@@ -195,7 +207,7 @@ final class BasePumpHistoryStorage: PumpHistoryStorage, Injectable {
             var purgedUploadedIds: [String] = []
             if replacePendingEvents {
                 let request = PumpEventStored.fetchRequest() as NSFetchRequest<PumpEventStored>
-                request.predicate = NSPredicate(format: "isMutable == YES")
+                request.predicate = .forPump(NSPredicate(format: "isMutable == YES"), simulated: simulated)
                 for orphan in try context.fetch(request) where !assertedRows.contains(orphan.objectID) {
                     debug(
                         .storage,
@@ -308,6 +320,7 @@ final class BasePumpHistoryStorage: PumpHistoryStorage, Injectable {
         await context.perform {
             // create pump event
             let newPumpEvent = PumpEventStored(context: context)
+            newPumpEvent.isSimulated = false
             let identifier = UUID().uuidString
             newPumpEvent.id = identifier
             // Trio-created record: it is its own source of truth, born final.
@@ -339,13 +352,13 @@ final class BasePumpHistoryStorage: PumpHistoryStorage, Injectable {
         }
     }
 
-    func getPumpHistory() async throws -> [PumpHistoryEvent] {
+    func getPumpHistory(simulated: Bool) async throws -> [PumpHistoryEvent] {
         let context = makeContext()
         context.name = "getPumpHistory"
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: PumpEventStored.self,
             onContext: context,
-            predicate: NSPredicate.pumpHistoryLast24h,
+            predicate: NSPredicate.forPump(.pumpHistoryLast24h, simulated: simulated),
             key: "timestamp",
             ascending: false,
             relationshipKeyPathsForPrefetching: ["bolus", "tempBasal"]
@@ -412,7 +425,7 @@ final class BasePumpHistoryStorage: PumpHistoryStorage, Injectable {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: PumpEventStored.self,
             onContext: context,
-            predicate: NSPredicate.pumpEventsNotYetUploadedToNightscout,
+            predicate: NSPredicate.forPump(.pumpEventsNotYetUploadedToNightscout, simulated: false),
             key: "timestamp",
             ascending: false,
             relationshipKeyPathsForPrefetching: ["bolus", "tempBasal"]
@@ -578,7 +591,7 @@ final class BasePumpHistoryStorage: PumpHistoryStorage, Injectable {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: PumpEventStored.self,
             onContext: context,
-            predicate: NSPredicate.pumpEventsNotYetUploadedToHealth,
+            predicate: NSPredicate.forPump(.pumpEventsNotYetUploadedToHealth, simulated: false),
             key: "timestamp",
             ascending: false,
             relationshipKeyPathsForPrefetching: ["bolus", "tempBasal"]
@@ -629,7 +642,7 @@ final class BasePumpHistoryStorage: PumpHistoryStorage, Injectable {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: PumpEventStored.self,
             onContext: context,
-            predicate: NSPredicate.pumpEventsNotYetUploadedToTidepool,
+            predicate: NSPredicate.forPump(.pumpEventsNotYetUploadedToTidepool, simulated: false),
             key: "timestamp",
             ascending: false,
             relationshipKeyPathsForPrefetching: ["bolus", "tempBasal"]

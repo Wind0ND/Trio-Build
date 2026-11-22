@@ -42,7 +42,7 @@ extension Calibrations {
             let results = try await CoreDataStack.shared.fetchEntitiesAsync(
                 ofType: GlucoseStored.self,
                 onContext: backgroundContext,
-                predicate: NSPredicate.predicateFor20MinAgo,
+                predicate: glucoseStorage.activeReadings(matching: NSPredicate.predicateFor20MinAgo),
                 key: "date",
                 ascending: false,
                 fetchLimit: 1 /// We only need the last value

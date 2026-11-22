@@ -124,6 +124,7 @@
         </fetchIndex>
     </entity>
     <entity name="OrefDetermination" representedClassName="OrefDetermination" syncable="YES">
+        <attribute name="isSimulated" optional="YES" attributeType="Boolean" usesScalarValueType="NO"/>
         <attribute name="bolus" optional="YES" attributeType="Decimal" defaultValueString="0.0"/>
         <attribute name="carbRatio" optional="YES" attributeType="Decimal" defaultValueString="0.0"/>
         <attribute name="carbsRequired" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
@@ -205,6 +206,7 @@
         </fetchIndex>
     </entity>
     <entity name="PumpEventStored" representedClassName="PumpEventStored" syncable="YES">
+        <attribute name="isSimulated" optional="YES" attributeType="Boolean" usesScalarValueType="NO"/>
         <attribute name="actionDuration" optional="YES" attributeType="Decimal"/>
         <attribute name="id" optional="YES" attributeType="String"/>
         <attribute name="insulinType" optional="YES" attributeType="String"/>
@@ -245,6 +247,7 @@
         <attribute name="lastrun" attributeType="Date" defaultDateTimeInterval="704497620" usesScalarValueType="NO"/>
     </entity>
     <entity name="TDDStored" representedClassName="TDDStored" syncable="YES">
+        <attribute name="isSimulated" optional="YES" attributeType="Boolean" usesScalarValueType="NO"/>
         <attribute name="bolus" optional="YES" attributeType="Decimal" defaultValueString="0.0"/>
         <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>

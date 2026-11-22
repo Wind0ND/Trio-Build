@@ -182,7 +182,9 @@ final class DiagnosticEventStore: @unchecked Sendable {
         }
         tail = savedTail?.generation == checkpoint.generation ? (savedTail?.events ?? []).filter(\.isValid) : []
         events = checkpoint.events.filter(\.isValid) + tail
+        let storedCount = checkpoint.events.count + (savedTail?.events.count ?? 0)
         pruneLocked(at: now())
+        if events.count != storedCount { checkpointLocked() }
     }
 
     deinit {
@@ -233,11 +235,13 @@ final class DiagnosticEventStore: @unchecked Sendable {
             attempt: attempt.map { min(max($0, 0), DiagnosticEvent.maximumAttempt) },
             count: count.map { min(max($0, 0), DiagnosticEvent.maximumCount) }
         )
+        let currentDate = now()
+        guard at >= currentDate.addingTimeInterval(-Self.retention) else { return true }
         lock.lock()
         events.append(event)
         tail.append(event)
-        pruneLocked(at: now())
         if tail.count >= Self.pageSize {
+            pruneLocked(at: currentDate)
             checkpointLocked()
         } else if let data = try? JSONEncoder.diagnosticStore.encode(Page(generation: generation, events: tail)) {
             defaults.set(data, forKey: Self.tailKey)
@@ -249,6 +253,7 @@ final class DiagnosticEventStore: @unchecked Sendable {
     func events(in window: DateInterval) -> [DiagnosticEvent] {
         lock.lock()
         defer { lock.unlock() }
+        pruneForReadLocked()
         return events
             .filter(\.isValid)
             .filter { window.contains($0.timestamp) }
@@ -258,6 +263,7 @@ final class DiagnosticEventStore: @unchecked Sendable {
     var allEvents: [DiagnosticEvent] {
         lock.lock()
         defer { lock.unlock() }
+        pruneForReadLocked()
         return events.filter(\.isValid)
     }
 
@@ -283,6 +289,12 @@ final class DiagnosticEventStore: @unchecked Sendable {
             attempt: userInfo["attempt"] as? Int,
             count: userInfo["count"] as? Int
         )
+    }
+
+    private func pruneForReadLocked() {
+        let previousCount = events.count
+        pruneLocked(at: now())
+        if events.count < previousCount { checkpointLocked() }
     }
 
     private func pruneLocked(at date: Date) {

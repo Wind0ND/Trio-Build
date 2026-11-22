@@ -38,7 +38,7 @@ final class LiveActivityData: ObservableObject {
     @Injected() private var settingsManager: SettingsManager!
     @Injected() private var broadcaster: Broadcaster!
     @Injected() private var storage: FileStorage!
-    @Injected() private var glucoseStorage: GlucoseStorage!
+    @Injected() var glucoseStorage: GlucoseStorage!
     @Injected() private var iobService: IOBService!
 
     private let activityAuthorizationInfo = ActivityAuthorizationInfo()

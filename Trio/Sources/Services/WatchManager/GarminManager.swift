@@ -470,7 +470,7 @@ final class BaseGarminManager: NSObject, GarminManager, Injectable {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: GlucoseStored.self,
             onContext: context,
-            predicate: NSPredicate.glucose,
+            predicate: glucoseStorage.activeReadings(matching: NSPredicate.glucose),
             key: "date",
             ascending: false,
             fetchLimit: limit
@@ -524,7 +524,7 @@ final class BaseGarminManager: NSObject, GarminManager, Injectable {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: OrefDetermination.self,
             onContext: context,
-            predicate: NSPredicate.predicateFor30MinAgoForDetermination,
+            predicate: glucoseStorage.activeDeterminations(matching: NSPredicate.predicateFor30MinAgoForDetermination),
             key: "deliverAt",
             ascending: false,
             fetchLimit: 0 // No limit - get all determinations in 30min window

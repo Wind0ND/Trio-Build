@@ -171,6 +171,35 @@ import Testing
         #expect(relaunched.allEvents.map(\.stage) == ["activation", "first_reading"])
     }
 
+    @Test("Compaction and relaunch never duplicate committed events")
+    func checkpointReplay() {
+        let defaults = Self.defaults()
+        let store = DiagnosticEventStore(defaults: defaults, now: { Self.start })
+        for count in 0..<145 {
+            _ = store.record(feature: "alerts", stage: "delivery", outcome: "delivered", count: count)
+        }
+        let reopened = DiagnosticEventStore(defaults: defaults, now: { Self.start })
+        #expect(reopened.allEvents.compactMap(\.count) == Array(0..<145))
+    }
+
+    @Test("Cold start physically removes expired events from both persistence pages")
+    func prunesExpiredPersistence() throws {
+        let defaults = Self.defaults()
+        let first = DiagnosticEventStore(defaults: defaults, now: { Self.start })
+        for _ in 0..<65 {
+            _ = first.record(feature: "ottai", stage: "nfc", outcome: "started")
+        }
+        let reopened = DiagnosticEventStore(defaults: defaults, now: {
+            Self.start.addingTimeInterval(DiagnosticEventStore.retention + 1)
+        })
+        #expect(reopened.allEvents.isEmpty)
+        let data = try #require(defaults.data(forKey: DiagnosticEventStore.defaultsKey))
+        let page = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let events = try #require(page["events"] as? [[String: Any]])
+        #expect(events.isEmpty)
+        #expect(defaults.data(forKey: DiagnosticEventStore.defaultsKey + ".tail") == nil)
+    }
+
     @Test("The notification contract is validated before persistence") func notificationContract() {
         // Isolated center: the app's shared store must not see test events.
         let center = Foundation.NotificationCenter()

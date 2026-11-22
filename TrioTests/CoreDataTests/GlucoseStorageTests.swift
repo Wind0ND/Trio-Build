@@ -141,6 +141,51 @@ import Testing
         #expect(algorithm.map(\.sgv) == [98])
     }
 
+    @Test("Noisy current value signals a fault and historical noisy values leave treatment history") func historicalNoise() async throws {
+        let date = Date().addingTimeInterval(-900)
+        let noisy = BloodGlucose(sgv: 240, date: 1, dateString: date, noise: 3, glucose: 240)
+        let valid = BloodGlucose(sgv: 103, date: 2, dateString: date.addingTimeInterval(300), glucose: 103)
+        try await storage.storeGlucose([noisy])
+        let initial = try await storage.getGlucoseForAlgorithm(shouldSmoothGlucose: false, fetchHours: 1)
+        #expect(initial.first?.noise == 3)
+        try await storage.storeGlucose([valid])
+        let recovered = try await storage.getGlucoseForAlgorithm(shouldSmoothGlucose: false, fetchHours: 1)
+        #expect(recovered.map(\.sgv) == [103])
+    }
+
+    @Test("Current-reading and chart predicates separate simulators while retaining old chart history") func sourceReadConsumers() async throws {
+        let date = Date().addingTimeInterval(-600)
+        try await storage.storeGlucose([BloodGlucose(sgv: 52, date: 2, dateString: date, glucose: 52)])
+        try await storage.storeGlucose([BloodGlucose(sgv: 120, date: 3, dateString: date.addingTimeInterval(300), glucose: 120, transmitterID: "SIMULATOR")])
+        let alertPredicate = storage.activeReadings(matching: NSPredicate(value: true))
+        let chartPredicate = storage.activeReadings(matching: NSPredicate(value: true), forHistory: true)
+        try await testContext.perform {
+            let request = GlucoseStored.fetchRequest()
+            request.predicate = alertPredicate
+            let current = try self.testContext.fetch(request)
+            #expect(current.map(\.glucose) == [52])
+            request.predicate = chartPredicate
+            let chart = try self.testContext.fetch(request)
+            #expect(chart.map(\.glucose) == [52])
+        }
+    }
+
+    @Test("A delayed deletion must still own its manager, source and revision") func stalePluginDeletion() {
+        let old = NSObject(), current = NSObject()
+        let oldID = ObjectIdentifier(old), newID = ObjectIdentifier(current)
+        let epoch = UUID()
+        func owned(manager: ObjectIdentifier, source: ObjectIdentifier, revision: UUID) -> Bool {
+            BaseFetchGlucoseManager.ownsPluginCallback(
+                manager: manager, currentManager: newID, source: source, currentSource: newID,
+                revision: revision, currentRevision: epoch
+            )
+        }
+        #expect(!owned(manager: oldID, source: newID, revision: epoch))
+        #expect(!owned(manager: newID, source: oldID, revision: epoch))
+        #expect(!owned(manager: newID, source: newID, revision: UUID()))
+        #expect(owned(manager: newID, source: newID, revision: epoch))
+    }
+
     @Test("Malformed xDrip dates are ignored") func appGroupDate() {
         #expect(AppGroupSource.parseDate("/Date(1462404576000)/") == Date(timeIntervalSince1970: 1_462_404_576))
         #expect(AppGroupSource.parseDate("/Date(inf)/") == nil)

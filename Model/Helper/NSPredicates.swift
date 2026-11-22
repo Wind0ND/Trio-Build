@@ -146,3 +146,13 @@ extension NSPredicate {
         NSPredicate(format: "timestamp >= %@ AND timestamp <= %@", start as NSDate, end as NSDate)
     }
 }
+
+extension NSPredicate {
+    /// Pre-migration rows carry no device tag. Keep them available in the real history;
+    /// simulations can consume only rows attested by a simulator callback.
+    static func forPump(_ predicate: NSPredicate, simulated: Bool) -> NSPredicate {
+        let source = simulated ? NSPredicate(format: "isSimulated == YES") :
+            NSPredicate(format: "isSimulated == NO OR isSimulated == nil")
+        return NSCompoundPredicate(andPredicateWithSubpredicates: [predicate, source])
+    }
+}
