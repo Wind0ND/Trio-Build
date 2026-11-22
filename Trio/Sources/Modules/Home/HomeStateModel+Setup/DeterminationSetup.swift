@@ -1,5 +1,6 @@
 import CoreData
 import Foundation
+import MockKit
 
 extension Home.StateModel {
     // MARK: - Enacted Determination
@@ -12,6 +13,7 @@ extension Home.StateModel {
         }
 
         do {
+            enactedDeterminationController.fetchRequest.predicate = glucoseStorage.activeDeterminations(matching: .enactedDetermination)
             try enactedDeterminationController.performFetch()
             updateEnactedDeterminationFromController()
             // Initial population; assigned to `forecastUpdateTask` so a change arriving
@@ -59,9 +61,11 @@ extension Home.StateModel {
 
     @MainActor func updateDeterminationsFromController() {
         guard let objects = determinationController.fetchedObjects else { return }
-        enactedAndNonEnactedDeterminations = objects
-        yAxisChartDataCobChart(determinations: objects)
-        yAxisChartDataIobChart(determinations: objects)
+        let history = glucoseStorage.activeDeterminations(matching: NSPredicate(value: true), forHistory: true)
+        let visible = objects.filter { history.evaluate(with: $0) }
+        enactedAndNonEnactedDeterminations = visible
+        yAxisChartDataCobChart(determinations: visible)
+        yAxisChartDataIobChart(determinations: visible)
         updateCobProjection()
     }
 
@@ -70,7 +74,7 @@ extension Home.StateModel {
     /// `monitor/cob.json` is written before the determination reaches Core Data, so it is
     /// already current by the time this fires.
     @MainActor private func updateCobProjection() {
-        cobProjection = (fileStorage.retrieve(OpenAPS.Monitor.cob, as: [CobEntry].self) ?? [])
+        cobProjection = (fileStorage.retrieve(OpenAPS.Monitor.cobFile(simulated: apsManager.pumpManager is MockPumpManager), as: [CobEntry].self) ?? [])
             .compactMap { entry in
                 entry.time.map { ProjectionPoint(date: $0, value: NSDecimalNumber(decimal: entry.cob).doubleValue) }
             }

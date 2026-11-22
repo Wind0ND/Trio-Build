@@ -88,7 +88,10 @@ final class TelemetryAttestor: Injectable {
             category: .telemetry,
             registerFields: (keyID: "key_id", appID: "app_id"),
             queryItems: Self.queryItems(reason: context.reason, lastFailureReason: context.lastFailureReason),
-            prepare: { context.applyHeaders(to: &$0) },
+            prepare: { request in
+                guard PropertyPersistentFlags.shared.telemetrySharingEnabled != false else { throw CancellationError() }
+                context.applyHeaders(to: &request)
+            },
             service: service
         )
     }

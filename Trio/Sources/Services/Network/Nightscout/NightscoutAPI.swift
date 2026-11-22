@@ -91,18 +91,29 @@ extension NightscoutAPI {
             request.addValue(secret.sha1(), forHTTPHeaderField: "api-secret")
         }
 
-        do {
-            let (data, _) = try await URLSession.shared.data(for: request)
-            let glucose = try JSONCoding.decoder.decode([BloodGlucose].self, from: data)
-            return glucose.map {
-                var reading = $0
-                reading.glucose = $0.sgv ?? $0.mbg
-                return reading
-            }
-        } catch {
-            warning(.nightscout, "Glucose fetch failed", error: error)
-            return []
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200 ... 299).contains(http.statusCode)
+        else { throw URLError(.badServerResponse) }
+        return try Self.decodeGlucoseEntries(data)
+    }
+
+    static func decodeGlucoseEntries(_ data: Data) throws -> [BloodGlucose] {
+        struct Entry: Decodable {
+            let reading: BloodGlucose?
+            init(from decoder: Decoder) { reading = try? BloodGlucose(from: decoder) }
         }
+        let entries = try JSONCoding.decoder.decode([Entry].self, from: data)
+        let readings = entries.compactMap { entry -> BloodGlucose? in
+            guard var reading = entry.reading, let value = reading.sgv ?? reading.mbg,
+                  value > 0, Int16(exactly: value) != nil else { return nil }
+            reading.glucose = value
+            return reading
+        }
+        if readings.count != entries.count {
+            warning(.nightscout, "Skipped \(entries.count - readings.count) malformed glucose entries")
+        }
+        guard entries.isEmpty || !readings.isEmpty else { throw URLError(.cannotDecodeContentData) }
+        return readings
     }
 
     private func makeNeQueryItems() -> [URLQueryItem] {

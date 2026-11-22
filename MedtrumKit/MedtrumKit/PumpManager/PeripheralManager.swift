@@ -386,22 +386,22 @@ extension PeripheralManager: CBPeripheralDelegate {
             return
         }
 
-        if packet.responseCode == 16384 {
+        if !packet.failed, packet.responseCode == 16384 {
             // Need to skip to packet
             log.debug("Skipping this message - data: \(packet.totalData.hexEncodedString())")
             return
         }
 
         let response: MedtrumWriteResult<Any>
-        if packet.responseCode != 0 {
+        if packet.failed {
+            log.error("Failed to validate command response")
+            response = .failure(error: .invalidData)
+        } else if packet.responseCode != 0 {
             // Examples for invalid codes:
             // 7 -> Invalid authorization: propably wrong session token used
             // 8 -> Invalid state: The patch is not in state 32 (active), which is required for that command
             log.error("Invalid responseCode: \(packet.responseCode)")
             response = .failure(error: .invalidResponse(code: packet.responseCode))
-        } else if packet.failed {
-            log.error("Failed to parse message, either wrong command type or CRC check failed...")
-            response = .failure(error: .invalidData)
         } else if !packet.hasEnoughData {
             let message =
                 "Packet has too little data - expected: \(packet.mimimumDataSize), data: \(packet.totalData.hexEncodedString())"

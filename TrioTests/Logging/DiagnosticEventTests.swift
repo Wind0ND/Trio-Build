@@ -139,6 +139,27 @@ import Testing
         #expect(store.allEvents.last?.count == DiagnosticEventStore.maximumEvents + 4)
     }
 
+    @Test("Appending a small burst preserves the stored checkpoint and survives relaunch")
+    func boundedPersistenceWrites() throws {
+        let defaults = Self.defaults()
+        let seeded = Array(repeating: DiagnosticEvent(timestamp: Self.start, feature: "activity",
+            stage: "lifecycle", outcome: "created", attempt: nil, count: nil), count: 512)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        defaults.set(try encoder.encode(seeded), forKey: DiagnosticEventStore.defaultsKey)
+        let store = DiagnosticEventStore(defaults: defaults, now: { Self.start })
+        let checkpoint = defaults.data(forKey: DiagnosticEventStore.defaultsKey)
+        for _ in 0..<4 {
+            #expect(store.record(feature: "alerts", stage: "delivery", outcome: "delivered"))
+        }
+        #expect(defaults.data(forKey: DiagnosticEventStore.defaultsKey) == checkpoint)
+        let reopened = DiagnosticEventStore(defaults: defaults, now: { Self.start })
+        #expect(reopened.allEvents.count == 516)
+        #expect(reopened.allEvents.suffix(4).allSatisfy { $0.stage == "delivery" })
+        reopened.removeAll()
+        #expect(DiagnosticEventStore(defaults: defaults, now: { Self.start }).allEvents.isEmpty)
+    }
+
     @Test("Events persist across store instances so pre-registration pairing survives a relaunch") func persistence() {
         let defaults = Self.defaults()
         let first = DiagnosticEventStore(defaults: defaults, now: { Self.start })
@@ -148,6 +169,35 @@ import Testing
         let relaunched = DiagnosticEventStore(defaults: defaults, now: { Self.start.addingTimeInterval(60) })
         #expect(relaunched.allEvents == first.allEvents)
         #expect(relaunched.allEvents.map(\.stage) == ["activation", "first_reading"])
+    }
+
+    @Test("Compaction and relaunch never duplicate committed events")
+    func checkpointReplay() {
+        let defaults = Self.defaults()
+        let store = DiagnosticEventStore(defaults: defaults, now: { Self.start })
+        for count in 0..<145 {
+            _ = store.record(feature: "alerts", stage: "delivery", outcome: "delivered", count: count)
+        }
+        let reopened = DiagnosticEventStore(defaults: defaults, now: { Self.start })
+        #expect(reopened.allEvents.compactMap(\.count) == Array(0..<145))
+    }
+
+    @Test("Cold start physically removes expired events from both persistence pages")
+    func prunesExpiredPersistence() throws {
+        let defaults = Self.defaults()
+        let first = DiagnosticEventStore(defaults: defaults, now: { Self.start })
+        for _ in 0..<65 {
+            _ = first.record(feature: "ottai", stage: "nfc", outcome: "started")
+        }
+        let reopened = DiagnosticEventStore(defaults: defaults, now: {
+            Self.start.addingTimeInterval(DiagnosticEventStore.retention + 1)
+        })
+        #expect(reopened.allEvents.isEmpty)
+        let data = try #require(defaults.data(forKey: DiagnosticEventStore.defaultsKey))
+        let page = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let events = try #require(page["events"] as? [[String: Any]])
+        #expect(events.isEmpty)
+        #expect(defaults.data(forKey: DiagnosticEventStore.defaultsKey + ".tail") == nil)
     }
 
     @Test("The notification contract is validated before persistence") func notificationContract() {

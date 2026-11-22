@@ -19,11 +19,12 @@ actor TelemetrySendGate {
         minimumInterval: TimeInterval,
         retryInterval: TimeInterval,
         force: Bool = false,
+        sharingEnabled: Bool = true,
         operation: () async -> Bool,
         onAttempt: () -> Void = {},
         onSuccess: () -> Void = {}
     ) async -> Bool {
-        guard !isSending else { return false }
+        guard sharingEnabled, !isSending else { return false }
         guard force || Self.isOverdue(now: now, lastSentAt: lastSentAt, minimumInterval: minimumInterval) else {
             return false
         }
@@ -56,8 +57,6 @@ actor TelemetrySendGate {
 /// No health data, credentials, or personally-identifying information is sent.
 /// See `buildPayload()` for the exact set of fields and `TelemetryPreviewView`
 /// for the in-app inspector that renders the same payload.
-/// Opted-out installs send only an empty daily `/anonymous` GET carrying the
-/// app version, install identifier, trigger reason, and prior failure category.
 final class TelemetryClient: Injectable {
     // Container-scoped singleton; resolving pulls the APS/device graph, so only touch after loadServices()
     static var shared: TelemetryClient { TrioApp.resolver.resolve(TelemetryClient.self)! }
@@ -132,6 +131,7 @@ final class TelemetryClient: Injectable {
     /// "how often does iOS recycle this process" signal that is directly
     /// comparable across pings regardless of the cadence between them.
     func recordColdLaunch(now: Date = Date()) {
+        guard PropertyPersistentFlags.shared.telemetrySharingEnabled != false else { return }
         let cutoff = now.addingTimeInterval(-Self.weeklyInterval)
         var recent = PropertyPersistentFlags.shared.telemetryColdLaunchTimes ?? []
         recent.removeAll { $0 < cutoff }
@@ -153,13 +153,6 @@ final class TelemetryClient: Injectable {
         return new
     }
 
-    /// Materializes the per-install identifier regardless of the telemetry
-    /// sharing preference so both identified and anonymous cadence paths have
-    /// a stable installation header when they run.
-    func initializeInstallID() {
-        _ = installId()
-    }
-
     // MARK: - Cadence
 
     /// True when the running build's commit SHA differs from the SHA recorded
@@ -171,8 +164,7 @@ final class TelemetryClient: Injectable {
         return PropertyPersistentFlags.shared.telemetryLastSentSha != currentSha
     }
 
-    /// Arms (or re-arms) the 24h send timer. Idempotent and active for both
-    /// full and anonymous telemetry. Best-effort fallback only: GCD timers
+    /// Arms the daily send timer when sharing is enabled. Best-effort fallback only: GCD timers
     /// don't advance while the app is
     /// suspended, so on iOS this effectively means "fires only if the app
     /// stays foregrounded for 24h." Daily cadence is instead driven by
@@ -182,7 +174,7 @@ final class TelemetryClient: Injectable {
         lock.lock()
         defer { lock.unlock() }
 
-        if timer == nil {
+        if timer == nil, PropertyPersistentFlags.shared.telemetrySharingEnabled != false {
             let t = DispatchTimer(timeInterval: Self.dailyInterval)
             t.eventHandler = { [weak self] in
                 Task.detached { await self?.sendIfOverdue(reason: .timer) }
@@ -201,28 +193,19 @@ final class TelemetryClient: Injectable {
     /// actor gate, preventing overlapping requests and enforcing a one-hour
     /// retry delay after an unsuccessful attempt.
     @discardableResult func sendIfOverdue(reason: SendReason, now: Date = Date()) async -> Bool {
-        let sharingEnabled = PropertyPersistentFlags.shared.telemetrySharingEnabled != false
-        let lastSentAt = sharingEnabled ?
-            PropertyPersistentFlags.shared.telemetryLastSentAt :
-            PropertyPersistentFlags.shared.telemetryAnonymousLastSentAt
-
         return await sendGate.runIfEligible(
             now: now,
-            lastSentAt: lastSentAt,
+            lastSentAt: PropertyPersistentFlags.shared.telemetryLastSentAt,
             lastAttemptAt: PropertyPersistentFlags.shared.telemetryLastAttemptAt,
             minimumInterval: Self.dailyInterval,
-            retryInterval: Self.retryInterval
+            retryInterval: Self.retryInterval,
+            sharingEnabled: PropertyPersistentFlags.shared.telemetrySharingEnabled != false
         ) { [weak self] in
-            guard let self else { return false }
-            return sharingEnabled ? await send(reason: reason) : await sendAnonymous(reason: reason)
+            await self?.send(reason: reason) ?? false
         } onAttempt: {
             PropertyPersistentFlags.shared.telemetryLastAttemptAt = now
         } onSuccess: {
-            if sharingEnabled {
-                self.recordSuccessfulSend()
-            } else {
-                self.recordSuccessfulAnonymousSend()
-            }
+            self.recordSuccessfulSend()
         }
     }
 
@@ -231,6 +214,7 @@ final class TelemetryClient: Injectable {
     /// operation while allowing an already-running app enough time to finish
     /// its daily request before iOS suspends it.
     func checkAndSendIfOverdueInBackground() {
+        guard PropertyPersistentFlags.shared.telemetrySharingEnabled != false else { return }
         Task { @MainActor in
             var backgroundTaskID = startBackgroundTask(withName: "Daily Telemetry Check-In")
             await sendIfOverdue(reason: .backgroundActivity)
@@ -252,7 +236,8 @@ final class TelemetryClient: Injectable {
             lastAttemptAt: PropertyPersistentFlags.shared.telemetryLastAttemptAt,
             minimumInterval: Self.dailyInterval,
             retryInterval: Self.retryInterval,
-            force: true
+            force: true,
+            sharingEnabled: PropertyPersistentFlags.shared.telemetrySharingEnabled != false
         ) { [weak self] in
             await self?.send(reason: reason) ?? false
         } onAttempt: {
@@ -371,11 +356,6 @@ final class TelemetryClient: Injectable {
         PropertyPersistentFlags.shared.telemetryLastAttemptAt = nil
     }
 
-    private func recordSuccessfulAnonymousSend() {
-        PropertyPersistentFlags.shared.telemetryAnonymousLastSentAt = Date()
-        PropertyPersistentFlags.shared.telemetryLastAttemptAt = nil
-    }
-
     private func requestContext(reason: SendReason) -> TelemetryRequestContext {
         TelemetryRequestContext(
             reason: reason.rawValue,
@@ -392,37 +372,6 @@ final class TelemetryClient: Injectable {
         Bundle.main.appDevVersion ??
             (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ??
             "unknown"
-    }
-
-    private func sendAnonymous(reason: SendReason) async -> Bool {
-        func failed(_ reason: String) -> Bool {
-            PropertyPersistentFlags.shared.telemetryLastFailureReason = reason
-            return false
-        }
-
-        let context = requestContext(reason: reason)
-        guard let baseURL = Self.baseURL,
-              var request = Self.anonymousRequest(baseURL: baseURL, context: context)
-        else { return failed("anonymous_request_url_failed") }
-
-        request.timeoutInterval = 15
-
-        do {
-            let (_, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse else {
-                return failed("anonymous_non_http_response")
-            }
-            guard (200 ..< 300).contains(http.statusCode) else {
-                warning(.telemetry, "Anonymous send failed with HTTP \(http.statusCode)")
-                return failed("anonymous_http_\(http.statusCode)")
-            }
-            PropertyPersistentFlags.shared.telemetryLastFailureReason = nil
-            info(.telemetry, "Anonymous send succeeded")
-            return true
-        } catch {
-            warning(.telemetry, "Anonymous send failed", error: error)
-            return failed("anonymous_request_failed")
-        }
     }
 
     /// Build payload, attest it via App Attest, and POST it. Returns success on
@@ -445,6 +394,7 @@ final class TelemetryClient: Injectable {
     /// Successful sends clear that failure-backoff timestamp and advance the
     /// normal 24-hour cadence.
     @discardableResult func send(reason: SendReason) async -> Bool {
+        guard PropertyPersistentFlags.shared.telemetrySharingEnabled != false else { return false }
         func failed(_ reason: String) -> Bool {
             PropertyPersistentFlags.shared.telemetryLastFailureReason = reason
             return false
@@ -480,6 +430,7 @@ final class TelemetryClient: Injectable {
             return failed("registration_failed")
         }
 
+        guard PropertyPersistentFlags.shared.telemetrySharingEnabled != false else { return false }
         let payload = buildPayload()
         guard let body = try? JSONSerialization.data(withJSONObject: payload, options: []) else {
             warning(.telemetry, "Send skipped: payload could not be serialized")
@@ -522,6 +473,7 @@ final class TelemetryClient: Injectable {
         request.timeoutInterval = 15
 
         do {
+            guard PropertyPersistentFlags.shared.telemetrySharingEnabled != false else { return false }
             let (_, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse else {
                 warning(.telemetry, "Send failed: response was not HTTP")
@@ -563,20 +515,6 @@ final class TelemetryClient: Injectable {
             reason: reason.rawValue,
             lastFailureReason: lastFailureReason
         )
-    }
-
-    static func anonymousRequest(baseURL: URL, context: TelemetryRequestContext) -> URLRequest? {
-        guard let url = TelemetryAttestor.requestURL(
-            baseURL: baseURL,
-            path: "anonymous",
-            reason: context.reason,
-            lastFailureReason: context.lastFailureReason
-        ) else { return nil }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        context.applyHeaders(to: &request)
-        return request
     }
 
     /// `iPhone15,2`-style identifier from `utsname.machine`. Returns

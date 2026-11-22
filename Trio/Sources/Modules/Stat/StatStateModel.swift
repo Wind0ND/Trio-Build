@@ -6,6 +6,7 @@ import Swinject
 
 extension Stat {
     @Observable final class StateModel: BaseStateModel<Provider> {
+        @ObservationIgnored @Injected() var glucoseStorage: GlucoseStorage!
         @ObservationIgnored @Injected() var settings: SettingsManager!
         @ObservationIgnored @Injected() var apsManager: APSManager!
         @ObservationIgnored @Injected() var fetchGlucoseManager: FetchGlucoseManager!
@@ -164,7 +165,7 @@ extension Stat {
                 let results = try await CoreDataStack.shared.fetchEntitiesAsync(
                     ofType: GlucoseStored.self,
                     onContext: context,
-                    predicate: predicate,
+                    predicate: glucoseStorage.activeReadings(matching: predicate, forHistory: true),
                     key: "date",
                     ascending: false,
                     batchSize: 100,

@@ -46,13 +46,7 @@ struct TelemetryPrivacyView: View {
                     )
                 }
 
-                Group {
-                    Text("Anonymous telemetry")
-                        .font(.headline)
-                    Text(
-                        "When telemetry is disabled, Trio still sends a minimal request every 24 hours so developers can track the number of active users per version. It carries only the app version, a randomly-generated install UUID that cannot be traced back to you, what triggered the request, and the type of any prior telemetry send error."
-                    )
-                }
+
             }
             .padding()
         }

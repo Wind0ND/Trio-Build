@@ -43,6 +43,12 @@ struct GlucoseAlert: Identifiable, Codable, Equatable {
         type == .urgentLow || isEnabled
     }
 
+    var shortSnoozeOnly: Bool { type == .urgentLow || overridesSilenceAndDND }
+
+    func snoozeEnd(_ requested: Date, now: Date) -> Date {
+        shortSnoozeOnly ? min(requested, now.addingTimeInterval(BaseTrioAlertManager.quickSnooze)) : requested
+    }
+
     // MARK: - Codable
 
     private enum CodingKeys: String, CodingKey {

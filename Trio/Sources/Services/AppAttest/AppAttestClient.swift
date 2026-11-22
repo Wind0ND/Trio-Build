@@ -28,7 +28,7 @@ struct AppAttestClient {
     var registerFields = (keyID: "keyId", appID: "appId")
     var challengeBody: Data?
     var queryItems: [URLQueryItem] = []
-    var prepare: (inout URLRequest) -> Void = { _ in }
+    var prepare: (inout URLRequest) throws -> Void = { _ in }
     var timeout: TimeInterval = 15
     var timeoutRetries = 0
     var service: AppAttestService = DCAppAttestService.shared
@@ -190,7 +190,7 @@ struct AppAttestClient {
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        prepare(&request)
+        try prepare(&request)
         request.timeoutInterval = timeout
         return request
     }

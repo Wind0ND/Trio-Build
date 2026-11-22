@@ -48,12 +48,26 @@ import Testing
         // Create a mock determination
         await testContext.perform {
             let determination = OrefDetermination(context: testContext)
+            determination.isSimulated = false
             determination.id = id
             determination.deliverAt = date
             determination.timestamp = date
             determination.enacted = true
             determination.isUploadedToNS = true
             try? testContext.save()
+        }
+
+        // More recent mock and unattributed build-28 rows must not displace a real recommendation.
+        try await testContext.perform {
+            let origins: [NSNumber?] = [NSNumber(value: true), nil]
+            for origin in origins {
+                let newer = OrefDetermination(context: testContext)
+                newer.id = UUID()
+                newer.deliverAt = date.addingTimeInterval(1)
+                newer.isSimulated = origin
+                newer.enacted = true
+            }
+            try testContext.save()
         }
 
         // Tests with predicates that we use the most for this function
@@ -188,6 +202,7 @@ import Testing
     ) async throws -> NSManagedObjectID {
         try await testContext.perform {
             let determination = OrefDetermination(context: testContext)
+            determination.isSimulated = false
             determination.id = UUID()
             determination.deliverAt = date
             determination.timestamp = date
@@ -227,5 +242,64 @@ import Testing
                 throw TestError("Failed to create test data: \(error)")
             }
         }
+    }
+}
+
+extension DeterminationStorageTests {
+    @Test("Two simulated readings cannot complete the minimum of three readings for a real pump")
+    func mixedGlucoseValidation() async throws {
+        let now = Date()
+        let counts = try await testContext.perform {
+            for (index, simulated) in [false, true, true].enumerated() {
+                let row = GlucoseStored(context: testContext)
+                row.date = now.addingTimeInterval(Double(-index * 300))
+                row.glucose = 100
+                row.isSimulated = NSNumber(value: simulated)
+            }
+            try testContext.save()
+            let request = GlucoseStored.fetchRequest()
+            request.fetchLimit = 6
+            request.predicate = BaseAPSManager.validationGlucosePredicate(simulated: false, now: now)
+            let actual = try testContext.fetch(request).count
+            request.predicate = BaseAPSManager.validationGlucosePredicate(simulated: true, now: now)
+            return (actual, try testContext.fetch(request).count)
+        }
+        #expect(counts.0 == 1)
+        #expect(counts.1 == 2)
+    }
+}
+
+private enum DeterminationTestError: Error { case rejectedSave }
+private final class RejectingDeterminationContext: NSManagedObjectContext {
+    override func save() throws { throw DeterminationTestError.rejectedSave }
+}
+
+extension DeterminationStorageTests {
+    @Test("Only a successful save returns the exact determination to enact")
+    func exactSavedDetermination() async throws {
+        let fixture = Data(#"{"reason":"test","rate":1,"duration":30}"#.utf8)
+        var determination = try JSONDecoder().decode(Determination.self, from: fixture)
+        determination.deliverAt = Date()
+        let first = try await OpenAPS.processDetermination(determination, on: testContext)
+        let second = try await OpenAPS.processDetermination(determination, on: testContext)
+        #expect(!first.isTemporaryID && !second.isTemporaryID && first != second)
+        let failing = RejectingDeterminationContext(concurrencyType: .privateQueueConcurrencyType)
+        failing.persistentStoreCoordinator = coreDataStack.persistentContainer.persistentStoreCoordinator
+        await #expect(throws: DeterminationTestError.rejectedSave) {
+            _ = try await OpenAPS.processDetermination(determination, on: failing)
+        }
+    }
+
+    @Test("Decoding an unavailable pump preserves the opaque checkpoint until explicit removal")
+    func pumpConfigurationLifecycle() throws {
+        var file = PersistedProperty<[String: Any]>(key: "TestPump-\(UUID().uuidString)")
+        defer { file.wrappedValue = nil }
+        try file.store(["managerIdentifier": "unsupported-driver", "state": ["opaque": "keep"]])
+        let opaque = try #require(file.wrappedValue)
+        #expect(BaseDeviceDataManager.pumpManagerFromRawValue(opaque) == nil)
+        let restored = file.wrappedValue?["state"] as? [String: String]
+        #expect(restored?["opaque"] == "keep")
+        try file.remove()
+        #expect(file.wrappedValue == nil)
     }
 }

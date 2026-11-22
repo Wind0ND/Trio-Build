@@ -64,10 +64,9 @@ final class BaseUserNotificationsManager: NSObject, UserNotificationsManager, In
         notificationCenter.getNotificationCategories { [weak self] existingCategories in
             guard let self else { return }
 
-            let glucoseCategory = NotificationCategoryFactory.createGlucoseCategory()
-
             var categories = existingCategories
-            categories.update(with: glucoseCategory)
+            categories.update(with: NotificationCategoryFactory.makeCategory(.trioAlert))
+            categories.update(with: NotificationCategoryFactory.makeCategory(.quickSnoozeOnly))
             // UNUserNotificationCenter methods should be called on main thread
             Task { @MainActor [weak self] in
                 guard let self else { return }
@@ -146,7 +145,7 @@ final class BaseUserNotificationsManager: NSObject, UserNotificationsManager, In
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: GlucoseStored.self,
             onContext: context,
-            predicate: NSPredicate.predicateFor20MinAgo,
+            predicate: glucoseStorage.activeReadings(matching: NSPredicate.predicateFor20MinAgo),
             key: "date",
             ascending: false,
             fetchLimit: 3
@@ -231,20 +230,15 @@ extension BaseUserNotificationsManager: UNUserNotificationCenterDelegate {
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        defer { completionHandler() }
-
-        HiroAlertJournal.shared.observedNotification(response.notification)
-        let userInfo = response.notification.request.content.userInfo
-        if userInfo[AlertUserInfoKey.managerIdentifier.rawValue] is String {
-            trioAlertManager.handleNotificationResponse(response)
-            return
-        }
-
-        // Handle quick snooze actions (from notification action buttons).
-        if let quickAction = NotificationResponseAction(rawValue: response.actionIdentifier) {
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                await self.applySnooze(for: quickAction.duration)
+        Task { @MainActor [weak self] in
+            defer { completionHandler() }
+            guard let self else { return }
+            HiroAlertJournal.shared.observedNotification(response.notification)
+            let userInfo = response.notification.request.content.userInfo
+            if userInfo[AlertUserInfoKey.managerIdentifier.rawValue] is String {
+                trioAlertManager.handleNotificationResponse(response)
+            } else if let quickAction = NotificationResponseAction(rawValue: response.actionIdentifier) {
+                await applySnooze(for: quickAction.duration)
             }
         }
     }

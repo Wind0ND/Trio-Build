@@ -416,7 +416,7 @@ final class GlucoseAlertCoordinator: Injectable {
             let results = try await CoreDataStack.shared.fetchEntitiesAsync(
                 ofType: GlucoseStored.self,
                 onContext: context,
-                predicate: predicate,
+                predicate: glucoseStorage.activeReadings(matching: predicate),
                 key: "date",
                 ascending: false,
                 fetchLimit: 1
@@ -435,8 +435,9 @@ final class GlucoseAlertCoordinator: Injectable {
 extension GlucoseAlertCoordinator: DeterminationObserver {
     func determinationDidUpdate(_ determination: Determination) {
         evaluationQueue.async { [weak self] in
-            self?.evaluateForecast(determination)
-            self?.evaluateCarbsRequired(determination)
+            guard let self, determination.isSimulated == (self.glucoseStorage.mockPumpConnected == true) else { return }
+            self.evaluateForecast(determination)
+            self.evaluateCarbsRequired(determination)
         }
     }
 }
@@ -446,20 +447,7 @@ extension GlucoseAlertCoordinator: SnoozeObserver {
     /// IDs so the post-snooze evaluation can re-fire fresh if any condition
     /// still breaches.
     func snoozeDidChange(_ untilDate: Date) {
-        // Mirror the global snooze onto per-alarm snoozedUntil: alarms with
-        // "Override Silence & DnD" are issued .critical and pierce the
-        // AlertMuter, so the shared mute window alone can't hold them. A
-        // shorter per-type snooze (e.g. a 15-min swipe) would otherwise
-        // resurface them mid-window. Urgent low keeps its 15-minute safety
-        // floor and is never bulk-snoozed. An ended snooze (.distantPast)
-        // clears the stamps the same way.
-        for type in GlucoseAlertType.allCases where type != .urgentLow {
-            snoozeGlucoseType(type, until: untilDate)
-        }
-        guard untilDate > Date() else { return }
-        evaluationQueue.async { [weak self] in
-            self?.firingAlertIDs.removeAll()
-        }
+        setSnooze(until: untilDate) { !$0.shortSnoozeOnly }
     }
 }
 
@@ -470,12 +458,17 @@ extension GlucoseAlertCoordinator: GlucoseSnoozeObserver {
     /// alarms dismisses as one unit), and drops matching entries from
     /// `firingAlertIDs` so the next post-snooze reading evaluates fresh.
     func snoozeGlucoseType(_ type: GlucoseAlertType, until untilDate: Date) {
+        setSnooze(until: untilDate) { $0.type == type }
+    }
+
+    private func setSnooze(until untilDate: Date, matching: @escaping (GlucoseAlert) -> Bool) {
         DispatchQueue.main.async {
             let store = GlucoseAlertsStore.shared
             var updated = store.alerts
             var matchingAlarms: [GlucoseAlert] = []
-            for index in updated.indices where updated[index].type == type {
-                updated[index].snoozedUntil = untilDate
+            let now = Date()
+            for index in updated.indices where matching(updated[index]) {
+                updated[index].snoozedUntil = updated[index].snoozeEnd(untilDate, now: now)
                 matchingAlarms.append(updated[index])
             }
             guard !matchingAlarms.isEmpty else { return }

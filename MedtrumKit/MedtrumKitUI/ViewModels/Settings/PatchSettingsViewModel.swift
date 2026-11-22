@@ -141,13 +141,18 @@ class PatchSettingsViewModel: ObservableObject {
         pumpManager.notifyStateDidChange()
         checkDirtyState()
 
+        let state = pumpManager.state
+        let activatedAt = state.patchSessionEnded || state.expiryMode != .default ? nil : state.patchActivatedAt
+        let interval = state.notificationAfterActivation
         pumpManager.pumpDelegate.notify { delegate in
             // retractAlert and issueAlert are async in LoopKit. Both stay in one
             // Task so the old notification is still retracted before the new one
             // is issued -- reversing them would leave the stale alert in place.
             Task {
                 await delegate?.retractAlert(identifier: MedtrumAlert.patchExpiredNotification(after: .hours(1)).alert.identifier)
-                await delegate?.issueAlert(MedtrumAlert.patchExpiredNotification(after: self.notificationAfterActivation).alert)
+                if let activatedAt {
+                    await delegate?.issueAlert(MedtrumAlert.patchReminder(activatedAt: activatedAt, afterActivation: interval, now: Date()).alert)
+                }
             }
         }
     }

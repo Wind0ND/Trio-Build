@@ -18,13 +18,14 @@ final class TrioUserNotificationAlertScheduler {
     /// `silenced` posts the notification without any sound. Used when another
     /// channel (AlarmKit) is already sounding this alert, so the two don't
     /// overlap into one very loud alarm.
-    func schedule(_ alert: Alert, muted: Bool, soundURL: URL?, silenced: Bool = false) {
-        let request = makeRequest(alert: alert, muted: muted, soundURL: soundURL, silenced: silenced)
-        PrivacyNotificationLifecycle.schedule(request, center: notificationCenter) { error in
+    func schedule(_ alert: Alert, soundURL: URL?, silenced: Bool = false, completion: ((UInt64) -> Void)? = nil) {
+        let request = makeRequest(alert: alert, soundURL: soundURL, silenced: silenced)
+        PrivacyNotificationLifecycle.schedule(request, center: notificationCenter) { error, revision in
             if let error = error {
                 DiagnosticEventStore.shared.record(feature: "alerts", stage: "plan", outcome: "failed")
                 warning(.alerts, "Scheduling alert notification \(alert.identifier.value) failed", error: error)
             }
+            completion?(revision)
         }
     }
 
@@ -32,7 +33,7 @@ final class TrioUserNotificationAlertScheduler {
         PrivacyNotificationLifecycle.cancel([identifier.value], center: notificationCenter)
     }
 
-    private func makeRequest(alert: Alert, muted: Bool, soundURL: URL?, silenced: Bool) -> UNNotificationRequest {
+    func makeRequest(alert: Alert, soundURL: URL?, silenced: Bool) -> UNNotificationRequest {
         let content = UNMutableNotificationContent()
         let presentation = TrioPrivacyAlert.content(alert.backgroundContent, for: alert) ?? alert.backgroundContent
         content.title = presentation.title
@@ -46,13 +47,9 @@ final class TrioUserNotificationAlertScheduler {
         if let occurrence = alert.metadata?[HiroAlertJournal.occurrenceKey]?.wrapped as? String {
             content.userInfo[HiroAlertJournal.occurrenceKey] = occurrence
         }
-        content.sound = silenced ? nil : sound(for: alert, muted: muted, soundURL: soundURL)
-        // Surface the four quick-snooze actions (15 min / 1 h / 3 h / 6 h)
-        // on both phone and watch lock-screen notifications. The category +
-        // its actions are registered by `NotificationCategoryFactory` on
-        // both the phone (`BaseUserNotificationsManager`) and watch
-        // (`WatchNotificationHandler`) UN delegates.
-        content.categoryIdentifier = NotificationCategoryIdentifier.trioAlert.rawValue
+        content.sound = silenced ? nil : sound(for: alert, soundURL: soundURL)
+        content.categoryIdentifier = NotificationCategoryIdentifier.alert(isCritical: alert.interruptionLevel == .critical,
+            slug: alert.identifier.alertIdentifier).rawValue
 
         return UNNotificationRequest(
             identifier: alert.identifier.value,
@@ -61,11 +58,8 @@ final class TrioUserNotificationAlertScheduler {
         )
     }
 
-    private func sound(for alert: Alert, muted: Bool, soundURL: URL?) -> UNNotificationSound? {
+    private func sound(for alert: Alert, soundURL: URL?) -> UNNotificationSound? {
         let isCritical = alert.interruptionLevel == .critical
-        if muted {
-            return isCritical ? .defaultCriticalSound(withAudioVolume: 0) : nil
-        }
         switch alert.sound {
         case .none,
              .vibrate:

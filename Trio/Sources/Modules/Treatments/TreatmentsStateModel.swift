@@ -183,7 +183,7 @@ extension Treatments {
         @ObservationIgnored private(set) lazy var lastBolusController: NSFetchedResultsController<PumpEventStored> = {
             let request = NSFetchRequest<PumpEventStored>(entityName: "PumpEventStored")
             request.sortDescriptors = [NSSortDescriptor(keyPath: \PumpEventStored.timestamp, ascending: false)]
-            request.predicate = NSPredicate.lastPumpBolus
+            request.predicate = .forPump(.lastPumpBolus, simulated: glucoseStorage.mockPumpConnected == true)
             request.fetchLimit = 1
             let controller = NSFetchedResultsController(
                 fetchRequest: request,
@@ -809,18 +809,26 @@ extension Treatments.StateModel {
         }
     }
 
+    @MainActor func refreshTreatmentInputs() {
+        updateGlucoseFromController()
+        updateDeterminationFromController()
+    }
+
     @MainActor private func updateGlucoseFromController() {
         guard let objects = glucoseController.fetchedObjects else { return }
 
         // Store all objects for the forecast graph
-        glucoseFromPersistence = objects
+        let history = glucoseStorage.sourcePredicate(forHistory: true)
+        glucoseFromPersistence = objects.filter { history.evaluate(with: $0) }
+        let eligible = glucoseStorage.sourcePredicate(forHistory: false)
+        let readings = objects.filter { eligible.evaluate(with: $0) }
 
         // Always use the most recent reading for current glucose
-        let lastGlucose = objects.first?.glucose ?? 0
+        let lastGlucose = readings.first?.glucose ?? 0
 
         // Filter for readings less than 20 minutes old
         let twentyMinutesAgo = Date().addingTimeInterval(-20 * 60)
-        let recentObjects = objects.filter {
+        let recentObjects = readings.filter {
             guard let date = $0.date else { return false }
             return date > twentyMinutesAgo
         }
@@ -873,26 +881,24 @@ extension Treatments.StateModel {
     }
 
     @MainActor private func updateDeterminationFromController() {
-        guard let objects = determinationController.fetchedObjects,
-              let mostRecentDetermination = objects.first else { return }
-
-        determination = objects
-
-        // setup vars for bolus calculation
-        insulinRequired = (mostRecentDetermination.insulinReq ?? 0) as Decimal
-        evBG = (mostRecentDetermination.eventualBG ?? 0) as Decimal
-        minPredBG = (mostRecentDetermination.minPredBGFromReason ?? 0) as Decimal
-        lastLoopDate = apsManager.lastLoopDate as Date?
-        target = (mostRecentDetermination.currentTarget ?? currentBGTarget as NSDecimalNumber) as Decimal
-        isf = (mostRecentDetermination.insulinSensitivity ?? currentISF as NSDecimalNumber) as Decimal
-        cob = mostRecentDetermination.cob as Int16
-        iob = (mostRecentDetermination.iob ?? 0) as Decimal
-        basal = (mostRecentDetermination.tempBasal ?? 0) as Decimal
-        carbRatio = (mostRecentDetermination.carbRatio ?? currentCarbRatio as NSDecimalNumber) as Decimal
+        let predicate = glucoseStorage.activeDeterminations(matching: NSPredicate(value: true))
+        let eligible = (determinationController.fetchedObjects ?? []).filter { predicate.evaluate(with: $0) }
+        determination = eligible
+        let latest = eligible.first
+        insulinRequired = latest?.insulinReq?.decimalValue ?? 0
+        evBG = latest?.eventualBG?.decimalValue ?? 0
+        minPredBG = latest?.minPredBGFromReason ?? 0
+        lastLoopDate = latest?.deliverAt
+        target = latest?.currentTarget?.decimalValue ?? currentBGTarget
+        isf = latest?.insulinSensitivity?.decimalValue ?? currentISF
+        cob = latest?.cob ?? 0
+        iob = latest?.iob?.decimalValue ?? 0
+        basal = latest?.tempBasal?.decimalValue ?? 0
+        carbRatio = latest?.carbRatio?.decimalValue ?? currentCarbRatio
     }
 
     @MainActor private func mapForecastsFromController() -> Determination? {
-        guard let determinationObject = determinationController.fetchedObjects?.first else {
+        guard let determinationObject = determination.first else {
             return nil
         }
 
@@ -1015,6 +1021,7 @@ extension Treatments.StateModel {
         }
 
         do {
+            lastBolusController.fetchRequest.predicate = .forPump(.lastPumpBolus, simulated: glucoseStorage.mockPumpConnected == true)
             try lastBolusController.performFetch()
             updateLastBolusFromController()
         } catch {

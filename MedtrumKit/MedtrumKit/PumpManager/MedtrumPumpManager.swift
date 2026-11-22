@@ -17,6 +17,13 @@ public class MedtrumPumpManager: DeviceManager {
 
     public let managerIdentifier: String = "Medtrum"
 
+    /// The host atomically saves this manager's current raw state before the patch receives a dose command.
+    public var persistPendingDelivery: (() throws -> Void)?
+    private func checkpointDelivery() throws {
+        guard let persistPendingDelivery else { throw CocoaError(.fileWriteUnknown) }
+        try persistPendingDelivery()
+    }
+
     private let log = MedtrumLogger(category: "MedtrumPumpManager")
 
     public let pumpDelegate = WeakSynchronizedDelegate<PumpManagerDelegate>()
@@ -25,9 +32,12 @@ public class MedtrumPumpManager: DeviceManager {
     public var state: MedtrumPumpState
     var oldState: MedtrumPumpState
     public var rawState: PumpManager.RawStateValue {
-        state.rawValue
+        deliveryLock.withLock { state.rawValue }
     }
 
+    // Protects the pending dose and delivery-command reservation across BLE callbacks.
+    let deliveryLock = NSRecursiveLock()
+    private var submittingDelivery = false
     private let logDeviceIdentifierLock = NSLock()
     private var logDeviceIdentifierStorage = ""
 
@@ -249,7 +259,7 @@ public extension MedtrumPumpManager {
     }
 
     var status: PumpManagerStatus {
-        self.status(state)
+        deliveryLock.withLock { self.status(state) }
     }
 
     private func status(_ state: MedtrumPumpState) -> PumpManagerStatus {
@@ -257,9 +267,10 @@ public extension MedtrumPumpManager {
             timeZone: TimeZone.current,
             device: device(state),
             pumpBatteryChargeRemaining: nil, // Patch pumps do not need to report back battery status
-            basalDeliveryState: state.basalDeliveryState,
+            basalDeliveryState: state.basalDeliveryUncertain ? nil : state.basalDeliveryState,
             bolusState: state.bolusDeliveryState,
-            insulinType: state.insulinType
+            insulinType: state.insulinType,
+            deliveryIsUncertain: state.bolusDeliveryUncertain || state.basalDeliveryUncertain
         )
     }
 
@@ -267,7 +278,7 @@ public extension MedtrumPumpManager {
         let age = Date.now.timeIntervalSince(state.lastSync)
 
         guard let activatedAt = state.patchActivatedAt,
-              age > Self.loopSyncFreshnessInterval ||
+              status.deliveryIsUncertain || age > Self.loopSyncFreshnessInterval ||
               Date.now.timeIntervalSince(activatedAt) < .minutes(4)
         else {
             log.info("Skipping status update -> data is fresh or not active: \(Int(age)) sec")
@@ -373,61 +384,83 @@ public extension MedtrumPumpManager {
         activationType: LoopKit.BolusActivationType,
         completion: @escaping (LoopKit.PumpManagerError?) -> Void
     ) {
-        guard state.bolusState == .noBolus else {
-            log.error("Pump is in bolus state...")
-            completion(.deviceState(MedtrumConnectError.isBolussing))
-            return
-        }
-
-        guard state.basalState != .suspended else {
-            log.error("Pump is suspended...")
-            completion(.deviceState(MedtrumConnectError.isSuspended))
-            return
-        }
-
-        let duration = estimatedDuration(toBolus: units)
-        log.info("Enact bolus - \(units)U, \(duration)sec")
-
+        guard let finish = reserveDeliveryCommand(completion) else { return }
         ensureConnectedAndActive { error in
-            if let error = error {
-                self.log.error("Failed to connect: \(error.localizedDescription)")
-                self.resetBolusState()
-
-                completion(.communication(error))
+            if let error {
+                finish(.communication(error))
                 return
             }
-
-            let writeResult = self.bluetooth.write(SetBolusPacket(bolusAmount: units))
-            if case let .failure(error) = writeResult {
-                self.log.error("Failed to write: \(error.localizedDescription)")
-                self.resetBolusState()
-
-                completion(.communication(error))
+            let duration = self.estimatedDuration(toBolus: units)
+            let dose = UnfinalizedDose(decisionId: decisionId, units: units, duration: duration,
+                                       activationType: activationType, insulinType: self.state.insulinType)
+            self.deliveryLock.lock()
+            guard self.state.bolusDose == nil, !self.status.deliveryIsUncertain, self.state.pumpState.isDelivering else {
+                self.deliveryLock.unlock()
+                finish(.deviceState(MedtrumConnectError.isSuspended))
                 return
             }
-
-            let doseEntry = UnfinalizedDose(
-                decisionId: decisionId,
-                units: units,
-                duration: duration,
-                activationType: activationType,
-                insulinType: self.state.insulinType
-            )
-
-            let events = [NewPumpEvent.bolus(unfinalizedDose: doseEntry)]
-            self.emitPumpEvents(events, replacePendingEvents: false)
-
-            self.state.bolusDose = doseEntry
+            self.state.bolusDose = dose
+            self.state.awaitingBolusReply = true
             self.notifyStateDidChange()
+            self.deliveryLock.unlock()
 
-            completion(nil)
+            do {
+                try self.checkpointDelivery()
+            } catch {
+                self.deliveryLock.withLock {
+                    if self.state.bolusDose === dose {
+                        self.state.bolusDose = nil
+                        self.state.awaitingBolusReply = false
+                    }
+                    self.notifyStateDidChange()
+                }
+                self.log.error("Cannot checkpoint delivery: \(error.localizedDescription)")
+                finish(.configuration(MedtrumWriteError.persistenceFailed))
+                return
+            }
+            let result = self.bluetooth.write(SetBolusPacket(bolusAmount: units))
+            self.deliveryLock.lock()
+            defer { self.deliveryLock.unlock() }
+            // A final progress event can arrive while write is waiting for its reply.
+            guard self.state.bolusDose === dose else {
+                if case .failure = result { finish(.uncertainDelivery) } else { finish(nil) }
+                return
+            }
+            self.state.awaitingBolusReply = false
+            switch result {
+            case .success:
+                self.notifyStateDidChange()
+                self.emitPumpEvents([NewPumpEvent.bolus(unfinalizedDose: dose, confirmedProgressOnly: self.state.bolusDeliveryUncertain)], replacePendingEvents: false)
+                finish(nil)
+            case let .failure(error):
+                if error.deliveryMayHaveStarted || dose.deliveredUnits > 0 {
+                    self.markBolusDeliveryUncertain()
+                    finish(.uncertainDelivery)
+                } else {
+                    self.state.bolusDose = nil
+                    self.notifyStateDidChange()
+                    self.emitPumpEvents([])
+                    finish(.communication(error))
+                }
+            }
         }
     }
 
-    private func resetBolusState() {
-        state.bolusDose = nil
-        state.cancelingBolusSince = nil
-        notifyStateDidChange()
+    private func reserveDeliveryCommand(
+        _ completion: @escaping (PumpManagerError?) -> Void
+    ) -> ((PumpManagerError?) -> Void)? {
+        deliveryLock.lock()
+        defer { deliveryLock.unlock() }
+        guard !status.deliveryIsUncertain else { completion(.uncertainDelivery); return nil }
+        guard !submittingDelivery, state.bolusState == .noBolus else {
+            completion(.deviceState(MedtrumConnectError.isBolussing))
+            return nil
+        }
+        submittingDelivery = true
+        return { error in
+            self.deliveryLock.withLock { self.submittingDelivery = false }
+            completion(error)
+        }
     }
 
     func cancelBolus(completion: @escaping (LoopKit.PumpManagerResult<LoopKit.DoseEntry?>) -> Void) {
@@ -447,12 +480,19 @@ public extension MedtrumPumpManager {
             }
 
             let result = self.bluetooth.write(CancelBolusPacket())
+            self.deliveryLock.lock()
+            defer { self.deliveryLock.unlock() }
             if case let .failure(error) = result {
                 self.log.error("Failed to cancel bolus: \(error.localizedDescription)")
                 self.state.cancelingBolusSince = nil
                 self.notifyStateDidChange()
 
-                completion(.failure(.communication(error)))
+                if error.deliveryMayHaveStarted {
+                    self.markBolusDeliveryUncertain()
+                    completion(.failure(.uncertainDelivery))
+                } else {
+                    completion(.failure(.communication(error)))
+                }
                 return
             }
 
@@ -466,11 +506,19 @@ public extension MedtrumPumpManager {
                 return
             }
 
+            if self.state.bolusDeliveryUncertain {
+                // Cancel confirms the stop, not how much was delivered before it.
+                self.state.cancelingBolusSince = nil
+                self.notifyStateDidChange()
+                completion(.failure(.uncertainDelivery))
+                return
+            }
             let dose = doseEntry.toDoseEntry()
             var events = self.runningTempBasal()
             events.append(NewPumpEvent.bolus(dose: dose))
 
             self.state.bolusDose = nil
+            self.state.awaitingBolusReply = false
             self.state.cancelingBolusSince = nil
             self.state.lastSync = Date.now
             self.notifyStateDidChange()
@@ -499,63 +547,62 @@ public extension MedtrumPumpManager {
     ) {
         log.info("Setting temp basal at \(unitsPerHour)U/hr for \(duration)s")
 
-        guard state.bolusState == .noBolus else {
-            log.error("Pump is in bolus state...")
-            completion(.deviceState(MedtrumConnectError.isBolussing))
-            return
-        }
-
+        guard let finish = reserveDeliveryCommand(completion) else { return }
         ensureConnectedAndActive { error in
-            if let error = error {
-                self.log.error("Failed to connect: \(error.localizedDescription)")
-                completion(.communication(error))
+            if let error {
+                finish(.communication(error))
                 return
             }
-
+            guard !self.status.deliveryIsUncertain, self.state.pumpState.isDelivering else {
+                finish(.deviceState(MedtrumConnectError.isSuspended))
+                return
+            }
             if self.state.basalState == .tempBasal {
-                // Need to cancel temp basal first before setting temp basal
-                let cancelResult = self.bluetooth.write(CancelTempBasalPacket())
-                if case let .failure(error) = cancelResult {
-                    self.log.error("Failed to cancel temp basal: \(error.localizedDescription)")
-                    completion(.communication(error))
+                do {
+                    try self.checkpointBasal(requested: nil)
+                } catch {
+                    self.log.error("Cannot checkpoint delivery: \(error.localizedDescription)")
+                    finish(.configuration(MedtrumWriteError.persistenceFailed))
                     return
                 }
-
-                self.state.basalState = .active
-                self.log.info("Cancelled temp basal!")
+                let result = self.bluetooth.write(CancelTempBasalPacket())
+                if case let .failure(error) = result {
+                    finish(self.handleBasalWriteError(error, requested: nil))
+                    return
+                }
+                self.deliveryLock.withLock {
+                    self.state.awaitingBasalReply = false
+                    self.state.basalState = .active
+                    self.reportScheduledBasal()
+                }
             }
 
-            if duration < .ulpOfOne {
-                // Need to cancel temp basal, but is already cancelled
-                // Only need to report back to algorithm
-                self.reportScheduledBasal()
-
-                completion(nil)
+            guard duration >= .ulpOfOne else {
+                finish(nil)
                 return
             }
-
-            let packet = SetTempBasalPacket(rate: unitsPerHour, duration: duration)
-            let tempBasalResult = self.bluetooth.write(packet)
-
-            if case let .failure(error) = tempBasalResult {
-                self.log.error("Failed to set temp basal: \(error.localizedDescription)")
-
-                // the cancel already succeeded, but new TBR failed - the patch is running the scheduled basal now
-                self.reportScheduledBasal()
-
-                completion(.communication(error))
-                return
-            }
-
-            self.log.info("Set temp basal!")
 
             let tempBasalDose = UnfinalizedDose(
-                decisionId: decisionId,
-                tempRate: unitsPerHour,
-                duration: duration,
-                insulinType: self.state.insulinType,
-                automatic: automatic
+                decisionId: decisionId, tempRate: unitsPerHour, duration: duration,
+                insulinType: self.state.insulinType, automatic: automatic
             )
+            do {
+                try self.checkpointBasal(requested: tempBasalDose)
+            } catch {
+                self.log.error("Cannot checkpoint delivery: \(error.localizedDescription)")
+                finish(.configuration(MedtrumWriteError.persistenceFailed))
+                return
+            }
+            let result = self.bluetooth.write(SetTempBasalPacket(rate: unitsPerHour, duration: duration))
+            if case let .failure(error) = result {
+                finish(self.handleBasalWriteError(error, requested: tempBasalDose))
+                return
+            }
+
+            self.deliveryLock.lock()
+            defer { self.deliveryLock.unlock() }
+            self.state.awaitingBasalReply = false
+            self.state.pendingTempBasal = nil
             var events = self.finalizedTempBasal(endedAt: Date.now)
             events.append(NewPumpEvent.tempBasal(dose: tempBasalDose.toDoseEntry(isMutable: true)))
 
@@ -565,8 +612,40 @@ public extension MedtrumPumpManager {
             self.notifyStateDidChange()
 
             self.emitPumpEvents(events)
+            finish(nil)
+        }
+    }
 
-            completion(nil)
+    func checkpointBasal(requested: UnfinalizedDose?) throws {
+        deliveryLock.withLock {
+            state.pendingTempBasal = requested
+            state.awaitingBasalReply = true
+        }
+        do {
+            try checkpointDelivery()
+        } catch {
+            deliveryLock.withLock {
+                state.pendingTempBasal = nil
+                state.awaitingBasalReply = false
+                notifyStateDidChange()
+            }
+            throw error
+        }
+    }
+
+    private func handleBasalWriteError(_ error: MedtrumWriteError, requested: UnfinalizedDose?) -> PumpManagerError {
+        deliveryLock.withLock {
+            state.awaitingBasalReply = false
+            guard error.deliveryMayHaveStarted else {
+                state.pendingTempBasal = nil
+                notifyStateDidChange()
+                return .communication(error)
+            }
+            state.basalDeliveryUncertain = true
+            state.pendingTempBasal = requested
+            notifyStateDidChange()
+            pumpDelegate.notify { $0?.pumpManager(self, didError: .uncertainDelivery) }
+            return .uncertainDelivery
         }
     }
 
@@ -921,8 +1000,7 @@ public extension MedtrumPumpManager {
     private func startPatchSession(patchId: Data, at start: Date, activatedAt: Date, isDelivering: Bool) {
         if state.expiryMode == .default {
             // Issued now, due a set time after the activation
-            let delay = max(0, state.notificationAfterActivation - start.timeIntervalSince(activatedAt))
-            emitAlert(alertType: .patchExpiredNotification(after: delay))
+            emitAlert(alertType: .patchReminder(activatedAt: activatedAt, afterActivation: state.notificationAfterActivation, now: start))
         }
 
         var events: [NewPumpEvent] = []
@@ -965,6 +1043,10 @@ public extension MedtrumPumpManager {
             state.basalState = .suspended
         }
 
+        state.bolusDeliveryUncertain = false
+        state.awaitingBolusReply = false
+        state.basalDeliveryUncertain = false
+        state.pendingTempBasal = nil
         state.patchSessionEnded = false
         state.initialReservoir = nil
         state.patchId = patchId
@@ -1111,7 +1193,11 @@ public extension MedtrumPumpManager {
                 observer.pumpManager(self, didUpdate: status, oldStatus: oldStatus)
             }
 
-            self.oldState = MedtrumPumpState(rawValue: self.state.rawValue)
+            self.deliveryLock.withLock {
+                self.oldState = MedtrumPumpState(rawValue: self.state.rawValue)
+                self.oldState.bolusDeliveryUncertain = self.state.bolusDeliveryUncertain
+                self.oldState.basalDeliveryUncertain = self.state.basalDeliveryUncertain
+            }
         }
     }
 
@@ -1146,16 +1232,24 @@ public extension MedtrumPumpManager {
     }
 
     func updateBolusProgress(delivered: Double, completed: Bool, useEstimatedEndDate: Bool) {
-        guard let doseEntry = state.bolusDose else {
+        deliveryLock.lock()
+        defer { deliveryLock.unlock() }
+        guard let doseEntry = state.bolusDose else { return }
+        // Compare in the patch's 0.05-U increments to tolerate binary float conversion.
+        let pulses = (delivered * 20).rounded()
+        guard pulses >= (doseEntry.deliveredUnits * 20).rounded(), pulses <= (doseEntry.value * 20).rounded() else {
+            markBolusDeliveryUncertain()
             return
         }
-
         doseEntry.deliveredUnits = delivered
 
         if !completed {
+            notifyStateDidChange()
             return
         }
 
+        state.bolusDeliveryUncertain = false
+        state.awaitingBolusReply = false
         let dose = doseEntry.toDoseEntry(useEstimatedEndDate: useEstimatedEndDate)
         var events = runningTempBasal()
         events.append(NewPumpEvent.bolus(dose: dose))
@@ -1187,34 +1281,17 @@ public extension MedtrumPumpManager {
     }
 
     func checkBolusDone() {
-        guard let doseEntry = state.bolusDose else {
-            // No bolus was in progress during disconnect
-            return
+        deliveryLock.withLock {
+            if state.bolusDose != nil { markBolusDeliveryUncertain() }
         }
+    }
 
-        log.warning("Bolus was not completed... \(doseEntry.deliveredUnits) U of the \(doseEntry.value) U")
-
-        // We assume the bolus has completed, but did not receive completed event
-        // due to being disconnected for too long
-        doseEntry.deliveredUnits = doseEntry.value
-        let dose = doseEntry.toDoseEntry(useEstimatedEndDate: true)
-        var events = runningTempBasal()
-        events.append(NewPumpEvent.bolus(dose: dose))
-
-        state.lastSync = Date.now
-        state.bolusDose = nil
+    private func markBolusDeliveryUncertain() {
+        guard let dose = state.bolusDose, !state.bolusDeliveryUncertain else { return }
+        state.bolusDeliveryUncertain = true
         notifyStateDidChange()
-
-        pumpDelegate.notify { delegate in
-            guard let delegate = delegate else {
-                self.log.warning("No pump delegate, not notifying...")
-                return
-            }
-
-            delegate.pumpManager(self, didError: .uncertainDelivery)
-        }
-
-        emitPumpEvents(events)
+        emitPumpEvents([NewPumpEvent.bolus(unfinalizedDose: dose, confirmedProgressOnly: true)], replacePendingEvents: false)
+        pumpDelegate.notify { $0?.pumpManager(self, didError: .uncertainDelivery) }
     }
 
     private func finalizeInterruptedBolus() -> [NewPumpEvent] {
@@ -1227,6 +1304,7 @@ public extension MedtrumPumpManager {
         )
 
         let dose = doseEntry.toDoseEntry()
+        state.awaitingBolusReply = false
         state.bolusDose = nil
 
         pumpDelegate.notify { delegate in
@@ -1318,7 +1396,7 @@ public extension MedtrumPumpManager {
         // the host's history until we report it again later.
         if replacePendingEvents {
             if let bolusDose = state.bolusDose, !events.contains(where: { $0.type == .bolus }) {
-                events.append(NewPumpEvent.bolus(unfinalizedDose: bolusDose))
+                events.append(NewPumpEvent.bolus(unfinalizedDose: bolusDose, confirmedProgressOnly: state.bolusDeliveryUncertain || state.awaitingBolusReply))
             }
 
             if !events.contains(where: { $0.type == .tempBasal }) {

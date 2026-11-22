@@ -10,6 +10,8 @@ public extension GlucoseStored {
     @NSManaged var direction: String?
     @NSManaged var glucose: Int16
     @NSManaged var id: UUID?
+    @NSManaged var isSimulated: NSNumber?
+    @NSManaged var noise: NSNumber?
     @NSManaged var isManual: Bool
     @NSManaged var isUploadedToHealth: Bool
     @NSManaged var isUploadedToNS: Bool

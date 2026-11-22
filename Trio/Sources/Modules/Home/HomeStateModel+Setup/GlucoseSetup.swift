@@ -25,9 +25,11 @@ extension Home.StateModel {
         // anything dated ahead of the clock here as well, so the screen recovers even when
         // the storage-level purge has not run yet.
         let horizon = Date().addingTimeInterval(60)
-        let usable = objects.filter { ($0.date ?? .distantPast) <= horizon }
+        let history = glucoseStorage.sourcePredicate(forHistory: true)
+        let current = glucoseStorage.sourcePredicate(forHistory: false)
+        let usable = objects.filter { ($0.date ?? .distantPast) <= horizon && history.evaluate(with: $0) }
         glucoseFromPersistence = usable
-        latestTwoGlucoseValues = Array(usable.suffix(2))
+        latestTwoGlucoseValues = Array(usable.filter { current.evaluate(with: $0) }.suffix(2))
         updateGlucoseChartYAxis(glucoseValues: usable)
         refreshExtendedStatsPanel()
     }
@@ -90,9 +92,10 @@ extension Home.StateModel {
 
         let timeInRangeType = settingsManager?.settings.timeInRangeType ?? .timeInTightRange
         extendedStatsPanelTask?.cancel()
+        let source = glucoseStorage.sourcePredicate(forHistory: true)
         extendedStatsPanelTask = Task { [weak self] in
             do {
-                let stats = try await Self.computeStatsPanelStats(range: range, timeInRangeType: timeInRangeType)
+                let stats = try await Self.computeStatsPanelStats(range: range, timeInRangeType: timeInRangeType, source: source)
                 guard let self, !Task.isCancelled else { return }
                 self.extendedStatsPanel = (range: range, stats: stats)
                 self.extendedStatsPanelRefreshedAt = Date()
@@ -106,7 +109,8 @@ extension Home.StateModel {
 
     private static func computeStatsPanelStats(
         range: HomeStatsPanelRange,
-        timeInRangeType: TimeInRangeType
+        timeInRangeType: TimeInRangeType,
+        source: NSPredicate
     ) async throws -> HomeStatsPanelStats {
         let context = CoreDataStack.shared.newTaskContext()
         context.name = "HomeStateModel.computeStatsPanelStats"
@@ -116,7 +120,7 @@ extension Home.StateModel {
         return try await context.perform {
             // dictionary rows keep three months of readings light
             let request = NSFetchRequest<NSDictionary>(entityName: "GlucoseStored")
-            request.predicate = NSPredicate(format: "date >= %@", startDate as NSDate)
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [source, NSPredicate(format: "date >= %@", startDate as NSDate)])
             request.resultType = .dictionaryResultType
             request.propertiesToFetch = ["glucose", "date"]
 

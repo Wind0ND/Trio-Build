@@ -1,10 +1,10 @@
 {
   "en-US": {
     "description": "hiro is a personal test build with customizable on-screen presentation, viewing protection and device connectivity.",
-    "whats_new": "Improves overnight stability, schedules the next Live Activity on iOS 26 and aligns the trend guides with the cover. Please check the handoff and both curve styles."
+    "whats_new": "Improves connection recovery, background reminders and device status. Please check the Dynamic Island and the optional symbol test under Privacy."
   },
   "zh-Hans": {
     "description": "hiro 是用于个人测试的应用版本，提供可自定义的界面展示、查看保护和设备连接功能。",
-    "whats_new": "修复夜间后台运行时的一处崩溃。在 iOS 26 上可预排下一场实时活动，趋势参考线与封面对齐。请测试长时间后台后的接班及两种曲线样式。"
+    "whats_new": "改进设备状态、重连、后台提醒和诊断导出。请检查灵动岛显示；如仍然空白，可在「隐私保护」打开「灵动岛显示排查」对照锁屏效果。"
   }
 }

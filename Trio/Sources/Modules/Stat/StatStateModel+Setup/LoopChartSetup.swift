@@ -252,7 +252,7 @@ extension Stat.StateModel {
         let glucoseResult = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: GlucoseStored.self,
             onContext: loopTaskContext,
-            predicate: glucosePredicate,
+            predicate: glucoseStorage.activeReadings(matching: glucosePredicate, forHistory: true),
             key: "date",
             ascending: false
         )

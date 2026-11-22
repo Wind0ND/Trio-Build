@@ -1,6 +1,26 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "The island shows a fixed diamond for this test. The Lock Screen keeps your usual display.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "排查时，灵动岛显示固定菱形，不表示读数。锁屏卡片仍使用你选择的样式。"
+          }
+        }
+      }
+    },
+    "Test Dynamic Island with a symbol": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "灵动岛显示排查"
+          }
+        }
+      }
+    },
     "4-digit PIN": {
       "localizations": {
         "zh-Hans": {

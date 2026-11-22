@@ -108,13 +108,16 @@ extension Home.StateModel {
     private func loadQuickPickBolusSuggestions() async -> [Decimal] {
         // Don't suggest an amount the user's current Max Bolus setting won't let them deliver in full.
         let maxBolusUnits = pumpInitialSettings.maxBolusUnits
+        let source = glucoseStorage.mockPumpConnected == true ? NSPredicate(format: "pumpEvent.isSimulated == YES") :
+            NSPredicate(format: "pumpEvent.isSimulated == NO OR (pumpEvent.isSimulated == nil AND pumpEvent.timestamp > %@)",
+                        (LegacyPumpHistory.cutoff ?? .distantPast) as NSDate)
         return await fetchQuickPickSuggestions(
             ofType: BolusStored.self,
             predicate: { cutoff in
-                NSPredicate(
+                NSCompoundPredicate(andPredicateWithSubpredicates: [source, NSPredicate(
                     format: "isSMB == false AND isExternal == false AND pumpEvent.timestamp >= %@",
                     cutoff as NSDate
-                )
+                )])
             },
             sortKey: "pumpEvent.timestamp",
             // Floor to one decimal place (e.g. 1.15 -> 1.1) rather than rounding to the nearest, so

@@ -5,6 +5,32 @@ import XCTest
 final class AlertJournalEvidenceTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
 
+    func testThreeDayPlanSurvivesPruningUntilDeliveredThenExpiresFromDelivery() {
+        var journal = AlertJournal()
+        let due = now.addingTimeInterval(3 * 86_400)
+        let plan = JournalAlert(source: "pump", kind: "expiry", title: "replacement", body: "",
+                                issuedAt: now, scheduledFor: due)
+        journal.issue(plan, now: now)
+        journal.prune(now: due.addingTimeInterval(-60))
+        XCTAssertEqual(journal.entries.map(\.id), [plan.id])
+        XCTAssertTrue(journal.triggeredHistory(now: due).isEmpty)
+        journal.prune(now: due.addingTimeInterval(10))
+        XCTAssertTrue(journal.markTriggered(id: plan.id, at: due, delivered: true))
+        XCTAssertEqual(journal.triggeredHistory(now: due.addingTimeInterval(86_399)).map(\.id), [plan.id])
+        journal.prune(now: due.addingTimeInterval(86_401))
+        XCTAssertTrue(journal.entries.isEmpty)
+    }
+
+    func testCancelledFuturePlanExpiresAfterClosure() {
+        var journal = AlertJournal()
+        let plan = JournalAlert(source: "pump", kind: "expiry", title: "", body: "",
+                                issuedAt: now, scheduledFor: now.addingTimeInterval(7 * 86_400))
+        journal.issue(plan, now: now)
+        journal.resolve(source: plan.source, kind: plan.kind, at: now.addingTimeInterval(60))
+        journal.prune(now: now.addingTimeInterval(2 * 86_400))
+        XCTAssertTrue(journal.entries.isEmpty)
+    }
+
     func testFuturePlansAndCancelledPlansAreNotTriggeredHistory() {
         var journal = AlertJournal()
         let plan = JournalAlert(source: "trio.aps", kind: "loop.notActive.w1", title: "plan", body: "", issuedAt: now,

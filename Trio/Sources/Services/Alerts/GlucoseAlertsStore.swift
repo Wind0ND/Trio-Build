@@ -31,6 +31,12 @@ final class GlucoseAlertsStore: ObservableObject {
             // Backfill alarm types added by later releases so upgrading users
             // get a default-on entry instead of silently missing the type.
             var migrated = loaded
+            let now = Date()
+            for index in migrated.indices {
+                if let until = migrated[index].snoozedUntil {
+                    migrated[index].snoozedUntil = migrated[index].snoozeEnd(until, now: now)
+                }
+            }
             let presentTypes = Set(loaded.map(\.type))
             for type in GlucoseAlertType.allCases where !presentTypes.contains(type) {
                 migrated.append(GlucoseAlert(type: type))
@@ -43,6 +49,7 @@ final class GlucoseAlertsStore: ObservableObject {
             key: configKey
         ) ?? GlucoseAlertConfiguration()
         bind()
+        if !loaded.isEmpty, loaded != alerts { encode(alerts, to: alertsKey) }
     }
 
     /// Seed every glucose alarm enabled. Users running a stock CGM app for

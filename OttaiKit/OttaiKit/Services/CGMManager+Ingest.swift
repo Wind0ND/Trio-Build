@@ -69,23 +69,23 @@ extension OttaiCGMManager {
             }
         }
 
-        if var elapsedSeconds = sample.elapsedSeconds, let activatedAt {
+        let sensorElapsed = sample.elapsedSeconds
+        if let elapsedSeconds = sample.elapsedSeconds, let activatedAt {
             var trueDate = activatedAt.addingTimeInterval(elapsedSeconds)
             if sample.source == .realtime, trueDate < Date().addingTimeInterval(-30 * 60) {
-                // The counter restarted (firmware reboot after a reconnect) or the frame was
-                // sliced wrong. A live frame describes "now", so date it by receipt time
-                // rather than trusting a counter that disagrees with the wall clock.
-                logger.info(
-                    "re-dated a live frame with a stale counter: seq=\(sample.sequence) elapsed=\(Int(elapsedSeconds))s"
-                )
-                trueDate = sample.date
-                elapsedSeconds = 0
+                // Recover the timestamp only when the independent minute index agrees with
+                // receipt time. A replayed or mis-sliced frame cannot be made fresh by arrival.
+                guard let indexedDate = Self.verifiedGridDate(sequence: sample.sequence, activatedAt: activatedAt, receivedAt: receivedAt) else {
+                    logger.info("withheld live frame with inconsistent sensor clocks: seq=\(sample.sequence)")
+                    return
+                }
+                trueDate = indexedDate
             }
             sample = GlucoseSample(
                 date: trueDate, valueMgDL: sample.valueMgDL, trend: sample.trend,
                 rateOfChangeMgDLPerMinute: sample.rateOfChangeMgDLPerMinute,
                 sequence: sample.sequence, rawBaseMgDL: sample.rawBaseMgDL,
-                rawCurrent: sample.rawCurrent, elapsedSeconds: elapsedSeconds,
+                rawCurrent: sample.rawCurrent, elapsedSeconds: trueDate.timeIntervalSince(activatedAt),
                 condition: sample.condition, hasBlockingIssue: sample.hasBlockingIssue,
                 source: sample.source
             )
@@ -134,21 +134,6 @@ extension OttaiCGMManager {
             updated.latestElapsedReceivedAt = receivedAt
         }
 
-        // Tracks the newest record we hold *on the grid*, not the newest record
-        // full stop: recovery is expressed in the same terms as forwarding, so
-        // a grid record we failed to fetch stays inside the request range until
-        // it actually arrives. Because it's the newest grid record rather than
-        // the oldest missing one, a record the sensor can't produce is dropped
-        // as soon as any later grid record lands — the retry is bounded by
-        // itself and needs no attempt counter.
-        if Self.isOnForwardGrid(sequence: sample.sequence),
-           sample.sequence > (updated.lastGridSequence ?? 0)
-        {
-            // Retain the pre-frame cursor even if later validity gates reject this grid frame.
-            pendingBackfillFrom = OttaiReconnectGridRecovery.preservedCursor(pending: pendingBackfillFrom, previousGrid: previousGridSequence)
-            updated.lastGridSequence = sample.sequence
-        }
-
         if state.activatedAt == nil, let activatedAt {
             updated.sensors.setActivatedAt(activatedAt)
         }
@@ -169,6 +154,16 @@ extension OttaiCGMManager {
         // as signal loss.
         if isExpiredReading {
             logger.debug("past wear: \(Int(sample.valueMgDL)) mg/dL seq=\(sample.sequence); not forwarding")
+            return
+        }
+
+        // Treatment availability is bounded by the manufacturer's timing on both clocks.
+        // A display extension, a stale counter, or missing metadata cannot extend it.
+        guard Self.acceptsForHost(
+            elapsed: sensorElapsed, wallAge: state.activatedAt.map { receivedAt.timeIntervalSince($0) },
+            warmup: state.preheatDuration, ratedWear: state.activeDuration
+        ) else {
+            recordForwardingOutcome(forSequence: sample.sequence, wasForwarded: false, skipReason: "Outside verified sensor wear")
             return
         }
 
@@ -228,6 +223,11 @@ extension OttaiCGMManager {
         }
 
         if sample.source == .realtime {
+            if Self.isOnForwardGrid(sequence: sample.sequence), let preheat = state.preheatDuration {
+                var received = state
+                received.observeGrid(sample.sequence, firstUsable: Self.firstBackfillableSequence(preheatDuration: preheat))
+                if received != state { setState(received) }
+            }
             // A still-connected link can miss a grid point too. Each valid live wake may repair it.
             Foundation.NotificationCenter.default.post(name: .init("com.trio.cgm.sourceActivity"), object: nil)
             firePendingBackfill(newest: sample.sequence, previousGridSequence: previousGridSequence)
@@ -255,6 +255,7 @@ extension OttaiCGMManager {
         // the priority request. Leave the older cursor intact, but submit that
         // exact sample only once.
         if sample.source == .historicalBackfill,
+           !state.pendingHistoryGrid.contains(sample.sequence),
            let lastPriorityGrid, lastPriorityGrid.sequence == sample.sequence, lastPriorityGrid.date == sample.date
         {
             recordForwardingOutcome(forSequence: sample.sequence, wasForwarded: true, skipReason: nil)
@@ -340,6 +341,30 @@ extension OttaiCGMManager {
     static func isWarmup(elapsedSeconds: TimeInterval?, preheatDuration: TimeInterval?) -> Bool {
         guard let elapsedSeconds, let preheatDuration else { return false }
         return elapsedSeconds <= preheatDuration
+    }
+
+    static func verifiedGridDate(sequence: UInt16, activatedAt: Date, receivedAt: Date) -> Date? {
+        let date = activatedAt.addingTimeInterval((Double(sequence) + 1) * 60)
+        return (0 ... 120).contains(receivedAt.timeIntervalSince(date)) ? date : nil
+    }
+
+    static func acceptsForHost(elapsed: TimeInterval?, wallAge: TimeInterval?, warmup: TimeInterval?, ratedWear: TimeInterval?) -> Bool {
+        guard let elapsed, let wallAge, let warmup, let ratedWear, warmup >= 0, ratedWear > warmup else { return false }
+        return elapsed > warmup && wallAge > warmup && elapsed < ratedWear && wallAge < ratedWear
+    }
+
+    /// Advance durable recovery only after the host has saved or deliberately deduplicated
+    /// these exact samples. Confirming a newer priority point never acknowledges older gaps.
+    @MainActor public func acknowledgeHistoryGrid(syncIdentifiers: [String]) {
+        guard let mac = state.mac else { return }
+        let prefix = "syai-\(mac)-"
+        var confirmed = state
+        for identifier in syncIdentifiers where identifier.hasPrefix(prefix) {
+            if let sequence = UInt16(identifier.dropFirst(prefix.count)) {
+                confirmed.pendingHistoryGrid.remove(sequence)
+            }
+        }
+        if confirmed != state { setState(confirmed) }
     }
 
     static func isPastWear(elapsedSeconds: TimeInterval?, activeDuration: TimeInterval?) -> Bool {
@@ -453,7 +478,7 @@ extension OttaiCGMManager {
     /// first while the older history cursor remains queued.
     @MainActor private func firePendingBackfill(newest: UInt16, previousGridSequence: UInt16?) {
         guard priorityGridSequence == nil else { return }
-        guard let have = pendingBackfillFrom ?? previousGridSequence else { return }
+        guard let have = pendingBackfillFrom ?? state.historyCursor ?? previousGridSequence else { return }
         guard let monitor else {
             logger.debug("backfill: skipped, no live monitor (have=\(have), seq=\(newest))")
             return

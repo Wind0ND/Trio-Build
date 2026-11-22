@@ -17,10 +17,9 @@ final class WatchNotificationHandler: NSObject, UNUserNotificationCenterDelegate
 
     private func registerCategories(on center: UNUserNotificationCenter) {
         center.getNotificationCategories { existingCategories in
-            let glucoseCategory = NotificationCategoryFactory.createGlucoseCategory()
-
             var categories = existingCategories
-            categories.update(with: glucoseCategory)
+            categories.update(with: NotificationCategoryFactory.makeCategory(.trioAlert))
+            categories.update(with: NotificationCategoryFactory.makeCategory(.quickSnoozeOnly))
             // UNUserNotificationCenter methods should be called on main thread
             Task { @MainActor in
                 center.setNotificationCategories(categories)
@@ -37,8 +36,10 @@ final class WatchNotificationHandler: NSObject, UNUserNotificationCenterDelegate
     ) {
         defer { completionHandler() }
 
-        guard let action = NotificationResponseAction(rawValue: response.actionIdentifier) else { return }
-        sendSnoozeRequest(minutes: action.minutes)
+        guard let action = NotificationResponseAction(rawValue: response.actionIdentifier),
+              let snooze = AlertNotificationSnooze(content: response.notification.request.content, action: action, at: Date()),
+              let data = try? PropertyListEncoder().encode(snooze) else { return }
+        send([AlertNotificationSnooze.messageKey: data])
     }
 
     /// Sends snooze request to iPhone via WatchConnectivity.
@@ -47,9 +48,12 @@ final class WatchNotificationHandler: NSObject, UNUserNotificationCenterDelegate
     /// session activation and delegate management.
     /// A duration of 0 ends the active snooze.
     func sendSnoozeRequest(minutes: Int) {
+        send([WatchMessageKeys.snoozeDuration: minutes])
+    }
+
+    private func send(_ payload: [String: Any]) {
         guard WCSession.isSupported() else { return }
 
-        let payload: [String: Any] = [WatchMessageKeys.snoozeDuration: minutes]
         let session = WCSession.default
 
         // Try sendMessage first if session is reachable and activated (faster, immediate delivery)

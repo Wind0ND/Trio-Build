@@ -13,9 +13,22 @@ enum MedtrumWriteError: LocalizedError {
     case invalidResponse(code: UInt16)
     case noManager
     case noWriteCharacteristic
+    case persistenceFailed
+
+    /// A reply lost or damaged after transmission cannot establish whether delivery started.
+    var deliveryMayHaveStarted: Bool {
+        switch self {
+        case .timeout, .noData, .invalidData:
+            return true
+        case .alreadyRunning, .invalidResponse, .noManager, .noWriteCharacteristic, .persistenceFailed:
+            return false
+        }
+    }
 
     public var errorDescription: String {
         switch self {
+        case .persistenceFailed:
+            return String(localized: "Could not save pump delivery state. No command was sent.")
         case .timeout:
             return String(localized: "A command timeout is hit")
         case .alreadyRunning:

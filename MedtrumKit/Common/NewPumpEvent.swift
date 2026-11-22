@@ -14,8 +14,10 @@ public extension NewPumpEvent {
         )
     }
 
-    static func bolus(unfinalizedDose: UnfinalizedDose) -> NewPumpEvent {
-        NewPumpEvent.bolus(dose: unfinalizedDose.toDoseEntry(isMutable: true))
+    static func bolus(unfinalizedDose: UnfinalizedDose, confirmedProgressOnly: Bool = false) -> NewPumpEvent {
+        var dose = unfinalizedDose.toDoseEntry(isMutable: true)
+        if confirmedProgressOnly { dose.deliveredUnits = unfinalizedDose.deliveredUnits }
+        return NewPumpEvent.bolus(dose: dose)
     }
 
     static func tempBasal(dose: DoseEntry) -> NewPumpEvent {

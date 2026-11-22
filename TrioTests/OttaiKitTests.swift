@@ -5,6 +5,34 @@ import Testing
 @Suite("Ottai reconnect grid priority") struct OttaiReconnectGridRecoveryTests {
     private let now = Date(timeIntervalSince1970: 1_800_001_200)
 
+    @Test("Unconfirmed history survives restore and out-of-order acknowledgments") func durableGap() throws {
+        var state = OttaiCGMManagerState()
+        state.lastGridSequence = 100
+        state.observeGrid(120, firstUsable: 30)
+        #expect(state.pendingHistoryGrid == [105, 110, 115, 120])
+        state.pendingHistoryGrid.remove(120)
+        var restored = try #require(OttaiCGMManagerState(rawValue: state.rawValue))
+        #expect(restored.pendingHistoryGrid == [105, 110, 115])
+        restored.resetSensorSession()
+        #expect(restored.pendingHistoryGrid.isEmpty)
+    }
+
+    @Test("A stale M8 counter needs independent sequence timing before a live frame can be re-dated") func liveCounterDrift() {
+        let activation = now.addingTimeInterval(-12_070)
+        let valid = OttaiCGMManager.verifiedGridDate(sequence: 200, activatedAt: activation, receivedAt: now)
+        #expect(valid == now.addingTimeInterval(-10))
+        #expect(OttaiCGMManager.verifiedGridDate(sequence: 20, activatedAt: activation, receivedAt: now) == nil)
+        #expect(OttaiCGMManager.verifiedGridDate(sequence: 300, activatedAt: activation, receivedAt: now) == nil)
+    }
+
+    @Test("Rated wear and warmup are independent of displayed extension and drifting clocks") func ratedWindow() {
+        #expect(OttaiCGMManager.acceptsForHost(elapsed: 1801, wallAge: 2000, warmup: 1800, ratedWear: 10000))
+        #expect(!OttaiCGMManager.acceptsForHost(elapsed: 1800, wallAge: 9000, warmup: 1800, ratedWear: 10000))
+        #expect(!OttaiCGMManager.acceptsForHost(elapsed: 9500, wallAge: 10000, warmup: 1800, ratedWear: 10000))
+        #expect(!OttaiCGMManager.acceptsForHost(elapsed: 10000, wallAge: 9500, warmup: 1800, ratedWear: 10000))
+        #expect(!OttaiCGMManager.acceptsForHost(elapsed: nil, wallAge: 9500, warmup: 1800, ratedWear: 10000))
+    }
+
     @Test("The same connected-grid target is rate limited while a newer target can recover") func connectedRecoveryThrottle() {
         var throttle = OttaiGridRecoveryThrottle()
         let first = throttle.reserve(target: 120, now: now)

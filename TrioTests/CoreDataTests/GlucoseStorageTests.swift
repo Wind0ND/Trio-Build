@@ -64,6 +64,134 @@ import Testing
         #expect(storedEntries?[0].direction == "Flat", "Direction should match")
     }
 
+    @Test("Confirmed storage excludes duplicate, overlapping and future samples") func confirmedWriteResults() async throws {
+        let date = Date().addingTimeInterval(-300)
+        let reading = BloodGlucose(sgv: 116, date: 1, dateString: date, noise: 3, glucose: 116)
+        let stored = try await storage.storeGlucose([reading])
+        let duplicate = try await storage.storeGlucose([reading])
+        let backfill = try await storage.backfillGlucose([reading])
+        let future = try await storage.storeGlucose([
+            BloodGlucose(sgv: 140, date: 2, dateString: Date().addingTimeInterval(250), glucose: 140)
+        ])
+        #expect(stored.map(\.dateString) == [date])
+        #expect(duplicate.isEmpty && backfill.isEmpty && future.isEmpty)
+        let algorithm = try await storage.getGlucoseForAlgorithm(shouldSmoothGlucose: true, fetchHours: 1)
+        #expect(algorithm.first?.noise == 3)
+    }
+
+    @Test("xDrip error 38 persists while an ordinary low reading keeps the clinical floor") func sensorErrorAndLow() async throws {
+        let date = Date().addingTimeInterval(-600)
+        let error = BloodGlucose(sgv: 38, date: 2, dateString: date, noise: 4, glucose: 38)
+        let low = BloodGlucose(sgv: 38, date: 3, dateString: date.addingTimeInterval(300), glucose: 38)
+        let storedError = try await storage.storeGlucose([error])
+        let storedLow = try await storage.storeGlucose([low])
+        #expect(storedError.first?.sgv == 38)
+        #expect(storedLow.first?.sgv == 39)
+    }
+
+    @Test("Build 28 SQLite store migrates without losing real or ambiguous glucose history") func migrateBuild28Glucose() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let storeURL = root.appendingPathComponent("history.sqlite")
+        let directory = try #require(Bundle(for: CoreDataStack.self).url(forResource: "TrioCoreDataPersistentContainer", withExtension: "momd"))
+        let oldModel = try #require(NSManagedObjectModel(contentsOf: directory.appendingPathComponent("TrioCoreDataPersistentContainer.mom")))
+        let before = NSPersistentStoreCoordinator(managedObjectModel: oldModel)
+        let oldStore = try before.addPersistentStore(ofType: NSSQLiteStoreType, configurationName: nil, at: storeURL)
+        let oldContext = NSManagedObjectContext(concurrencyType: .privateQueueConcurrencyType)
+        oldContext.persistentStoreCoordinator = before
+        let lastSimulation = Date(timeIntervalSince1970: 1_800_000_000)
+        try oldContext.performAndWait {
+            for (offset, manual, value) in [(-300, false, 155), (-60, true, 132), (300, false, 121)] {
+                let row = NSEntityDescription.insertNewObject(forEntityName: "GlucoseStored", into: oldContext)
+                row.setValue(lastSimulation.addingTimeInterval(Double(offset)), forKey: "date")
+                row.setValue(value, forKey: "glucose")
+                row.setValue(manual, forKey: "isManual")
+            }
+            try oldContext.save()
+            oldContext.reset()
+        }
+        try before.remove(oldStore)
+        let current = NSPersistentStoreCoordinator(managedObjectModel: CoreDataStack.managedObjectModel)
+        let migrated = try current.addPersistentStore(ofType: NSSQLiteStoreType, configurationName: nil, at: storeURL, options: [
+            NSMigratePersistentStoresAutomaticallyOption: true, NSInferMappingModelAutomaticallyOption: true
+        ])
+        let context = NSManagedObjectContext(concurrencyType: .privateQueueConcurrencyType)
+        context.persistentStoreCoordinator = current
+        try context.performAndWait {
+            let request = GlucoseStored.fetchRequest()
+            let all = try context.fetch(request)
+            #expect(all.map(\.glucose).sorted() == [121, 132, 155])
+            #expect(all.allSatisfy { $0.isSimulated == nil && $0.noise == nil })
+            request.predicate = BaseGlucoseStorage.provenancePredicate(simulated: false, legacyLastSimulation: lastSimulation)
+            let usable = try context.fetch(request).map(\.glucose).sorted()
+            #expect(usable == [121, 132])
+        }
+        try current.remove(migrated)
+    }
+
+    @Test("Physical glucose history excludes marked simulator data") func simulatorProvenance() async throws {
+        let date = Date().addingTimeInterval(-600)
+        let simulated = BloodGlucose(sgv: 220, date: 2, dateString: date, glucose: 220, transmitterID: "SIMULATOR")
+        let actual = BloodGlucose(sgv: 98, date: 3, dateString: date, glucose: 98)
+        try await storage.storeGlucose([simulated])
+        let stored = try await storage.storeGlucose([actual])
+        #expect(stored.count == 1)
+        let algorithm = try await storage.getGlucoseForAlgorithm(shouldSmoothGlucose: false, fetchHours: 1)
+        #expect(algorithm.map(\.sgv) == [98])
+    }
+
+    @Test("Noisy current value signals a fault and historical noisy values leave treatment history") func historicalNoise() async throws {
+        let date = Date().addingTimeInterval(-900)
+        let noisy = BloodGlucose(sgv: 240, date: 1, dateString: date, noise: 3, glucose: 240)
+        let valid = BloodGlucose(sgv: 103, date: 2, dateString: date.addingTimeInterval(300), glucose: 103)
+        try await storage.storeGlucose([noisy])
+        let initial = try await storage.getGlucoseForAlgorithm(shouldSmoothGlucose: false, fetchHours: 1)
+        #expect(initial.first?.noise == 3)
+        try await storage.storeGlucose([valid])
+        let recovered = try await storage.getGlucoseForAlgorithm(shouldSmoothGlucose: false, fetchHours: 1)
+        #expect(recovered.map(\.sgv) == [103])
+    }
+
+    @Test("Current-reading and chart predicates separate simulators while retaining old chart history") func sourceReadConsumers() async throws {
+        let date = Date().addingTimeInterval(-600)
+        try await storage.storeGlucose([BloodGlucose(sgv: 52, date: 2, dateString: date, glucose: 52)])
+        try await storage.storeGlucose([BloodGlucose(sgv: 120, date: 3, dateString: date.addingTimeInterval(300), glucose: 120, transmitterID: "SIMULATOR")])
+        let alertPredicate = storage.activeReadings(matching: NSPredicate(value: true))
+        let chartPredicate = storage.activeReadings(matching: NSPredicate(value: true), forHistory: true)
+        try await testContext.perform {
+            let request = GlucoseStored.fetchRequest()
+            request.predicate = alertPredicate
+            let current = try self.testContext.fetch(request)
+            #expect(current.map(\.glucose) == [52])
+            request.predicate = chartPredicate
+            let chart = try self.testContext.fetch(request)
+            #expect(chart.map(\.glucose) == [52])
+        }
+    }
+
+    @Test("A delayed deletion must still own its manager, source and revision") func stalePluginDeletion() {
+        let old = NSObject(), current = NSObject()
+        let oldID = ObjectIdentifier(old), newID = ObjectIdentifier(current)
+        let epoch = UUID()
+        func owned(manager: ObjectIdentifier, source: ObjectIdentifier, revision: UUID) -> Bool {
+            BaseFetchGlucoseManager.ownsPluginCallback(
+                manager: manager, currentManager: newID, source: source, currentSource: newID,
+                revision: revision, currentRevision: epoch
+            )
+        }
+        #expect(!owned(manager: oldID, source: newID, revision: epoch))
+        #expect(!owned(manager: newID, source: oldID, revision: epoch))
+        #expect(!owned(manager: newID, source: newID, revision: UUID()))
+        #expect(owned(manager: newID, source: newID, revision: epoch))
+    }
+
+    @Test("Malformed xDrip dates are ignored") func appGroupDate() {
+        #expect(AppGroupSource.parseDate("/Date(1462404576000)/") == Date(timeIntervalSince1970: 1_462_404_576))
+        #expect(AppGroupSource.parseDate("/Date(inf)/") == nil)
+        #expect(AppGroupSource.parseDate("/Date(99999999999999999999)/") == nil)
+    }
+
     @Test("Delete glucose entry") func testDeleteGlucose() async throws {
         // Given
         let testGlucose = [

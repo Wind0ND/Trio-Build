@@ -170,6 +170,7 @@ private extension AlertCatalogRegistry {
         // misspelled entry once the typo is fixed upstream.
         addEntry("Medtrum", "com.nightscout.medtrumkit.patch-occlussion", .critical, "Occlusion", "Delivery", .occlusion),
         addEntry("Medtrum", "com.nightscout.medtrumkit.patch-occlusion", .critical, "Occlusion", "Delivery", .occlusion),
+        addEntry("Medtrum", "com.nightscout.medtrumkit.base-reset", .critical, "Pump Base Restarted", "Hardware", .hardwareFault),
         addEntry("Medtrum", "com.nightscout.medtrumkit.patch-fault", .critical, "Patch Fault", "Hardware", .hardwareFault),
         addEntry("Medtrum", "com.nightscout.medtrumkit.patch-empty", .critical, "Reservoir Empty", "Reservoir", .reservoirEmpty),
         addEntry(

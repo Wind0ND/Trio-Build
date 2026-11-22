@@ -2,7 +2,10 @@ extension OpenAPS {
     enum Settings {
         static let preferences = "preferences.json"
         static let autotune = "settings/autotune.json"
-        static let autosense = "settings/autosense.json"
+        static let autosense = "settings/autosense.json" // bundled neutral default
+        static func autosenseCache(simulated: Bool) -> String {
+            simulated ? "settings/autosense-simulator.json" : "settings/autosense-physical.json"
+        }
         static let profile = "settings/profile.json"
         static let pumpProfile = "settings/pumpprofile.json"
         static let settings = "settings/settings.json"
@@ -20,8 +23,9 @@ extension OpenAPS {
         static let tempBasal = "monitor/temp_basal.json"
         static let meal = "monitor/meal.json"
         static let glucose = "monitor/glucose.json"
-        static let iob = "monitor/iob.json"
-        static let cob = "monitor/cob.json"
+        /// The old shared files carry no pump provenance. Each domain builds its own fresh projections.
+        static func iobFile(simulated: Bool) -> String { simulated ? "monitor/iob-simulator.json" : "monitor/iob-physical.json" }
+        static func cobFile(simulated: Bool) -> String { simulated ? "monitor/cob-simulator.json" : "monitor/cob-physical.json" }
         static let cgmState = "monitor/cgm-state.json"
         static let podAge = "monitor/pod-age.json"
         static let trio_custom_oref_variables = "monitor/trio_custom_oref_variables.json"

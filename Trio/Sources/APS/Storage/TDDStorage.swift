@@ -1,6 +1,7 @@
 import CoreData
 import Foundation
 import LoopKitUI
+import MockKit
 import Swinject
 
 protocol TDDStorage {
@@ -10,8 +11,8 @@ protocol TDDStorage {
         basalProfile: [BasalProfileEntry]
     ) async throws
         -> TDDResult
-    func storeTDD(_ tddResult: TDDResult) async
-    func hasSufficientTDD() async throws -> Bool
+    func storeTDD(_ tddResult: TDDResult, simulated: Bool) async
+    func hasSufficientTDD(simulated: Bool) async throws -> Bool
 }
 
 /// Structure containing the results of TDD calculations
@@ -97,7 +98,7 @@ final class BaseTDDStorage: TDDStorage, Injectable {
             now: now,
             roundToSupportedBasalRate: pumpManager.roundToSupportedBasalRate
         )
-        async let weightedAverage = calculateWeightedAverage()
+        async let weightedAverage = calculateWeightedAverage(simulated: pumpManager is MockPumpManager)
 
         // Await all concurrent calculations
         let (hours, bolus, scheduled, temp, weighted) = try await (
@@ -147,12 +148,13 @@ final class BaseTDDStorage: TDDStorage, Injectable {
 
     /// Stores the Total Daily Dose (TDD) result in Core Data
     /// - Parameter tddResult: The TDD result to store, containing total insulin, bolus, temp basal, scheduled basal and weighted average
-    func storeTDD(_ tddResult: TDDResult) async {
+    func storeTDD(_ tddResult: TDDResult, simulated: Bool) async {
         let context = makeContext()
         context.name = "storeTDD"
         await context.perform {
             let tddStored = TDDStored(context: context)
             tddStored.id = UUID()
+            tddStored.isSimulated = NSNumber(value: simulated)
             tddStored.date = Date()
             tddStored.total = NSDecimalNumber(decimal: tddResult.total)
             tddStored.bolus = NSDecimalNumber(decimal: tddResult.bolus)
@@ -343,7 +345,7 @@ final class BaseTDDStorage: TDDStorage, Injectable {
     ///
     /// - Returns: A weighted average of TDD as Decimal, or nil if insufficient data
     /// - Note: The weight percentage can be configured in preferences. Default is 0.65 (65% recent, 35% historical)
-    private func calculateWeightedAverage() async throws -> Decimal? {
+    private func calculateWeightedAverage(simulated: Bool) async throws -> Decimal? {
         let tenDaysAgo = Date().addingTimeInterval(-10.days.timeInterval)
         let twoHoursAgo = Date().addingTimeInterval(-2.hours.timeInterval)
 
@@ -351,8 +353,8 @@ final class BaseTDDStorage: TDDStorage, Injectable {
         context.name = "calculateWeightedAverage"
 
         return try await context.perform { () -> Decimal? in
-            let recent = try Self.aggregateTDD(from: twoHoursAgo, in: context)
-            let historical = try Self.aggregateTDD(from: tenDaysAgo, in: context)
+            let recent = try Self.aggregateTDD(from: twoHoursAgo, in: context, simulated: simulated)
+            let historical = try Self.aggregateTDD(from: tenDaysAgo, in: context, simulated: simulated)
 
             // Extract into locals so SwiftFormat's isEmpty rule doesn't
             // mis-rewrite the tuple member access into `!tuple.isEmpty`
@@ -379,11 +381,12 @@ final class BaseTDDStorage: TDDStorage, Injectable {
     /// avoiding materializing hundreds of rows just to add them up.
     private static func aggregateTDD(
         from: Date,
-        in context: NSManagedObjectContext
+        in context: NSManagedObjectContext,
+        simulated: Bool
     ) throws -> (total: Decimal, count: Int) {
         let request = NSFetchRequest<NSDictionary>(entityName: "TDDStored")
         request.resultType = .dictionaryResultType
-        request.predicate = NSPredicate(format: "date >= %@ AND total != nil", from as NSDate)
+        request.predicate = .forTDD(NSPredicate(format: "date >= %@ AND total != nil", from as NSDate), simulated: simulated)
 
         let sumExp = NSExpressionDescription()
         sumExp.name = "sumTotal"
@@ -416,20 +419,20 @@ final class BaseTDDStorage: TDDStorage, Injectable {
     ///
     /// - Returns: `true` if sufficient TDD data is available, otherwise `false`.
     /// - Throws: An error if the Core Data count operation fails.
-    func hasSufficientTDD() async throws -> Bool {
+    func hasSufficientTDD(simulated: Bool) async throws -> Bool {
         let context = makeContext()
         context.name = "hasSufficientTDD"
-        return try await BaseTDDStorage.hasSufficientTDD(context: context)
+        return try await BaseTDDStorage.hasSufficientTDD(context: context, simulated: simulated)
     }
 
     /// internal function with context exposed to enable testing
-    static func hasSufficientTDD(context: NSManagedObjectContext) async throws -> Bool {
+    static func hasSufficientTDD(context: NSManagedObjectContext, simulated: Bool = false) async throws -> Bool {
         try await context.perform {
             let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "TDDStored")
-            fetchRequest.predicate = NSPredicate(
+            fetchRequest.predicate = .forTDD(NSPredicate(
                 format: "date > %@ AND total > 0",
                 Date().addingTimeInterval(-86400 * 7) as NSDate
-            )
+            ), simulated: simulated)
             fetchRequest.resultType = .countResultType
 
             let count = try context.count(for: fetchRequest)

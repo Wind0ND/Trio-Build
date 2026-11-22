@@ -73,3 +73,28 @@ import Testing
         #expect(decoded.suspendOnly == false)
     }
 }
+
+@Suite("Automatic delivery context") struct AutomaticDeliveryContextTests {
+    @Test("Only the calculating mode, glucose source revision and pump may send the next command")
+    func rejectsChangedInputs() {
+        let pump = NSObject()
+        let replacement = NSObject()
+        let revision = UUID()
+        let now = Date()
+        func context(_ mode: DosingMode = .closed, _ epoch: UUID? = nil, _ device: NSObject? = nil,
+                     simulated: Bool = false, mock: Bool = false) -> AutomaticDeliveryContext {
+            AutomaticDeliveryContext(mode: mode, modeRevision: revision, sourceRevision: epoch ?? revision, pumpID: ObjectIdentifier(device ?? pump),
+                                     simulatorSource: simulated, mockPump: mock)
+        }
+        let start = context()
+        #expect(start.permitsDelivery(current: start, deliverAt: now, now: now))
+        for changed in [context(.basalTesting), context(.open), context(.closed, UUID()), context(.closed, revision, replacement)] {
+            #expect(!start.permitsDelivery(current: changed, deliverAt: now, now: now))
+        }
+        #expect(!start.permitsDelivery(current: start, deliverAt: now.addingTimeInterval(-1801), now: now))
+        let incompatible = context(simulated: true)
+        #expect(!incompatible.permitsDelivery(current: incompatible, deliverAt: now, now: now))
+        let simulated = context(simulated: true, mock: true)
+        #expect(simulated.permitsDelivery(current: simulated, deliverAt: now, now: now))
+    }
+}

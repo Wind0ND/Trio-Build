@@ -38,7 +38,7 @@ final class LiveActivityData: ObservableObject {
     @Injected() private var settingsManager: SettingsManager!
     @Injected() private var broadcaster: Broadcaster!
     @Injected() private var storage: FileStorage!
-    @Injected() private var glucoseStorage: GlucoseStorage!
+    @Injected() var glucoseStorage: GlucoseStorage!
     @Injected() private var iobService: IOBService!
 
     private let activityAuthorizationInfo = ActivityAuthorizationInfo()
@@ -270,7 +270,7 @@ final class LiveActivityData: ObservableObject {
             if let existing { observeState(of: existing) }
         }
         let content = ActivityContent(state: state, staleDate: state.privacy?.staleDate
-            ?? min(state.glucoseMeasuredAt ?? state.date ?? now, now).addingTimeInterval(300))
+            ?? min(state.glucoseMeasuredAt ?? state.date ?? now, now).addingTimeInterval(300), relevanceScore: 100)
         let renew = existing.map {
             ActivityLifecyclePolicy.shouldRenew(start: $0.attributes.startDate, now: now, foreground: foreground)
         } ?? false
@@ -358,7 +358,7 @@ final class LiveActivityData: ObservableObject {
                     isInitialState: true,
                     privacy: nil
                 ),
-            staleDate: Date.now.addingTimeInterval(60)
+            staleDate: Date.now.addingTimeInterval(60), relevanceScore: 100
         )
     }
 

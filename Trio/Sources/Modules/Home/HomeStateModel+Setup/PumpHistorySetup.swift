@@ -15,6 +15,7 @@ extension Home.StateModel {
         }
 
         do {
+            insulinController.fetchRequest.predicate = .forPump(.pumpHistory(since: chartHistoryStartDate), simulated: glucoseStorage.mockPumpConnected == true)
             try insulinController.performFetch()
             updateInsulinFromController()
         } catch {
@@ -47,6 +48,7 @@ extension Home.StateModel {
         }
 
         do {
+            lastBolusController.fetchRequest.predicate = .forPump(.lastPumpBolus, simulated: glucoseStorage.mockPumpConnected == true)
             try lastBolusController.performFetch()
             updateLastBolusFromController()
         } catch {

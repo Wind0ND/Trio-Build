@@ -62,7 +62,7 @@ final class StateIntentRequest: BaseIntentsRequest {
             let results = try CoreDataStack.shared.fetchEntities(
                 ofType: GlucoseStored.self,
                 onContext: onContext,
-                predicate: NSPredicate.predicateFor30MinAgo,
+                predicate: glucoseStorage.activeReadings(matching: NSPredicate.predicateFor30MinAgo),
                 key: "date",
                 ascending: false,
                 fetchLimit: 2
@@ -92,7 +92,7 @@ final class StateIntentRequest: BaseIntentsRequest {
         let results = try CoreDataStack.shared.fetchEntities(
             ofType: OrefDetermination.self,
             onContext: onContext,
-            predicate: NSPredicate.enactedDetermination,
+            predicate: glucoseStorage.activeDeterminations(matching: NSPredicate.enactedDetermination),
             key: "deliverAt",
             ascending: false,
             fetchLimit: 1

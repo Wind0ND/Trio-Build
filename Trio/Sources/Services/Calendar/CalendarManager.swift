@@ -157,7 +157,7 @@ final class BaseCalendarManager: CalendarManager, Injectable {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: OrefDetermination.self,
             onContext: context,
-            predicate: NSPredicate.predicateFor30MinAgoForDetermination,
+            predicate: glucoseStorage.activeDeterminations(matching: NSPredicate.predicateFor30MinAgoForDetermination),
             key: "timestamp",
             ascending: false,
             fetchLimit: 1,
@@ -179,7 +179,7 @@ final class BaseCalendarManager: CalendarManager, Injectable {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: GlucoseStored.self,
             onContext: context,
-            predicate: NSPredicate.predicateFor30MinAgo,
+            predicate: glucoseStorage.activeReadings(matching: NSPredicate.predicateFor30MinAgo),
             key: "date",
             ascending: false,
             propertiesToFetch: ["objectID", "glucose"]

@@ -24,6 +24,7 @@ extension History.RootView {
 
     var filteredPumpEvents: [PumpEventStored] {
         pumpEventStored.filter { item in
+            guard (item.isSimulated?.boolValue == true) == (state.glucoseStorage?.mockPumpConnected == true) else { return false }
             // First filter by date
             let passesDateFilter = !showFutureEntries ? item.timestamp ?? Date() <= Date() : true
 

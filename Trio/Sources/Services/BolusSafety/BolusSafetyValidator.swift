@@ -1,5 +1,6 @@
 import CoreData
 import Foundation
+import MockKit
 import Swinject
 
 /// Shared safety checks applied to any bolus command originating outside the main bolus UI
@@ -63,6 +64,7 @@ enum BolusSafetyEvaluator {
 final class BaseBolusSafetyValidator: BolusSafetyValidator, Injectable {
     @Injected() private var settingsManager: SettingsManager!
     @Injected() private var iobService: IOBService!
+    @Injected() private var deviceManager: DeviceDataManager!
 
     init(resolver: Resolver) {
         injectServices(resolver)
@@ -91,7 +93,7 @@ final class BaseBolusSafetyValidator: BolusSafetyValidator, Injectable {
         let results: Any = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: PumpEventStored.self,
             onContext: fetchContext,
-            predicate: predicate,
+            predicate: .forPump(predicate, simulated: deviceManager.pumpManager is MockPumpManager),
             key: "timestamp",
             ascending: true,
             fetchLimit: nil,

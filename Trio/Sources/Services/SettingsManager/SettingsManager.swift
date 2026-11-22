@@ -4,6 +4,7 @@ import Swinject
 
 protocol SettingsManager: AnyObject {
     var settings: TrioSettings { get set }
+    var dosingModeRevision: UUID { get }
     var preferences: Preferences { get set }
     var pumpSettings: PumpSettings { get }
     func updateInsulinCurve(_ insulinType: InsulinType?)
@@ -21,8 +22,10 @@ final class BaseSettingsManager: SettingsManager, Injectable {
     @Injected() var broadcaster: Broadcaster!
     @Injected() var storage: FileStorage!
 
+    @SyncAccess private(set) var dosingModeRevision = UUID()
     @SyncAccess var settings: TrioSettings {
         didSet {
+            if oldValue.dosingMode != settings.dosingMode { dosingModeRevision = UUID() }
             if oldValue != settings {
                 saveSettings()
                 DispatchQueue.main.async {

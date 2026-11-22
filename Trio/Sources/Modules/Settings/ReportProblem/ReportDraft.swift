@@ -8,7 +8,8 @@ struct ReportDraft: Codable, Equatable {
 
     var title = ""
     var description = ""
-    var attachLogs = true
+    var attachLogs = false
+    var explicitAttachmentChoice: Bool? = nil
     var isAnonymous = true
     var contact = ProblemReport.Contact()
 
@@ -32,15 +33,20 @@ struct ReportDraft: Codable, Equatable {
     }
 
     static func load(from storage: KeyValueStorage = UserDefaults.standard) -> ReportDraft {
-        storage.getValue(ReportDraft.self, forKey: storageKey, defaultValue: nil, reportError: false) ?? ReportDraft()
+        var draft = storage.getValue(ReportDraft.self, forKey: storageKey, defaultValue: nil, reportError: false) ?? ReportDraft()
+        if draft.explicitAttachmentChoice != true { draft.attachLogs = false }
+        draft.explicitAttachmentChoice = nil
+        return draft
     }
 
     func save(to storage: KeyValueStorage = UserDefaults.standard) {
-        storage.setValue(self, forKey: Self.storageKey)
+        var saved = self
+        saved.explicitAttachmentChoice = attachLogs
+        storage.setValue(saved, forKey: Self.storageKey)
     }
 
     static func clear(in storage: KeyValueStorage = UserDefaults.standard) {
-        storage.setValue(ReportDraft?.none, forKey: storageKey)
+        storage.setValue(ReportDraft?.none, forKey: Self.storageKey)
     }
 }
 

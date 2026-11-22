@@ -14,7 +14,8 @@ import SwiftDate
 import Swinject
 import UserNotifications
 
-protocol DeviceDataManager {
+protocol DeviceDataManager: AnyObject {
+    var glucoseSourceRevision: UUID { get set }
     var pumpManager: PumpManagerUI? { get set }
     var bluetoothManager: BluetoothStateManager { get }
     var loopInProgress: Bool { get set }
@@ -56,6 +57,7 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
     // serializes event batches: a PM may report again before the prior store finished
     private var pumpEventsTask: Task<Void, Never>?
 
+    @Persisted(key: "BaseDeviceDataManager.lastSimulatorEventDate") var lastSimulatorEventDate: Date? = nil
     @Persisted(key: "BaseDeviceDataManager.lastEventDate") var lastEventDate: Date? = nil
     @SyncAccess(lock: accessLock) @Persisted(key: "BaseDeviceDataManager.lastHeartBeatTime") var lastHeartBeatTime: Date =
         .distantPast
@@ -70,17 +72,29 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
 
     @SyncAccess private var pumpUpdateCancellable: AnyCancellable?
     private var pumpUpdatePromise: Future<Bool, Never>.Promise?
+    @SyncAccess var glucoseSourceRevision = UUID()
     @SyncAccess var loopInProgress: Bool = false
 
     var pumpManager: PumpManagerUI? {
         didSet {
+            glucoseStorage.mockPumpConnected = pumpManager.map { $0 is MockPumpManager }
             if let oldValue = oldValue {
+                oldValue.pumpManagerDelegate = nil
                 trioAlertManager?.unregister(managerIdentifier: oldValue.pluginIdentifier)
             }
             if let pumpManager = pumpManager {
                 // Queue before delegate, so no delegate call lands on the default main queue
                 pumpManager.delegateQueue = processQueue
                 pumpManager.pumpManagerDelegate = self
+                if let medtrum = pumpManager as? MedtrumPumpManager {
+                    medtrum.persistPendingDelivery = { [weak self, weak medtrum] in
+                        guard let self, let medtrum else { throw CocoaError(.fileWriteUnknown) }
+                        try self.processQueue.safeSync {
+                            guard self.pumpManager === medtrum else { throw CocoaError(.fileWriteUnknown) }
+                            try self._rawPumpManager.store(medtrum.rawValue)
+                        }
+                    }
+                }
 
                 // Re-apply the latest CGM-aligned heartbeat request to a freshly set pump
                 if let heartbeatRequest = lastPumpHeartbeatRequest {
@@ -93,6 +107,7 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
                 /// Since the pump manager has been successfully instantiated from its saved state,
                 /// copy its rawValue to rawPumpManager which will be saved to persistant storage.
                 processQueue.async {
+                    guard self.pumpManager === pumpManager else { return }
                     self.rawPumpManager = pumpManager.rawValue
                     UserDefaults.standard.clearLegacyPumpManagerRawValue()
                 }
@@ -170,10 +185,7 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
                 }
             } else {
                 info(.pump, oldValue == nil ? "No pump configured" : "Pump removed")
-                // A stored pump manager that fails to decode at launch counts as removed.
-                if oldValue != nil || rawPumpManager != nil {
-                    pumpStatusStorage.storePumpRemoved()
-                }
+                if oldValue != nil { pumpStatusStorage.storePumpRemoved() }
                 pumpDisplayState.value = nil
                 pumpExpiresAtDate.send(nil)
                 pumpActivatedAtDate.send(nil)
@@ -249,8 +261,14 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
     }
 
     func setupPumpManager() {
-        if let pumpManagerRawValue = rawPumpManager ?? UserDefaults.standard.legacyPumpManagerRawValue {
-            pumpManager = pumpManagerFromRawValue(pumpManagerRawValue)
+        let saved = rawPumpManager ?? UserDefaults.standard.legacyPumpManagerRawValue
+        LegacyPumpHistory.noteRestoredConfiguration(saved?["managerIdentifier"] as? String)
+        if let pumpManagerRawValue = saved {
+            guard let restored = Self.pumpManagerFromRawValue(pumpManagerRawValue) else {
+                warning(.pump, "Cannot restore the saved pump configuration; preserving it for recovery")
+                return
+            }
+            pumpManager = restored
         } else {
             pumpManager = nil
         }
@@ -332,7 +350,7 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
         DeviceCatalog.pumpManagersByIdentifier[identifier]
     }
 
-    private func pumpManagerFromRawValue(_ rawValue: [String: Any]) -> PumpManagerUI? {
+    static func pumpManagerFromRawValue(_ rawValue: [String: Any]) -> PumpManagerUI? {
         guard let rawState = rawValue["state"] as? PumpManager.RawStateValue,
               let Manager = pumpManagerTypeFromRawValue(rawValue)
         else {
@@ -342,7 +360,7 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
         return Manager.init(rawState: rawState) as? PumpManagerUI
     }
 
-    private func pumpManagerTypeFromRawValue(_ rawValue: [String: Any]) -> PumpManager.Type? {
+    private static func pumpManagerTypeFromRawValue(_ rawValue: [String: Any]) -> PumpManager.Type? {
         guard let managerIdentifier = rawValue["managerIdentifier"] as? String else {
             return nil
         }
@@ -385,10 +403,8 @@ extension BaseDeviceDataManager: PumpManagerDelegate {
     }
 
     func pumpManagerDidUpdateState(_ pumpManager: PumpManager) {
+        guard self.pumpManager === pumpManager else { return }
         rawPumpManager = pumpManager.rawValue
-        if self.pumpManager == nil, let newPumpManager = pumpManager as? PumpManagerUI {
-            self.pumpManager = newPumpManager
-        }
         pumpName.send(pumpManager.localizedTitle)
     }
 
@@ -545,14 +561,23 @@ extension BaseDeviceDataManager: PumpManagerDelegate {
         }
     }
 
-    func pumpManagerWantsDeletion(_: PumpManager) async {
+    func pumpManagerWantsDeletion(_ pumpManager: PumpManager) async {
         await withCheckedContinuation { continuation in
             processQueue.async {
+                defer { continuation.resume() }
+                guard self.pumpManager === pumpManager else { return }
+                do {
+                    try self._rawPumpManager.remove()
+                    UserDefaults.standard.clearLegacyPumpManagerRawValue()
+                } catch {
+                    warning(.storage, "Could not remove the saved pump configuration", error: error)
+                    self.errorSubject.send(error)
+                    return
+                }
                 self.pumpManager = nil
                 self.broadcaster.notify(PumpDeactivatedObserver.self, on: self.processQueue) {
                     $0.pumpDeactivatedDidChange()
                 }
-                continuation.resume()
             }
         }
     }
@@ -566,7 +591,7 @@ extension BaseDeviceDataManager: PumpManagerDelegate {
     }
 
     func pumpManager(
-        _: PumpManager,
+        _ reportingPump: PumpManager,
         hasNewPumpEvents events: [NewPumpEvent],
         lastReconciliation _: Date?,
         replacePendingEvents: Bool,
@@ -586,9 +611,10 @@ extension BaseDeviceDataManager: PumpManagerDelegate {
                 debug(.pump, "Storing \(events.count) new pump events")
                 let purgedUploadedIds = try await pumpHistoryStorage.storePumpEvents(
                     events,
-                    replacePendingEvents: replacePendingEvents
+                    replacePendingEvents: replacePendingEvents, simulated: reportingPump is MockPumpManager
                 )
-                lastEventDate = events.last?.date
+                if reportingPump is MockPumpManager { lastSimulatorEventDate = events.last?.date }
+                else { lastEventDate = events.last?.date }
                 completion(nil)
                 // the pump withdrew these events; remove their NS treatments
                 if !purgedUploadedIds.isEmpty, let nightscoutManager = resolver?.resolve(NightscoutManager.self) {
@@ -638,8 +664,9 @@ extension BaseDeviceDataManager: PumpManagerDelegate {
         promise(.success(true))
     }
 
-    func startDateToFilterNewPumpEvents(for _: PumpManager) -> Date {
-        lastEventDate?.addingTimeInterval(-15.minutes.timeInterval) ?? Date().addingTimeInterval(-2.hours.timeInterval)
+    func startDateToFilterNewPumpEvents(for pump: PumpManager) -> Date {
+        let last = pump is MockPumpManager ? lastSimulatorEventDate : lastEventDate
+        return last?.addingTimeInterval(-15.minutes.timeInterval) ?? Date().addingTimeInterval(-2.hours.timeInterval)
     }
 }
 

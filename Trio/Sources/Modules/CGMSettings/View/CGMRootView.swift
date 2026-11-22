@@ -211,7 +211,7 @@ extension CGMSettings {
                                 "Current CGM Models Supported:"
                             )
                             VStack(alignment: .leading) {
-                                ForEach(DeviceCatalog.cgms.filter(\.isSelectableInPicker)) { cgm in
+                                ForEach(state.availableSources.filter(\.isSelectableInPicker)) { cgm in
                                     Text("• \(cgm.hintLine)")
                                 }
                             }
@@ -232,7 +232,7 @@ extension CGMSettings {
             }) {
                 DevicePickerView(
                     title: String(localized: "Add CGM", comment: "The title of the CGM chooser in settings"),
-                    entries: DeviceCatalog.cgms
+                    entries: state.availableSources
                 ) { entry in
                     pendingCGM = entry
                     showCGMSelection = false

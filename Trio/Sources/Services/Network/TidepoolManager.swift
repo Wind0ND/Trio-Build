@@ -449,7 +449,7 @@ extension BaseTidepoolManager {
                 ofType: PumpEventStored.self,
                 onContext: context,
                 predicate: NSCompoundPredicate(andPredicateWithSubpredicates: [
-                    NSPredicate.pumpHistoryLast24h,
+                    NSPredicate.forPump(.pumpHistoryLast24h, simulated: false),
                     NSPredicate(format: "tempBasal != nil")
                 ]),
                 key: "timestamp",

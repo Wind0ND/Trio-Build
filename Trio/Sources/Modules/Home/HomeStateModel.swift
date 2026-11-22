@@ -77,6 +77,7 @@ extension Home {
         var eventualBG: Int?
         var units: GlucoseUnits = .mgdL
         var pumpDisplayState: PumpDisplayState?
+        @ObservationIgnored private var displayingMockPump = false
         var alarm: GlucoseAlarm?
         var manualTempBasal = false
         var isSmoothingEnabled = false
@@ -293,7 +294,7 @@ extension Home {
         @ObservationIgnored private(set) lazy var insulinController: NSFetchedResultsController<PumpEventStored> = {
             let request = NSFetchRequest<PumpEventStored>(entityName: "PumpEventStored")
             request.sortDescriptors = [NSSortDescriptor(keyPath: \PumpEventStored.timestamp, ascending: true)]
-            request.predicate = NSPredicate.pumpHistory(since: chartHistoryStartDate)
+            request.predicate = .forPump(.pumpHistory(since: chartHistoryStartDate), simulated: glucoseStorage.mockPumpConnected == true)
             request.fetchBatchSize = 30
             let controller = NSFetchedResultsController(
                 fetchRequest: request,
@@ -309,7 +310,7 @@ extension Home {
         @ObservationIgnored private(set) lazy var lastBolusController: NSFetchedResultsController<PumpEventStored> = {
             let request = NSFetchRequest<PumpEventStored>(entityName: "PumpEventStored")
             request.sortDescriptors = [NSSortDescriptor(keyPath: \PumpEventStored.timestamp, ascending: false)]
-            request.predicate = NSPredicate.lastPumpBolus
+            request.predicate = .forPump(.lastPumpBolus, simulated: glucoseStorage.mockPumpConnected == true)
             request.fetchLimit = 1
             let controller = NSFetchedResultsController(
                 fetchRequest: request,
@@ -433,7 +434,7 @@ extension Home {
             reanchor(determinationController, with: NSPredicate.determinationsForCobIobCharts(since: chartHistoryStartDate)) {
                 self.updateDeterminationsFromController()
             }
-            reanchor(insulinController, with: NSPredicate.pumpHistory(since: chartHistoryStartDate)) {
+            reanchor(insulinController, with: .forPump(.pumpHistory(since: chartHistoryStartDate), simulated: glucoseStorage.mockPumpConnected == true)) {
                 self.updateInsulinFromController() }
             reanchor(overrideRunController, with: NSPredicate.predicateForStartDate(since: chartHistoryStartDate)) {
                 self.updateOverrideRunsFromController()
@@ -687,6 +688,17 @@ extension Home {
                 .sink { [weak self] state in
                     guard let self = self else { return }
                     self.pumpDisplayState = state
+                    let simulated = self.glucoseStorage.mockPumpConnected == true
+                    if self.displayingMockPump != simulated {
+                        self.displayingMockPump = simulated
+                        Task { @MainActor in
+                            self.updateGlucoseFromController()
+                            self.updateDeterminationsFromController()
+                            self.setupEnactedDeterminationController()
+                            self.setupInsulinController()
+                            self.setupLastBolusController()
+                        }
+                    }
                     if state == nil {
                         self.reservoir = nil
                         self.battery = nil
@@ -1048,8 +1060,9 @@ extension Home.StateModel:
         enableQuickPickTreatments = settingsManager.settings.enableQuickPickTreatments
         forecastDisplayType = settingsManager.settings.forecastDisplayType
         homeStatsPanelRange = settingsManager.settings.homeStatsPanelRange
-        // range, face or time-in-range type may have changed
+        // Source changes also invalidate the current reading and chart selection.
         Task { @MainActor in
+            updateGlucoseFromController()
             refreshExtendedStatsPanel(force: true)
         }
         cgmAvailable = (fetchGlucoseManager.cgmGlucoseSourceType != CGMType.none)

@@ -1,3 +1,4 @@
+import MockKit
 import Combine
 import CoreData
 import Observation
@@ -8,6 +9,7 @@ extension DynamicSettings {
         @Injected() var settings: SettingsManager!
         @Injected() var storage: FileStorage!
         @Injected() var tddStorage: TDDStorage!
+        @Injected() var deviceManager: DeviceDataManager!
 
         // this is an *interim* fix to provide better UI/UX
         // FIXME: needs to be refactored, once oref-swift lands and dynamicISF becomes swift-bound
@@ -58,7 +60,7 @@ extension DynamicSettings {
 
             Task {
                 do {
-                    let hasValidTDD = try await tddStorage.hasSufficientTDD()
+                    let hasValidTDD = try await tddStorage.hasSufficientTDD(simulated: deviceManager.pumpManager is MockPumpManager)
                     await MainActor.run {
                         self.hasValidTDD = hasValidTDD
                     }

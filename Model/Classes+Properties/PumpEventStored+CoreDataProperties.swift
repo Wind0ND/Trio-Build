@@ -6,6 +6,7 @@ public extension PumpEventStored {
         NSFetchRequest<PumpEventStored>(entityName: "PumpEventStored")
     }
 
+    @NSManaged var isSimulated: NSNumber?
     @NSManaged var actionDuration: NSDecimalNumber?
     @NSManaged var id: String?
     @NSManaged var insulinType: String?

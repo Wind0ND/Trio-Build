@@ -17,6 +17,7 @@ protocol DeterminationStorage {
 }
 
 final class BaseDeterminationStorage: DeterminationStorage, Injectable {
+    @Injected() private var glucoseStorage: GlucoseStorage!
     private let viewContext = CoreDataStack.shared.persistentContainer.viewContext
     private let makeContext: () -> NSManagedObjectContext
 
@@ -31,7 +32,7 @@ final class BaseDeterminationStorage: DeterminationStorage, Injectable {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: OrefDetermination.self,
             onContext: context,
-            predicate: predicate,
+            predicate: glucoseStorage.activeDeterminations(matching: predicate),
             key: "deliverAt",
             ascending: false,
             fetchLimit: 1
@@ -157,7 +158,7 @@ final class BaseDeterminationStorage: DeterminationStorage, Injectable {
                 let orefDetermination = try context.existingObject(with: determinationId) as? OrefDetermination
 
                 // Check if the fetched object is of the expected type
-                if let orefDetermination = orefDetermination {
+                if let orefDetermination, orefDetermination.isSimulated?.boolValue == false {
                     result = Determination(
                         id: orefDetermination.id ?? UUID(),
                         reason: orefDetermination.reason ?? "",

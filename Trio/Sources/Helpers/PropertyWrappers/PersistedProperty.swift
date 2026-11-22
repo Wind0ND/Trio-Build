@@ -88,9 +88,8 @@ import Foundation
         }
         set {
             guard let newValue = newValue else {
-                guard FileManager.default.fileExists(atPath: storageURL.path) else { return }
                 do {
-                    try FileManager.default.removeItem(at: storageURL)
+                    try remove()
                     debug(.storage, "Removed persisted value '\(key)'")
                 } catch {
                     warning(.storage, "Removing persisted value '\(key)' failed", error: error)
@@ -99,20 +98,23 @@ import Foundation
             }
 
             do {
-                let data = try PropertyListSerialization.data(fromPropertyList: newValue, format: .binary, options: 0)
-                try data.write(to: storageURL, options: .atomic)
-
-                // Ensure appropriate protection level
-                try FileManager.default.setAttributes(
-                    [.protectionKey: FileProtectionType.none],
-                    ofItemAtPath: storageURL.path
-                )
-
+                try store(newValue)
                 debug(.storage, "Saved persisted value '\(key)'")
             } catch {
                 warning(.storage, "Saving persisted value '\(key)' failed", error: error)
             }
         }
+    }
+
+    /// A command which could start delivery must be able to distinguish a durable checkpoint from a failed save.
+    func store(_ value: Value) throws {
+        let data = try PropertyListSerialization.data(fromPropertyList: value, format: .binary, options: 0)
+        try data.write(to: storageURL, options: .atomic)
+        try FileManager.default.setAttributes([.protectionKey: FileProtectionType.none], ofItemAtPath: storageURL.path)
+    }
+    func remove() throws {
+        do { try FileManager.default.removeItem(at: storageURL) }
+        catch let error as CocoaError where error.code == .fileNoSuchFile { return }
     }
 }
 

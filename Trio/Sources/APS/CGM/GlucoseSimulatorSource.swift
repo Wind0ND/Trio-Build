@@ -42,7 +42,7 @@ final class GlucoseSimulatorSource: GlucoseSource {
     @Persisted(key: "GlucoseSimulatorLastGlucose") private var lastGlucose = 100
 
     /// The date of the last fetch operation
-    @Persisted(key: "GlucoseSimulatorLastFetchDate") private var lastFetchDate: Date! = nil
+    @Persisted(key: "GlucoseSimulatorProvenanceLastFetchDate") private var lastFetchDate: Date! = nil
 
     /// Initializes the glucose simulator source
     /// Sets up the initial fetch date if not already set
@@ -92,7 +92,7 @@ final class GlucoseSimulatorSource: GlucoseSource {
         let cutoff = Date().addingTimeInterval(-12 * 60)
         context.perform {
             let request = GlucoseStored.fetchRequest()
-            request.predicate = NSPredicate(format: "date > %@", cutoff as NSDate)
+            request.predicate = NSPredicate(format: "date > %@ AND isSimulated == YES AND isManual == NO", cutoff as NSDate)
             do {
                 let recent = try context.fetch(request)
                 for row in recent {

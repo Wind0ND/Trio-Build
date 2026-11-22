@@ -36,7 +36,8 @@ final class SpyAlertManager: TrioAlertManager {
     func unregister(managerIdentifier _: String) {}
 
     func handleAcknowledgement(identifier _: Alert.Identifier) {}
-    func handleNotificationResponse(_: UNNotificationResponse) {}
+    @MainActor func handleNotificationResponse(_: UNNotificationResponse) {}
+    @MainActor func handleWatchSnooze(_: AlertNotificationSnooze) {}
     func acknowledgeAllOutstanding() {}
     func replayUnacknowledgedAlerts() {}
     @MainActor func applySnooze(for _: TimeInterval) async {}

@@ -563,6 +563,7 @@ extension Treatments {
                         .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
                 } else {
                     Button {
+                        state.refreshTreatmentInputs()
                         if bolusWarning.shouldConfirm {
                             showConfirmDialogForBolusing = true
                         } else {

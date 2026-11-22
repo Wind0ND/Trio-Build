@@ -42,7 +42,7 @@ import PrivacyKit
         guard let start = ActivityLifecyclePolicy.successorDate(start: current.attributes.startDate, now: now) else { return }
         let foreground = maySchedule()
         let snapshot = placeholder()
-        let content = ActivityContent(state: snapshot, staleDate: max(start, snapshot.privacy?.staleDate ?? start))
+        let content = ActivityContent(state: snapshot, staleDate: max(start, snapshot.privacy?.staleDate ?? start), relevanceScore: 0)
         var match: Session?
         var superseded: [Session] = []
         for session in pending {

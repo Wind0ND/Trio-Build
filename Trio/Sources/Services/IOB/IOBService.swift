@@ -1,6 +1,7 @@
 import Combine
 import CoreData
 import Foundation
+import MockKit
 import Swinject
 
 protocol IOBService {
@@ -19,6 +20,7 @@ protocol IOBService {
 // TODO: Calculate IoB using APSManager after enough time has elapsed from the last file or determination data
 final class BaseIOBService: IOBService, Injectable {
     @Injected() private var fileStorage: FileStorage!
+    @Injected() private var glucoseStorage: GlucoseStorage!
     @Injected() private var determinationStorage: DeterminationStorage!
     @Injected() private var apsManager: APSManager!
 
@@ -34,7 +36,7 @@ final class BaseIOBService: IOBService, Injectable {
 
     // Projected IOB series from the latest loop cycle (now → +4 h, 5 min steps)
     var iobProjection: [IOBEntry] {
-        fileStorage.retrieve(OpenAPS.Monitor.iob, as: [IOBEntry].self) ?? []
+        fileStorage.retrieve(OpenAPS.Monitor.iobFile(simulated: apsManager.pumpManager is MockPumpManager), as: [IOBEntry].self) ?? []
     }
 
     private var subscriptions = Set<AnyCancellable>()
@@ -74,6 +76,7 @@ final class BaseIOBService: IOBService, Injectable {
         context.performAndWait {
             let request = OrefDetermination.fetchRequest() as NSFetchRequest<OrefDetermination>
             request.sortDescriptors = [NSSortDescriptor(key: "deliverAt", ascending: false)]
+            request.predicate = self.glucoseStorage.activeDeterminations(matching: NSPredicate(value: true))
             request.fetchLimit = 1
             if let determination = try? context.fetch(request).first {
                 iob = determination.iob as? Decimal
@@ -86,7 +89,7 @@ final class BaseIOBService: IOBService, Injectable {
     // Lookup IOB data from the file system and determinations core data, use the most
     // recent value
     func lookupIOB() -> Decimal? {
-        let iobFromFile = fileStorage.retrieve(OpenAPS.Monitor.iob, as: [IOBEntry].self)
+        let iobFromFile = fileStorage.retrieve(OpenAPS.Monitor.iobFile(simulated: apsManager.pumpManager is MockPumpManager), as: [IOBEntry].self)
         let iobFromFileValue = iobFromFile?.first?.iob
         let iobFromFileDate = iobFromFile?.first?.time
 

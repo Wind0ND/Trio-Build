@@ -13,6 +13,7 @@ public struct PrivacySettingsView: View {
     @AppStorage(PrivacyPreference.paletteKey) private var palette = PrivacyPalettePreset.quiet.rawValue
     @AppStorage(PrivacyPreference.meterStyleKey) private var meterStyle = PrivacyMeterStyle.history.rawValue
     @AppStorage(PrivacyPreference.scheduledHandoffKey) private var scheduledHandoff = true
+    @AppStorage(PrivacyPreference.islandSymbolTestKey) private var islandSymbolTest = false
     @State private var showSetup = false
     @State private var method: PrivacyLockMethod = .pin
     @State private var selectedPhoto: PhotosPickerItem?
@@ -34,6 +35,13 @@ public struct PrivacySettingsView: View {
                     Toggle(privacyText("Schedule the next Live Activity"), isOn: protected($scheduledHandoff))
                     Text(privacyText("While hiro is open, prepare one more eight-hour session. iOS announces its start as hiro."))
                         .font(.footnote).foregroundStyle(.secondary)
+                }
+                if privateDisplay {
+                    Toggle(privacyText("Test Dynamic Island with a symbol"), isOn: protected($islandSymbolTest))
+                    if islandSymbolTest {
+                        Text(privacyText("The island shows a fixed diamond for this test. The Lock Screen keeps your usual display."))
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
                 }
                 Toggle(privacyText("Private alert wording"), isOn: protected($privateAlerts))
                 Text(privacyText("Private activities show a cover and a small trend. Public glucose alerts say Attention. The existing alert sounds and schedules still apply."))

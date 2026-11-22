@@ -42,6 +42,7 @@ final class BaseNightscoutManager: NightscoutManager, Injectable {
 
     private let processQueue = DispatchQueue(label: "BaseNetworkManager.processQueue")
     private var ping: TimeInterval?
+    @SyncAccess private var lastGlucoseHistoryPoll: Date?
 
     /// Coalesces and serializes upload runs so no two runs of the same pipeline overlap.
     /// Runs execute `performUpload(for:)`, provided at init. The public `upload*()`
@@ -394,7 +395,13 @@ final class BaseNightscoutManager: NightscoutManager, Injectable {
     func fetch(_: DispatchTimer?) -> AnyPublisher<[BloodGlucose], Never> {
         Future { promise in
             Task {
-                let glucoseData = await self.fetchGlucose(since: self.glucoseStorage.syncDate())
+                // Recheck delayed uploads periodically, while keeping minute polls small.
+                let now = Date()
+                let historyDue = now.timeIntervalSince(self.lastGlucoseHistoryPoll ?? .distantPast) >= 15 * 60
+                let oldest = now.addingTimeInterval(-24 * 3600)
+                let since = historyDue ? oldest : max(oldest, self.glucoseStorage.syncDate().addingTimeInterval(-15 * 60))
+                let glucoseData = await self.fetchGlucose(since: since)
+                if historyDue, !glucoseData.isEmpty { self.lastGlucoseHistoryPoll = now }
                 promise(.success(glucoseData))
             }
         }
@@ -581,7 +588,7 @@ final class BaseNightscoutManager: NightscoutManager, Injectable {
 
         // OpenAPS Status
         async let fetchedBattery = fetchBattery()
-        async let fetchedIOBEntry = storage.retrieveAsync(OpenAPS.Monitor.iob, as: [IOBEntry].self)
+        async let fetchedIOBEntry = storage.retrieveAsync(OpenAPS.Monitor.iobFile(simulated: false), as: [IOBEntry].self)
         async let fetchedPumpStatus = pumpStatusForUpload()
 
         var (fetchedEnactedDetermination, fetchedSuggestedDetermination) = try await (

@@ -1,3 +1,4 @@
+import MockKit
 import Combine
 import CoreData
 import Foundation
@@ -27,6 +28,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
     @Injected() private var bolusCalculationManager: BolusCalculationManager!
     @Injected() private var iobService: IOBService!
     @Injected() private var notificationsManager: UserNotificationsManager!
+    @Injected() private var trioAlertManager: TrioAlertManager!
 
     private var units: GlucoseUnits = .mgdL
     private var glucoseColorScheme: GlucoseColorScheme = .staticColor
@@ -435,7 +437,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: GlucoseStored.self,
             onContext: context,
-            predicate: NSPredicate.glucose,
+            predicate: glucoseStorage.activeReadings(matching: NSPredicate.glucose),
             key: "date",
             ascending: false
         )
@@ -457,7 +459,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: PumpEventStored.self,
             onContext: context,
-            predicate: NSPredicate.lastPumpBolus,
+            predicate: .forPump(.lastPumpBolus, simulated: apsManager.pumpManager is MockPumpManager),
             key: "timestamp",
             ascending: false,
             fetchLimit: 1,
@@ -647,9 +649,7 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
                 return
             }
 
-            if let snoozeMinutes = message[WatchMessageKeys.snoozeDuration] as? Int {
-                info(.watch, "Watch requested alert snooze for \(snoozeMinutes) min")
-                await self.notificationsManager.applySnooze(for: TimeInterval(snoozeMinutes * 60))
+            if await self.handleWatchSnooze(message) {
                 return
             } else if let bolusAmount = message[WatchMessageKeys.bolus] as? Double,
                       message[WatchMessageKeys.carbs] == nil,
@@ -770,13 +770,21 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
             WatchLogIngest.legacyRecords(from: logs).forEach(TrioLogger.sink.accept)
         }
 
-        if let snoozeMinutes = userInfo[WatchMessageKeys.snoozeDuration] as? Int {
-            info(.watch, "Watch requested alert snooze for \(snoozeMinutes) min")
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                await self.notificationsManager.applySnooze(for: TimeInterval(snoozeMinutes * 60))
-            }
+        Task { @MainActor [weak self] in
+            _ = await self?.handleWatchSnooze(userInfo)
         }
+    }
+
+    @MainActor private func handleWatchSnooze(_ message: [String: Any]) async -> Bool {
+        if let scoped = message[AlertNotificationSnooze.messageKey] {
+            if let data = scoped as? Data, let request = try? PropertyListDecoder().decode(AlertNotificationSnooze.self, from: data) {
+                trioAlertManager.handleWatchSnooze(request)
+            }
+            return true
+        }
+        guard let minutes = message[WatchMessageKeys.snoozeDuration] as? Int else { return false }
+        await notificationsManager.applySnooze(for: TimeInterval(minutes) * 60)
+        return true
     }
 
     func session(_: WCSession, didReceive file: WCSessionFile) {
@@ -906,15 +914,6 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
                     carbEntry.isUploadedToHealth = false
                     carbEntry.isUploadedToTidepool = false
 
-                    guard context.hasChanges else {
-                        // Acknowledge failure
-                        self.sendAcknowledgment(
-                            toWatch: false,
-                            message: String(localized: "Error! Something went wrong when processing your request."),
-                            ackCode: .genericFailure
-                        )
-                        return
-                    }
                     try context.save()
                     debug(.treatments, "Saved \(carbsAmount) g carbs from watch")
                 }
@@ -932,23 +931,14 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
                 // Enact bolus via APS Manager
                 let bolusDouble = NSDecimalNumber(decimal: bolusAmount).doubleValue
                 await apsManager.enactBolus(amount: bolusDouble, isSMB: false) { success, message in
-                    // Acknowledge success or error of bolus
                     self.sendAcknowledgment(
                         toWatch: success,
-                        message: message,
-                        ackCode: success == true ? .genericSuccess : .genericFailure
+                        message: success ? String(localized: "Carbs and Bolus logged successfully.") :
+                            String(localized: "Carbs logged successfully.") + " " + message,
+                        ackCode: success ? .comboComplete : .genericFailure
                     )
                 }
                 debug(.bolus, "Watch bolus of \(bolusDouble) U handed to APS manager")
-                // Notify Watch: "Carbs and bolus logged successfully"
-                sendAcknowledgment(
-                    toWatch: true,
-                    message: String(
-                        localized: "Carbs and Bolus logged successfully.",
-                        comment: "Successful message sent to watch when logging carbs and bolus"
-                    ),
-                    ackCode: .comboComplete
-                )
 
             } catch let requestError {
                 error(.watch, "Logging carbs and bolus from watch failed", error: requestError)

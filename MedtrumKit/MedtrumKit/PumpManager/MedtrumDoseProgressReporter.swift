@@ -3,6 +3,10 @@ import LoopKit
 
 class MedtrumDoseProgressReporter: DoseProgressTimerEstimator {
     override var progress: DoseProgress {
+        if pumpManager.status.deliveryIsUncertain || pumpManager.state.awaitingBolusReply {
+            let confirmed = dose.deliveredUnits
+            return DoseProgress(deliveredUnits: confirmed, percentComplete: dose.value > 0 ? min(1, confirmed / dose.value) : 0)
+        }
         let elapsed = -dose.startDate.timeIntervalSinceNow
         let duration = dose.estimatedEndDate.timeIntervalSince(dose.startDate)
         let percentComplete = min(elapsed / duration, 1)

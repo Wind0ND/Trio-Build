@@ -32,6 +32,7 @@ import Testing
             // forward-compat for when the upstream typo is fixed. Both escalate.
             ("Medtrum", "com.nightscout.medtrumkit.patch-occlussion"), // double-s (current MedtrumKit)
             ("Medtrum", "com.nightscout.medtrumkit.patch-occlusion"), // single-s (future MedtrumKit)
+            ("Medtrum", "com.nightscout.medtrumkit.base-reset"),
             ("Medtrum", "com.nightscout.medtrumkit.patch-fault"),
             ("Medtrum", "com.nightscout.medtrumkit.patch-empty"),
             ("trio.aps", "loop.notActive")

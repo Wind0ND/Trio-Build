@@ -1,3 +1,4 @@
+import MockKit
 import Combine
 import ConnectIQ
 import CoreData
@@ -470,7 +471,7 @@ final class BaseGarminManager: NSObject, GarminManager, Injectable {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: GlucoseStored.self,
             onContext: context,
-            predicate: NSPredicate.glucose,
+            predicate: glucoseStorage.activeReadings(matching: NSPredicate.glucose),
             key: "date",
             ascending: false,
             fetchLimit: limit
@@ -500,7 +501,7 @@ final class BaseGarminManager: NSObject, GarminManager, Injectable {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: PumpEventStored.self,
             onContext: context,
-            predicate: compoundPredicate,
+            predicate: .forPump(compoundPredicate, simulated: apsManager.pumpManager is MockPumpManager),
             key: "timestamp",
             ascending: false,
             fetchLimit: 1,
@@ -524,7 +525,7 @@ final class BaseGarminManager: NSObject, GarminManager, Injectable {
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: OrefDetermination.self,
             onContext: context,
-            predicate: NSPredicate.predicateFor30MinAgoForDetermination,
+            predicate: glucoseStorage.activeDeterminations(matching: NSPredicate.predicateFor30MinAgoForDetermination),
             key: "deliverAt",
             ascending: false,
             fetchLimit: 0 // No limit - get all determinations in 30min window

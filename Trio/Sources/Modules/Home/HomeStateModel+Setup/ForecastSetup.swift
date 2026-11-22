@@ -9,7 +9,8 @@ extension Home.StateModel {
         do {
             // Get the Determination ID on the main context
             guard let determination = await viewContext.perform({
-                self.enactedAndNonEnactedDeterminations.first
+                let eligible = self.glucoseStorage.activeDeterminations(matching: NSPredicate(value: true))
+                return self.enactedAndNonEnactedDeterminations.first { eligible.evaluate(with: $0) }
             }) else {
                 debug(.ui, "No determination yet, forecast not shown")
                 return []

@@ -2336,6 +2336,7 @@
 		DDD163192C4C695E00CD525A /* EditOverrideForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditOverrideForm.swift; sourceTree = "<group>"; };
 		DDD1631B2C4C697400CD525A /* AddOverrideForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddOverrideForm.swift; sourceTree = "<group>"; };
 		DDD1631E2C4C6F6900CD525A /* TrioCoreDataPersistentContainer.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = TrioCoreDataPersistentContainer.xcdatamodel; sourceTree = "<group>"; };
+		3D2026112200000000000001 /* TrioCoreDataPersistentContainerV2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = TrioCoreDataPersistentContainerV2.xcdatamodel; sourceTree = "<group>"; };
 		DDD6D4D22CDE90720029439A /* EstimatedA1cDisplayUnit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EstimatedA1cDisplayUnit.swift; sourceTree = "<group>"; };
 		DDD78A902DC4064800AC63F3 /* carbhistory.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = carbhistory.json; sourceTree = "<group>"; };
 		DDD78AD72DC421B500AC63F3 /* enacted.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = enacted.json; sourceTree = "<group>"; };
@@ -7708,8 +7709,9 @@
 			isa = XCVersionGroup;
 			children = (
 				DDD1631E2C4C6F6900CD525A /* TrioCoreDataPersistentContainer.xcdatamodel */,
+				3D2026112200000000000001 /* TrioCoreDataPersistentContainerV2.xcdatamodel */,
 			);
-			currentVersion = DDD1631E2C4C6F6900CD525A /* TrioCoreDataPersistentContainer.xcdatamodel */;
+			currentVersion = 3D2026112200000000000001 /* TrioCoreDataPersistentContainerV2.xcdatamodel */;
 			path = TrioCoreDataPersistentContainer.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;

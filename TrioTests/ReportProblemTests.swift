@@ -7,6 +7,11 @@ import UniformTypeIdentifiers
 @testable import Trio
 
 @Suite("Report a Problem Tests") struct ReportProblemTests {
+    @Test("New reports require explicit consent to attach device logs")
+    func optionalAttachments() {
+        #expect(!ReportDraft().attachLogs)
+    }
+
     private static let context = ProblemReport.Context(
         appVersion: "1.0.0",
         buildNumber: "1",
@@ -139,6 +144,12 @@ import UniformTypeIdentifiers
         draft.contact = ProblemReport.Contact(name: "Test User", email: "user@example.com", discord: "tester", github: "tester")
         draft.save(to: storage)
         #expect(ReportDraft.load(from: storage) == draft)
+
+        draft.attachLogs = true
+        storage.setValue(draft, forKey: ReportDraft.storageKey) // Persisted by build 28, before consent was explicit.
+        #expect(!ReportDraft.load(from: storage).attachLogs)
+        draft.save(to: storage)
+        #expect(ReportDraft.load(from: storage).attachLogs)
 
         ReportDraft.clear(in: storage)
         #expect(storage.data(forKey: ReportDraft.storageKey) == nil)
