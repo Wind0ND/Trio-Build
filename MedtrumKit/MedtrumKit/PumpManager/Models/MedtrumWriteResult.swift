@@ -14,19 +14,22 @@ enum MedtrumWriteError: LocalizedError {
     case noManager
     case noWriteCharacteristic
     case persistenceFailed
+    case contextChanged
 
     /// A reply lost or damaged after transmission cannot establish whether delivery started.
     var deliveryMayHaveStarted: Bool {
         switch self {
         case .timeout, .noData, .invalidData:
             return true
-        case .alreadyRunning, .invalidResponse, .noManager, .noWriteCharacteristic, .persistenceFailed:
+        case .alreadyRunning, .invalidResponse, .noManager, .noWriteCharacteristic, .persistenceFailed, .contextChanged:
             return false
         }
     }
 
     public var errorDescription: String {
         switch self {
+        case .contextChanged:
+            return String(localized: "Delivery settings changed before the command was sent.", bundle: Bundle(for: MedtrumPumpManager.self))
         case .persistenceFailed:
             return String(localized: "Could not save pump delivery state. No command was sent.")
         case .timeout:

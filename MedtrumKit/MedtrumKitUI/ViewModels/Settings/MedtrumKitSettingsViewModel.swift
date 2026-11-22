@@ -400,7 +400,7 @@ extension MedtrumKitSettingsViewModel {
         showPumpTimeSyncWarning = state.shouldShowTimeWarning()
         patchState = state.pumpState
         useSilentTones = state.useSilentTones
-        isBasalOnly = state.isExtendedBasalOnly()
+        isBasalOnly = state.canShowExtendedBasalOnlyStatus()
         patchStateString = isBasalOnly ? String(localized: "Basal only", bundle: Bundle(for: MedtrumPumpManager.self)) : state.pumpState.description
         pumpTime = state.pumpTime
         pumpTimeSyncedAt = state.pumpTimeSyncedAt
@@ -456,7 +456,7 @@ extension MedtrumKitSettingsViewModel {
         }
 
         if let patchExpiresAt, Date.now > patchExpiresAt {
-            return state.expiryMode == .extended ? .expiredBasalOnly : .expired
+            return state.canShowExtendedBasalOnlyStatus() ? .expiredBasalOnly : .expired
         }
 
         return .gracePeriod

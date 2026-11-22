@@ -1,4 +1,5 @@
 import CoreBluetooth
+import MedtrumLifecycleKit
 
 class PeripheralManager: NSObject {
     private let log = MedtrumLogger(category: "PeripheralManager")
@@ -28,7 +29,7 @@ class PeripheralManager: NSObject {
     private var isReadyStorage = false
     /* end */
 
-    private let semaphore = DispatchSemaphore(value: 1)
+    private let commandGate = MedtrumCommandGate()
 
     /* access must be serialized with stateLock, prevents concurrent `considerFullSync` runs */
     private var isFullSyncInFlight = false
@@ -78,15 +79,16 @@ class PeripheralManager: NSObject {
         return isInvalidated
     }
 
-    func writePacket(_ packet: any MedtrumBasePacketProtocol) -> MedtrumWriteResult<Any> {
+    func writePacket(_ packet: any MedtrumBasePacketProtocol, validation: (() -> Bool)? = nil) -> MedtrumWriteResult<Any> {
+        commandGate.perform(isValid: { validation?() ?? true }) {
+            writePacketInSlot(packet, validation: validation)
+        } ?? .failure(error: .contextChanged)
+    }
+
+    private func writePacketInSlot(_ packet: any MedtrumBasePacketProtocol, validation: (() -> Bool)?) -> MedtrumWriteResult<Any> {
         guard let characteristic = writeCharacteristic else {
             log.error("No write characteristic found... Device might be disconnected...")
             return .failure(error: .noWriteCharacteristic)
-        }
-
-        semaphore.wait()
-        defer {
-            semaphore.signal()
         }
 
         let writeQ = MedtrumKitDispatchGroup()
@@ -111,6 +113,16 @@ class PeripheralManager: NSObject {
             writeSequence = 0
         }
 
+        // Encoding must not create a gap between validation and the first transmitted fragment.
+        guard validation?() ?? true else {
+            stateLock.lock()
+            writeQueue = nil
+            currentPacket = nil
+            writeResponse = nil
+            stateLock.unlock()
+            writeQ.leave()
+            return .failure(error: .contextChanged)
+        }
         for package in packages {
             log.debug("Writing data: \(package.hexEncodedString())")
             peripheral.writeValue(package, for: characteristic, type: .withResponse)

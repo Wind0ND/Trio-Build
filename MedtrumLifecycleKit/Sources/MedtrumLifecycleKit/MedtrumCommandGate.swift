@@ -8,6 +8,7 @@ public final class MedtrumCommandGate: @unchecked Sendable {
     public func perform<T>(isValid: () -> Bool, operation: () -> T) -> T? {
         slot.wait()
         defer { slot.signal() }
+        guard isValid() else { return nil }
         return operation()
     }
 }

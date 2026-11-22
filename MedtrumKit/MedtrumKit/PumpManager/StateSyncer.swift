@@ -162,7 +162,11 @@ enum StateSyncer {
             state.battery = battery.voltageB
         }
 
-        if let startTime = syncResponse.startTime {
+        // An age/start-time field without a same-payload ID cannot be attributed after a patch change.
+        let expectedID = Double(state.patchId.toUInt64())
+        let provenSession = !state.patchId.isEmpty &&
+            (syncResponse.storage?.patchId == expectedID || syncResponse.basal?.patchId == expectedID)
+        if provenSession, let startTime = syncResponse.startTime {
             state.patchActivatedAt = startTime
         }
 
@@ -175,7 +179,7 @@ enum StateSyncer {
             }
         }
 
-        if !syncResponse.invalidPayload, !syncResponse.truncated, !state.patchSessionEnded,
+        if provenSession, !syncResponse.invalidPayload, !syncResponse.truncated, !state.patchSessionEnded,
            let age = syncResponse.patchAge {
             state.extendedLifePolicy.observe(age: TimeInterval(age), sessionID: state.patchId, at: syncDate)
         }

@@ -6,6 +6,9 @@ final class ExtendedLifeCapabilityTests: XCTestCase {
 
     private func state(age: TimeInterval = 432_000) -> MedtrumPumpState {
         let state = MedtrumPumpState(nil)
+        state.pumpSN = Data([18, 187, 192, 52]) // synthetic MD8301 model fixture
+        state.lastSync = now
+        state.reservoir = 50
         state.pumpState = .active
         state.patchSessionEnded = false
         state.patchId = Data([1, 0, 0, 0])
@@ -20,8 +23,35 @@ final class ExtendedLifeCapabilityTests: XCTestCase {
         XCTAssertFalse(manager.automaticBolusContext(at: now).allowsAutomaticBolus)
         XCTAssertTrue(old.isExtendedBasalOnly(at: now))
         old.expiryMode = .default
-        XCTAssertTrue(manager.automaticBolusContext(at: now).allowsAutomaticBolus)
-        XCTAssertFalse(old.isExtendedBasalOnly(at: now))
+        XCTAssertFalse(manager.automaticBolusContext(at: now).allowsAutomaticBolus)
+        XCTAssertTrue(old.isExtendedBasalOnly(at: now))
+    }
+
+    func testUnsupportedModelDoesNotAcquireAnExtendedRestriction() {
+        let other = state()
+        other.pumpSN = Data()
+        XCTAssertTrue(MedtrumPumpManager(state: other, bluetooth: nil).automaticBolusContext(at: now).allowsAutomaticBolus)
+    }
+
+    func testBasalOnlyPresentationRequiresConfirmedAvailableDelivery() {
+        for condition in 0 ... 3 {
+            let old = state()
+            if condition == 0 { old.basalState = .suspended }
+            if condition == 1 { old.reservoir = 0 }
+            if condition == 2 { old.lastSync = now.addingTimeInterval(-721) }
+            if condition == 3 { old.basalDeliveryUncertain = true }
+            XCTAssertFalse(old.canShowExtendedBasalOnlyStatus(at: now))
+        }
+    }
+
+    func testUnidentifiedAgeCannotBeAttachedToTheCurrentPatch() {
+        let young = state(age: 60)
+        let manager = MedtrumPumpManager(state: young, bluetooth: nil)
+        let response = SynchronizePacketResponse(state: .active, startTime: now.addingTimeInterval(-500_000),
+                                                activeAlarms: [], patchAge: 500_000)
+        StateSyncer.sync(syncResponse: response, state: young, pumpManager: manager, duringReconnect: false, fullSync: true)
+        XCTAssertFalse(young.isExtendedBasalOnly(at: now))
+        XCTAssertEqual(young.patchActivatedAt, now.addingTimeInterval(-60))
     }
 
     func testDeviceAgeSurvivesStateRestorationAndDoesNotLeakIntoANewPatch() {

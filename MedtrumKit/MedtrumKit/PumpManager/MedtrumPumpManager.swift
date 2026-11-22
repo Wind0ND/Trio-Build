@@ -384,11 +384,22 @@ public extension MedtrumPumpManager {
     }
 
     func enactBolus(
-        decisionId: UUID?,
-        units: Double,
-        activationType: LoopKit.BolusActivationType,
+        decisionId: UUID?, units: Double, activationType: LoopKit.BolusActivationType,
         completion: @escaping (LoopKit.PumpManagerError?) -> Void
     ) {
+        enactBolus(decisionId: decisionId, units: units, activationType: activationType, validation: nil, completion: completion)
+    }
+
+    func enactGuardedAutomaticBolus(units: Double, isValid: @escaping () -> Bool,
+                                   completion: @escaping (LoopKit.PumpManagerError?) -> Void) {
+        enactBolus(decisionId: nil, units: units, activationType: .automatic, validation: isValid, completion: completion)
+    }
+
+    private func enactBolus(
+        decisionId: UUID?, units: Double, activationType: LoopKit.BolusActivationType,
+        validation: (() -> Bool)?, completion: @escaping (LoopKit.PumpManagerError?) -> Void
+    ) {
+        guard validation?() ?? true else { completion(.configuration(MedtrumWriteError.contextChanged)); return }
         let originalContext = automaticBolusContext()
         guard activationType != .automatic || originalContext.allowsAutomaticBolus else {
             completion(.deviceState(MedtrumConnectError.automaticBolusUnavailable))
@@ -449,7 +460,10 @@ public extension MedtrumPumpManager {
                 finish(.deviceState(MedtrumConnectError.automaticBolusUnavailable))
                 return
             }
-            let result = self.bluetooth.write(SetBolusPacket(bolusAmount: units))
+            let result = self.bluetooth.write(SetBolusPacket(bolusAmount: units), validation: {
+                (validation?() ?? true) &&
+                    (activationType != .automatic || self.automaticBolusContext() == originalContext)
+            })
             self.deliveryLock.lock()
             defer { self.deliveryLock.unlock() }
             // A final progress event can arrive while write is waiting for its reply.
@@ -471,6 +485,10 @@ public extension MedtrumPumpManager {
                     self.state.bolusDose = nil
                     self.notifyStateDidChange()
                     self.emitPumpEvents([])
+                    do { try self.checkpointDelivery() } catch {
+                        finish(.configuration(MedtrumWriteError.persistenceFailed))
+                        return
+                    }
                     finish(.communication(error))
                 }
             }
@@ -569,13 +587,19 @@ public extension MedtrumPumpManager {
         enactTempBasal(decisionId: decisionId, unitsPerHour: unitsPerHour, duration: duration, automatic: true, completion: completion)
     }
 
+    func enactGuardedAutomaticTempBasal(unitsPerHour: Double, duration: TimeInterval,
+                                       isValid: @escaping () -> Bool,
+                                       completion: @escaping (LoopKit.PumpManagerError?) -> Void) {
+        enactTempBasal(decisionId: nil, unitsPerHour: unitsPerHour, duration: duration,
+                       automatic: true, validation: isValid, completion: completion)
+    }
+
     func enactTempBasal(
-        decisionId: UUID?,
-        unitsPerHour: Double,
-        duration: TimeInterval,
-        automatic: Bool,
-        completion: @escaping (LoopKit.PumpManagerError?) -> Void
+        decisionId: UUID?, unitsPerHour: Double, duration: TimeInterval, automatic: Bool,
+        validation: (() -> Bool)? = nil, completion: @escaping (LoopKit.PumpManagerError?) -> Void
     ) {
+        guard validation?() ?? true else { completion(.configuration(MedtrumWriteError.contextChanged)); return }
+        let originalSession = automaticBolusContext()
         log.info("Setting temp basal at \(unitsPerHour)U/hr for \(duration)s")
 
         guard let finish = reserveDeliveryCommand(completion) else { return }
@@ -588,6 +612,7 @@ public extension MedtrumPumpManager {
                 finish(.deviceState(MedtrumConnectError.isSuspended))
                 return
             }
+            guard validation?() ?? true else { finish(.configuration(MedtrumWriteError.contextChanged)); return }
             if self.state.basalState == .tempBasal {
                 do {
                     try self.checkpointBasal(requested: nil)
@@ -596,9 +621,9 @@ public extension MedtrumPumpManager {
                     finish(.configuration(MedtrumWriteError.persistenceFailed))
                     return
                 }
-                let result = self.bluetooth.write(CancelTempBasalPacket())
+                let result = self.bluetooth.write(CancelTempBasalPacket(), validation: validation)
                 if case let .failure(error) = result {
-                    finish(self.handleBasalWriteError(error, requested: nil))
+                    finish(self.handleBasalWriteError(error, requested: nil, expectedSession: originalSession))
                     return
                 }
                 self.deliveryLock.withLock {
@@ -624,9 +649,9 @@ public extension MedtrumPumpManager {
                 finish(.configuration(MedtrumWriteError.persistenceFailed))
                 return
             }
-            let result = self.bluetooth.write(SetTempBasalPacket(rate: unitsPerHour, duration: duration))
+            let result = self.bluetooth.write(SetTempBasalPacket(rate: unitsPerHour, duration: duration), validation: validation)
             if case let .failure(error) = result {
-                finish(self.handleBasalWriteError(error, requested: tempBasalDose))
+                finish(self.handleBasalWriteError(error, requested: tempBasalDose, expectedSession: originalSession))
                 return
             }
 
@@ -664,12 +689,17 @@ public extension MedtrumPumpManager {
         }
     }
 
-    private func handleBasalWriteError(_ error: MedtrumWriteError, requested: UnfinalizedDose?) -> PumpManagerError {
+    private func handleBasalWriteError(_ error: MedtrumWriteError, requested: UnfinalizedDose?,
+                                      expectedSession: MedtrumAutomaticBolusContext) -> PumpManagerError {
         deliveryLock.withLock {
+            guard state.patchId == expectedSession.sessionID, state.patchActivatedAt == expectedSession.sessionStartedAt else {
+                return .communication(error)
+            }
             state.awaitingBasalReply = false
             guard error.deliveryMayHaveStarted else {
                 state.pendingTempBasal = nil
                 notifyStateDidChange()
+                do { try checkpointDelivery() } catch { return .configuration(MedtrumWriteError.persistenceFailed) }
                 return .communication(error)
             }
             state.basalDeliveryUncertain = true

@@ -361,14 +361,16 @@ class BluetoothManager: NSObject, CBCentralManagerDelegate {
         }
     }
 
-    func write(_ packet: any MedtrumBasePacketProtocol) -> MedtrumWriteResult<Any> {
+    func write(_ packet: any MedtrumBasePacketProtocol, validation: (() -> Bool)? = nil) -> MedtrumWriteResult<Any> {
         // Only the lookup is serialised. writePacket blocks for up to 30s waiting for a response
         // that is delivered on managerQueue, so it must not be holding the queue while it waits.
         guard let peripheralManager = managerQueue.sync(execute: { self.peripheralManager }) else {
             return .failure(error: .noManager)
         }
 
-        return peripheralManager.writePacket(packet)
+        return peripheralManager.writePacket(packet, validation: {
+            self.managerQueue.sync { self.peripheralManager === peripheralManager } && (validation?() ?? true)
+        })
     }
 
     func disconnect(force: Bool = false) {

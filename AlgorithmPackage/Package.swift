@@ -27,6 +27,8 @@ let algorithmModels = [
     "CarbRatios",
     "CarbsEntry",
     "Determination",
+    "DosingMode",
+    "Preferences+DosingMode",
     "IOBEntry",
     "InsulinSensitivities",
     "Override",

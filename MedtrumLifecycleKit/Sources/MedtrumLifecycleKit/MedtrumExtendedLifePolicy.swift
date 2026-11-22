@@ -12,12 +12,14 @@ public struct MedtrumExtendedLifePolicy: Codable, Equatable {
     private var observedSessionID: Data?
     private var observedAge: TimeInterval?
     private var observedAt: Date?
+    private var extendedSessionID: Data?
+    private var restrictedSessionID: Data?
 
     public init() {}
 
     public mutating func observe(age: TimeInterval, sessionID: Data, at: Date) {
         guard age.isFinite, age >= 0, !sessionID.isEmpty, at.timeIntervalSince1970.isFinite else { return }
-        if observedSessionID == sessionID, let observedAge, age < observedAge { return }
+        if observedSessionID == sessionID, let observedAge, age <= observedAge { return }
         observedSessionID = sessionID
         observedAge = age
         observedAt = at
@@ -26,7 +28,11 @@ public struct MedtrumExtendedLifePolicy: Codable, Equatable {
     public mutating func evaluate(
         extended: Bool, activeSession: Bool, sessionID: Data, activatedAt: Date?, now: Date
     ) -> Restriction {
-        restriction(extended: extended, activeSession: activeSession, sessionID: sessionID, activatedAt: activatedAt, now: now)
+        if activeSession, !sessionID.isEmpty, extended { extendedSessionID = sessionID }
+        let result = restriction(extended: extended, activeSession: activeSession, sessionID: sessionID,
+                                 activatedAt: activatedAt, now: now)
+        if result == .extendedAgeLimit { restrictedSessionID = sessionID }
+        return result
     }
 
     public func restriction(
@@ -34,7 +40,8 @@ public struct MedtrumExtendedLifePolicy: Codable, Equatable {
         activatedAt: Date?, now: Date
     ) -> Restriction {
         guard activeSession, !sessionID.isEmpty else { return .noActiveSession }
-        guard extended else { return .none }
+        if restrictedSessionID == sessionID { return .extendedAgeLimit }
+        guard extended || extendedSessionID == sessionID else { return .none }
         var ages: [TimeInterval] = []
         if let activatedAt {
             let elapsed = now.timeIntervalSince(activatedAt)

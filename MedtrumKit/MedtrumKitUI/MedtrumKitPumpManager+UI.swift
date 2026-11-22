@@ -105,7 +105,7 @@ extension MedtrumPumpManager: PumpManagerUI {
                 imageName: "pause.circle.fill",
                 state: .warning
             )
-        } else if state.isExtendedBasalOnly() && !inSignalLoss {
+        } else if state.canShowExtendedBasalOnlyStatus() {
             return PumpStatusHighlight(
                 localizedMessage: String(
                     localized: "Basal only", bundle: Bundle(for: MedtrumPumpManager.self),
