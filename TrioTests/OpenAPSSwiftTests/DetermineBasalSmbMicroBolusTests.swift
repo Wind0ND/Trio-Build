@@ -3,7 +3,7 @@ import Testing
 @testable import Trio
 
 @Suite("determineBasal SMB microbolus behavior") struct DetermineBasalSmbMicroBolusTests {
-    @Test("Device SMB restriction selects the complete native basal-only algorithm", arguments: [-1, 0, 5])
+    @Test("Device SMB restriction selects the complete native basal-only algorithm", arguments: [1, 2, 5])
     func deviceRestrictionMatchesNativeBasalOnly(delta: Decimal) throws {
         let inputs = buildInputs(lastBolusOffsetMinutes: 10)
         var profile = inputs.profile
@@ -12,12 +12,24 @@ import Testing
             delta: delta, glucose: 140, noise: 1, shortAvgDelta: delta, longAvgDelta: delta,
             date: inputs.currentTime, lastCalIndex: nil, device: "test"
         )
+        let iobForecast = (0 ..< 48).map { index -> IobResult in
+            let remaining = Decimal(48 - index) / 48
+            let time = inputs.currentTime.addingTimeInterval(Double(index) * 300)
+            return IobResult(
+                iob: 1.2 * remaining, activity: 0.008 * remaining,
+                basaliob: 1.2 * remaining, bolusiob: 0, netbasalinsulin: 0, bolusinsulin: 0, time: time,
+                iobWithZeroTemp: IobResult.IobWithZeroTemp(
+                    iob: 1.2 * remaining, activity: 0.008 * remaining,
+                    basaliob: 1.2 * remaining, bolusiob: 0, netbasalinsulin: 0, bolusinsulin: 0, time: time
+                ), lastBolusTime: inputs.iobData.first?.lastBolusTime, lastTemp: inputs.iobData.first?.lastTemp
+            )
+        }
         func calculate(deviceAllowsSMB: Bool, userDisablesSMB: Bool) throws -> Determination? {
             var variables = inputs.trioCustomOrefVariables
             variables.smbIsOff = userDisablesSMB
             return try DeterminationGenerator.determineBasal(
                 profile: profile, preferences: inputs.preferences, currentTemp: inputs.currentTemp,
-                iobData: inputs.iobData, mealData: inputs.mealData, autosensData: inputs.autosensData,
+                iobData: iobForecast, mealData: inputs.mealData, autosensData: inputs.autosensData,
                 glucoseStatus: glucoseStatus, microBolusAllowed: deviceAllowsSMB,
                 trioCustomOrefVariables: variables, currentTime: inputs.currentTime
             )
