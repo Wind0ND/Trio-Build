@@ -1,4 +1,5 @@
 import LoopKit
+import MedtrumLifecycleKit
 
 public enum BasalState: Int {
     case active = 0
@@ -59,6 +60,9 @@ public class MedtrumPumpState: RawRepresentable {
         patchId = rawValue["patchId"] as? Data ?? Data()
         peripheralIdentifier = (rawValue["peripheralIdentifier"] as? String).flatMap { UUID(uuidString: $0) }
         patchActivatedAt = rawValue["patchActivatedAt"] as? Date ?? nil
+        if let data = rawValue["extendedLifePolicy"] as? Data {
+            extendedLifePolicy = (try? JSONDecoder().decode(MedtrumExtendedLifePolicy.self, from: data)) ?? .init()
+        }
         deviceType = rawValue["deviceType"] as? UInt8 ?? 0
         swVersion = rawValue["swVersion"] as? String ?? "0.0.0"
         pumpTime = rawValue["pumpTime"] as? Date ?? Date()
@@ -190,6 +194,7 @@ public class MedtrumPumpState: RawRepresentable {
         value["patchId"] = patchId
         value["peripheralIdentifier"] = peripheralIdentifier?.uuidString
         value["patchActivatedAt"] = patchActivatedAt
+        value["extendedLifePolicy"] = try? JSONEncoder().encode(extendedLifePolicy)
         value["patchGracePeriodFrom"] = patchGracePeriodFrom
         value["patchExpiresAt"] = patchExpiresAt
         value["deviceType"] = deviceType
@@ -256,6 +261,7 @@ public class MedtrumPumpState: RawRepresentable {
     public var peripheralIdentifier: UUID?
 
     public var patchActivatedAt: Date?
+    public var extendedLifePolicy = MedtrumExtendedLifePolicy()
     public var patchGracePeriodFrom: Date? {
         guard let activatedAt = patchActivatedAt else {
             return nil

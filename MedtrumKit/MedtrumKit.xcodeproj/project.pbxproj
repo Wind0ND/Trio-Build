@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA2311230000000000000001 /* MedtrumLifecycleKit in Frameworks */ = {isa = PBXBuildFile; productRef = AA2311230000000000000002 /* MedtrumLifecycleKit */; };
 		3E767D4D2D67BA71004B1971 /* LoopKitUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3E767D4C2D67BA71004B1971 /* LoopKitUI.framework */; };
 		3E98B84B2D6BB12C00DD5123 /* MedtrumKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B7D3A8D02C148CC4002EE003 /* MedtrumKit.framework */; platformFilter = ios; };
 		3E98B84C2D6BB12C00DD5123 /* MedtrumKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B7D3A8D02C148CC4002EE003 /* MedtrumKit.framework */; platformFilter = ios; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -100,6 +101,7 @@
 			files = (
 				3E767D4D2D67BA71004B1971 /* LoopKitUI.framework in Frameworks */,
 				B7189AEA2C15A8CE00703DE2 /* LoopKit.framework in Frameworks */,
+				AA2311230000000000000001 /* MedtrumLifecycleKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -212,6 +214,7 @@
 				3EF5F40B3034EC9800608A97 /* Localization */,
 			);
 			name = MedtrumKit;
+			packageProductDependencies = (AA2311230000000000000002 /* MedtrumLifecycleKit */);
 			productName = MedtrumKit;
 			productReference = B7D3A8D02C148CC4002EE003 /* MedtrumKit.framework */;
 			productType = "com.apple.product-type.framework";
@@ -291,6 +294,7 @@
 			);
 			mainGroup = B7D3A8C62C148CC4002EE003;
 			productRefGroup = B7D3A8D12C148CC4002EE003 /* Products */;
+			packageReferences = (AA2311230000000000000003 /* XCLocalSwiftPackageReference "../MedtrumLifecycleKit" */);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -362,6 +366,19 @@
 			targetProxy = B7D3A8DC2C148CC4002EE003 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		AA2311230000000000000003 /* XCLocalSwiftPackageReference "../MedtrumLifecycleKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../MedtrumLifecycleKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+/* Begin XCSwiftPackageProductDependency section */
+		AA2311230000000000000002 /* MedtrumLifecycleKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MedtrumLifecycleKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		3E767D492D67B790004B1971 /* Debug */ = {

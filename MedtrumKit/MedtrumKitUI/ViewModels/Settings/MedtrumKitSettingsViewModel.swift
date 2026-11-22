@@ -23,6 +23,7 @@ class MedtrumKitSettingsViewModel: PatchLifetimeFormatting, ObservableObject, Pu
     @Published var pumpTime = Date.distantPast
     @Published var pumpTimeSyncedAt = Date.distantPast
     @Published var patchState: PatchState = .none
+    @Published var isBasalOnly = false
     @Published var patchStateString: String = PatchState.none.description
     @Published var basalType: DoseType = .basal
     @Published var basalRate: String = ""
@@ -399,7 +400,8 @@ extension MedtrumKitSettingsViewModel {
         showPumpTimeSyncWarning = state.shouldShowTimeWarning()
         patchState = state.pumpState
         useSilentTones = state.useSilentTones
-        patchStateString = state.pumpState.description
+        isBasalOnly = state.isExtendedBasalOnly()
+        patchStateString = isBasalOnly ? String(localized: "Basal only") : state.pumpState.description
         pumpTime = state.pumpTime
         pumpTimeSyncedAt = state.pumpTimeSyncedAt
         reservoirLevel = patchState != .reservoirEmpty ? state.reservoir : 0

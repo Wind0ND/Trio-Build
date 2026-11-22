@@ -70,7 +70,6 @@ jobs:
   test:
     name: Run Unit Tests
     runs-on: macos-26
-    if: false
 
     env:
       DESTINATION: "platform=iOS Simulator,name=iPhone 17,OS=26.2"
@@ -263,7 +262,7 @@ jobs:
         run: |
           set -o pipefail
           _start=$(date +%s)
-          xcodebuild test-without-building -only-testing:TrioTests/DetermineBasalSmbMicroBolusTests \
+          xcodebuild test-without-building \
             -workspace Trio.xcworkspace \
             -scheme "Trio Tests" \
             -destination "$DESTINATION" \

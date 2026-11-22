@@ -65,7 +65,8 @@ final class NotLoopingMonitor: Injectable {
     /// Publisher-only seam for tests: assigns the alert manager directly and
     /// subscribes to a supplied loop-date publisher, avoiding the need to stub
     /// the full `APSManager` protocol.
-    init(loopDates: AnyPublisher<Date, Never>, trioAlertManager: TrioAlertManager) {
+    init(loopDates: AnyPublisher<Date, Never>, trioAlertManager: TrioAlertManager,
+         remindersEnabled _: AnyPublisher<Bool, Never> = Just(true).eraseToAnyPublisher()) {
         self.trioAlertManager = trioAlertManager
         subscribe(to: loopDates)
     }

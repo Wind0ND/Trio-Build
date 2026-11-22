@@ -4,6 +4,7 @@ import Foundation
 import LoopKit
 import LoopKitUI
 import MockKit
+import MedtrumKit
 import SwiftDate
 import Swinject
 
@@ -128,12 +129,24 @@ struct AutomaticDeliveryContext: Equatable {
     let pumpID: ObjectIdentifier?
     let simulatorSource: Bool
     let mockPump: Bool
+    var automaticBolusAllowed = true
+    var pumpSessionID: Data?
+    var pumpSessionStartedAt: Date?
+
+    /// Retry only a known capability transition on the same patch, mode and glucose source.
+    func canRecalculateBasalOnly(current: Self) -> Bool {
+        var expected = self
+        expected.automaticBolusAllowed = false
+        return automaticBolusAllowed && !current.automaticBolusAllowed && expected == current
+    }
 
     func permitsDelivery(current: Self, deliverAt: Date, now: Date) -> Bool {
         self == current && pumpID != nil && mode.automation != .off &&
             (!simulatorSource || mockPump) && (0 ... 30 * 60).contains(now.timeIntervalSince(deliverAt))
     }
 }
+
+private enum AutomaticDeliveryInvalidation: Error { case contextChanged }
 
 final class BaseAPSManager: APSManager, Injectable {
     private let processQueue = DispatchQueue(label: "BaseAPSManager.processQueue")
@@ -389,25 +402,45 @@ final class BaseAPSManager: APSManager, Injectable {
     private var automaticDeliveryContext: AutomaticDeliveryContext {
         let pump = pumpManager
         let settings = settingsManager.settings
+        let capability = (pump as? MedtrumPumpManager)?.automaticBolusContext()
         return AutomaticDeliveryContext(
             mode: settings.dosingMode,
             modeRevision: settingsManager.dosingModeRevision,
             sourceRevision: deviceDataManager.glucoseSourceRevision,
             pumpID: pump.map { ObjectIdentifier($0) },
             simulatorSource: settings.cgm == .simulator,
-            mockPump: pump is MockPumpManager
+            mockPump: pump is MockPumpManager,
+            automaticBolusAllowed: capability?.allowsAutomaticBolus ?? true,
+            pumpSessionID: capability?.sessionID,
+            pumpSessionStartedAt: capability?.sessionStartedAt
         )
     }
 
     private func executeLoop(loopStatRecord: inout LoopStats) async throws {
-        let inputs = automaticDeliveryContext
-        let determinationID = try await calculateDetermination(for: inputs.mode, simulatedPump: inputs.mockPump)
-        if inputs.mode.automation != .off {
+        for attempt in 0 ... 1 {
+            let inputs = automaticDeliveryContext
+            if let medtrum = pumpManager as? MedtrumPumpManager {
+                DiagnosticEventStore.shared.record(feature: "medtrum", stage: "automatic_mode",
+                                                   outcome: medtrum.automaticBolusContext().restrictionReason)
+            }
+            let determinationID = try await calculateDetermination(
+                for: inputs.mode, simulatedPump: inputs.mockPump, automaticBolusAllowed: inputs.automaticBolusAllowed
+            )
+            if inputs.mode.automation == .off { break }
             do {
                 let enacted = try await enactDetermination(determinationID, inputs: inputs)
                 await reportEnacted(determinationID, wasEnacted: enacted)
+                break
             } catch {
                 await reportEnacted(determinationID, wasEnacted: false)
+                if error is AutomaticDeliveryInvalidation, attempt == 0,
+                   inputs.canRecalculateBasalOnly(current: automaticDeliveryContext),
+                   pumpManager?.status.deliveryIsUncertain == false, !isSuspended, !isManualTempBasal {
+                    // A confirmed basal is part of the next calculation's current-temp/IOB inputs.
+                    // Never replay a bolus or retry an uncertain delivery.
+                    DiagnosticEventStore.shared.record(feature: "medtrum", stage: "delivery_guard", outcome: "invalidated")
+                    continue
+                }
                 throw error
             }
         }
@@ -517,7 +550,9 @@ final class BaseAPSManager: APSManager, Injectable {
     }
 
     func determineBasal() async throws {
-        _ = try await calculateDetermination(for: settingsManager.settings.dosingMode, simulatedPump: pumpManager is MockPumpManager)
+        let inputs = automaticDeliveryContext
+        _ = try await calculateDetermination(for: inputs.mode, simulatedPump: inputs.mockPump,
+                                             automaticBolusAllowed: inputs.automaticBolusAllowed)
     }
 
     static func validationGlucosePredicate(simulated: Bool, now: Date) -> NSPredicate {
@@ -528,7 +563,8 @@ final class BaseAPSManager: APSManager, Injectable {
         ])
     }
 
-    private func calculateDetermination(for mode: DosingMode, simulatedPump: Bool) async throws -> NSManagedObjectID {
+    private func calculateDetermination(for mode: DosingMode, simulatedPump: Bool,
+                                        automaticBolusAllowed: Bool) async throws -> NSManagedObjectID {
         try await calculateAndStoreTDD()
 
         var invalidGlucoseError: String?
@@ -587,6 +623,7 @@ final class BaseAPSManager: APSManager, Injectable {
                 currentTemp: currentTemp,
                 supportedBasalRates: supportedBasalRates,
                 shouldSmoothGlucose: settingsManager.settings.smoothGlucose,
+                automaticBolusAllowed: automaticBolusAllowed,
                 clock: now
             )
             iobFileDidUpdate.send(())
@@ -844,7 +881,7 @@ final class BaseAPSManager: APSManager, Injectable {
         let (rateDecimal, durationInSeconds, smbToDeliver, deliverAt) = try await setValues(determinationID: determinationID)
         func checkDelivery() throws {
             guard inputs.permitsDelivery(current: automaticDeliveryContext, deliverAt: deliverAt, now: Date()) else {
-                throw APSError.apsError(message: "Determination expired or delivery settings changed")
+                throw AutomaticDeliveryInvalidation.contextChanged
             }
             guard !pump.status.deliveryIsUncertain else { throw PumpManagerError.uncertainDelivery }
             guard !isManualTempBasal, !pump.status.pumpStatus.suspended, !pump.status.pumpStatus.bolusing else {

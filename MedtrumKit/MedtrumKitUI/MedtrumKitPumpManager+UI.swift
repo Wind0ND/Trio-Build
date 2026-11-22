@@ -105,10 +105,10 @@ extension MedtrumPumpManager: PumpManagerUI {
                 imageName: "pause.circle.fill",
                 state: .warning
             )
-        } else if state.expiryMode == .extended, let expiresAt = state.patchExpiresAt, Date.now > expiresAt {
+        } else if state.isExtendedBasalOnly() && !inSignalLoss {
             return PumpStatusHighlight(
                 localizedMessage: String(
-                    localized: "Patch expired. Basal only.",
+                    localized: "Basal only",
                     comment: "Status highlight when extended patch has expired, i.e. lifetime past 120 hours."
                 ),
                 imageName: "exclamationmark.circle.fill",

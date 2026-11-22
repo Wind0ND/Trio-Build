@@ -70,6 +70,14 @@ struct MedtrumKitSettings: View {
                     .padding(.bottom, 5)
                 }
 
+                if viewModel.isBasalOnly {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Basal only").font(.headline)
+                        Text("Automatic SMB is disabled after five days. Automatic basal adjustment remains available in closed loop.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                }
+
                 if viewModel.showPumpTimeSyncWarning {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Time Change Detected", comment: "title for time change detected notice")

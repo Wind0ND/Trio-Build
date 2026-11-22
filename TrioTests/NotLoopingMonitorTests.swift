@@ -78,6 +78,25 @@ final class SpyAlertManager: TrioAlertManager {
         return spy
     }
 
+    @Test("Disabling the loop reminder retracts the entire ladder without disabling other alerts")
+    func disablingReminderClearsPlans() {
+        let dates = PassthroughSubject<Date, Never>()
+        let enabled = CurrentValueSubject<Bool, Never>(false)
+        let spy = SpyAlertManager()
+        let monitor = NotLoopingMonitor(loopDates: dates.eraseToAnyPublisher(), trioAlertManager: spy,
+                                       remindersEnabled: enabled.eraseToAnyPublisher())
+        dates.send(Date())
+        #expect(spy.issuedAlerts.isEmpty)
+        enabled.send(true)
+        #expect(spy.issuedAlerts.count == 6)
+        enabled.send(false)
+        let count = spy.issuedAlerts.count
+        dates.send(Date())
+        #expect(spy.issuedAlerts.count == count)
+        #expect(spy.retractedIdentifiers.suffix(6).allSatisfy { $0.managerIdentifier == "trio.aps" })
+        _ = monitor
+    }
+
     @Test("A loop success arms five warnings and one critical") func armsFullLadder() {
         let spy = armLadder()
         #expect(spy.issuedAlerts.count == 6)

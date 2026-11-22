@@ -389,6 +389,11 @@ public extension MedtrumPumpManager {
         activationType: LoopKit.BolusActivationType,
         completion: @escaping (LoopKit.PumpManagerError?) -> Void
     ) {
+        let originalContext = automaticBolusContext()
+        guard activationType != .automatic || originalContext.allowsAutomaticBolus else {
+            completion(.deviceState(MedtrumConnectError.automaticBolusUnavailable))
+            return
+        }
         guard let finish = reserveDeliveryCommand(completion) else { return }
         ensureConnectedAndActive { error in
             if let error {
@@ -399,6 +404,11 @@ public extension MedtrumPumpManager {
             let dose = UnfinalizedDose(decisionId: decisionId, units: units, duration: duration,
                                        activationType: activationType, insulinType: self.state.insulinType)
             self.deliveryLock.lock()
+            guard activationType != .automatic || self.automaticBolusContext() == originalContext else {
+                self.deliveryLock.unlock()
+                finish(.deviceState(MedtrumConnectError.automaticBolusUnavailable))
+                return
+            }
             guard self.state.bolusDose == nil, !self.status.deliveryIsUncertain, self.state.pumpState.isDelivering else {
                 self.deliveryLock.unlock()
                 finish(.deviceState(MedtrumConnectError.isSuspended))
@@ -421,6 +431,15 @@ public extension MedtrumPumpManager {
                 }
                 self.log.error("Cannot checkpoint delivery: \(error.localizedDescription)")
                 finish(.configuration(MedtrumWriteError.persistenceFailed))
+                return
+            }
+            if activationType == .automatic, self.automaticBolusContext() != originalContext {
+                self.deliveryLock.withLock {
+                    self.state.bolusDose = nil
+                    self.state.awaitingBolusReply = false
+                    self.notifyStateDidChange()
+                }
+                finish(.deviceState(MedtrumConnectError.automaticBolusUnavailable))
                 return
             }
             let result = self.bluetooth.write(SetBolusPacket(bolusAmount: units))
@@ -1056,6 +1075,7 @@ public extension MedtrumPumpManager {
         state.initialReservoir = nil
         state.patchId = patchId
         state.patchActivatedAt = activatedAt
+        state.extendedLifePolicy = .init()
         state.lastSync = Date.now
         notifyStateDidChange()
 

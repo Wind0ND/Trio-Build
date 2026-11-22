@@ -75,6 +75,29 @@ import Testing
 }
 
 @Suite("Automatic delivery context") struct AutomaticDeliveryContextTests {
+    @Test("Age restriction and patch changes invalidate the entire old decision before basal delivery")
+    func rejectsChangedPumpCapability() {
+        let pump = NSObject()
+        let now = Date()
+        let revision = UUID()
+        var captured = AutomaticDeliveryContext(
+            mode: .closed, modeRevision: revision, sourceRevision: revision,
+            pumpID: ObjectIdentifier(pump), simulatorSource: false, mockPump: false
+        )
+        captured.pumpSessionID = Data([1, 0, 0, 0])
+        captured.pumpSessionStartedAt = now.addingTimeInterval(-431_999)
+        var current = captured
+        current.automaticBolusAllowed = false
+        #expect(!captured.permitsDelivery(current: current, deliverAt: now, now: now))
+        #expect(current.permitsDelivery(current: current, deliverAt: now, now: now))
+        current = captured
+        current.pumpSessionID = Data([2, 0, 0, 0])
+        #expect(!captured.permitsDelivery(current: current, deliverAt: now, now: now))
+        current = captured
+        current.pumpSessionStartedAt = now
+        #expect(!captured.permitsDelivery(current: current, deliverAt: now, now: now))
+    }
+
     @Test("Only the calculating mode, glucose source revision and pump may send the next command")
     func rejectsChangedInputs() {
         let pump = NSObject()

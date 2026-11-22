@@ -56,6 +56,10 @@ enum DeterminationGenerator {
         currentTime: Date
     ) throws -> Determination? {
         var autosensData = autosensData
+        // Device availability is a per-run input, never a change to the user's SMB settings.
+        // Apply it before every SMB-sensitive branch, including paired low-temp planning.
+        var trioCustomOrefVariables = trioCustomOrefVariables
+        trioCustomOrefVariables.smbIsOff = trioCustomOrefVariables.smbIsOff || !microBolusAllowed
 
         try checkDeterminationInputs(
             glucoseStatus: glucoseStatus,

@@ -175,6 +175,11 @@ enum StateSyncer {
             }
         }
 
+        if !syncResponse.invalidPayload, !syncResponse.truncated, !state.patchSessionEnded,
+           let age = syncResponse.patchAge {
+            state.extendedLifePolicy.observe(age: TimeInterval(age), sessionID: state.patchId, at: syncDate)
+        }
+
         if let bolusProgress = syncResponse.bolus {
             pumpManager.updateBolusProgress(
                 delivered: bolusProgress.delivered,

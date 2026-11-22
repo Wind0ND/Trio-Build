@@ -228,6 +228,7 @@ final class OpenAPS {
         currentTemp: TempBasal,
         supportedBasalRates: [Decimal],
         shouldSmoothGlucose: Bool,
+        automaticBolusAllowed: Bool = true,
         clock: Date = Date(),
         simulatedCarbsAmount: Decimal? = nil,
         simulatedBolusAmount: Decimal? = nil,
@@ -326,7 +327,7 @@ final class OpenAPS {
             profile: profile,
             autosens: autosens,
             meal: meal,
-            microBolusAllowed: true,
+            microBolusAllowed: automaticBolusAllowed,
             preferences: preferences,
             trioCustomOrefVariables: trioCustomOrefVariables
         )
