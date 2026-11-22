@@ -151,6 +151,8 @@ struct LoopStatusView: View {
         switch state.dosingMode {
         case .closed:
             return nil
+        case .basalOnly:
+            return String(localized: "Automatically adjusts basal insulin without SMB.")
         case .open:
             return String(localized: "Trio worked this out but did not send anything to your pump.")
         case .lowGlucoseSuspend:

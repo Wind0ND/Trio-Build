@@ -19,6 +19,7 @@ final class ExtendedLifeCapabilityTests: XCTestCase {
 
     func testOnlyExtendedSessionLosesAutomaticBolusAtFiveDays() {
         let old = state()
+        XCTAssertEqual(old.model, "MD8301")
         let manager = MedtrumPumpManager(state: old, bluetooth: nil)
         XCTAssertFalse(manager.automaticBolusContext(at: now).allowsAutomaticBolus)
         XCTAssertTrue(old.isExtendedBasalOnly(at: now))
@@ -74,6 +75,23 @@ final class ExtendedLifeCapabilityTests: XCTestCase {
             XCTAssertFalse(MedtrumPumpManager(state: stopped, bluetooth: nil)
                 .automaticBolusContext(at: now).allowsAutomaticBolus)
         }
+    }
+
+    func testOriginalDecisionGuardRejectsBothCommandsBeforeAnyConnectionOrCheckpoint() {
+        let current = state(age: 60)
+        let manager = MedtrumPumpManager(state: current, bluetooth: nil)
+        var rejected = 0
+        manager.enactGuardedAutomaticTempBasal(unitsPerHour: 1, duration: 1800, isValid: { false }) { error in
+            if case .some(.configuration) = error { rejected += 1 }
+        }
+        manager.enactGuardedAutomaticBolus(units: 0.05, isValid: { false }) { error in
+            if case .some(.configuration) = error { rejected += 1 }
+        }
+        XCTAssertEqual(rejected, 2)
+        XCTAssertNil(current.pendingTempBasal)
+        XCTAssertNil(current.bolusDose)
+        XCTAssertFalse(current.awaitingBasalReply)
+        XCTAssertFalse(current.awaitingBolusReply)
     }
 
     func testRestrictedAutomaticBolusIsRejectedBeforeBluetoothOrDoseBookkeeping() {

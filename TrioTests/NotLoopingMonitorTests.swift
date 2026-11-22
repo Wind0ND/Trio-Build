@@ -111,6 +111,43 @@ final class SpyAlertManager: TrioAlertManager {
         _ = monitor
     }
 
+    @Test("Unrelated settings do not retract overdue or outstanding reminders")
+    func unrelatedSettingsPreserveOutstandingReminders() {
+        let dates = PassthroughSubject<Date, Never>()
+        let spy = SpyAlertManager()
+        let monitor = NotLoopingMonitor(loopDates: dates.eraseToAnyPublisher(), trioAlertManager: spy)
+        dates.send(Date().addingTimeInterval(-130 * 60))
+        let before = spy.retractedIdentifiers.count
+        monitor.settingsDidChange(TrioSettings(dosingMode: .closed))
+        monitor.settingsDidChange(TrioSettings(dosingMode: .closed, debugOptions: true))
+        #expect(spy.retractedIdentifiers.count == before)
+    }
+
+    @Test("Re-enabling reminders when already overdue arms the critical escalation immediately")
+    func enablingOverdueReminderArmsCritical() {
+        let dates = PassthroughSubject<Date, Never>()
+        let enabled = CurrentValueSubject<Bool, Never>(false)
+        let spy = SpyAlertManager()
+        let monitor = NotLoopingMonitor(loopDates: dates.eraseToAnyPublisher(), trioAlertManager: spy,
+                                       remindersEnabled: enabled.eraseToAnyPublisher())
+        dates.send(Date().addingTimeInterval(-130 * 60))
+        enabled.send(true)
+        #expect(spy.issuedAlerts.count == 1)
+        #expect(spy.issuedAlerts.first?.identifier == criticalID)
+        #expect(spy.issuedAlerts.first?.trigger == .immediate)
+        _ = monitor
+    }
+
+    @Test("An enabled startup subscription preserves existing OS alarms and unresolved history")
+    func enabledStartupDoesNotClearExistingAlarms() {
+        let dates = PassthroughSubject<Date, Never>()
+        let spy = SpyAlertManager()
+        let monitor = NotLoopingMonitor(loopDates: dates.eraseToAnyPublisher(), trioAlertManager: spy)
+        #expect(spy.retractedIdentifiers.isEmpty)
+        #expect(spy.issuedAlerts.isEmpty)
+        _ = monitor
+    }
+
     @Test("A loop success arms five warnings and one critical") func armsFullLadder() {
         let spy = armLadder()
         #expect(spy.issuedAlerts.count == 6)

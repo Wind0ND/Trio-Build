@@ -16,6 +16,7 @@ enum AutomationLevel {
 enum DosingMode: String, JSON, CaseIterable, Identifiable, Codable, Hashable {
     var id: String { rawValue }
     case closed
+    case basalOnly
     case open
     case lowGlucoseSuspend
     case basalTesting
@@ -24,7 +25,7 @@ enum DosingMode: String, JSON, CaseIterable, Identifiable, Codable, Hashable {
     /// can take insulin away but never add it, because Max IOB is clamped to 0.
     var automation: AutomationLevel {
         switch self {
-        case .closed:
+        case .closed, .basalOnly:
             return .full
         case .open:
             return .off
@@ -35,6 +36,13 @@ enum DosingMode: String, JSON, CaseIterable, Identifiable, Codable, Hashable {
         }
     }
 
+    var allowsAutomaticSMB: Bool { self != .basalOnly }
+
+    /// A device restriction changes the effective mode, not the user's stored selection.
+    func effectiveForDevice(basalOnly: Bool) -> Self {
+        self == .closed && basalOnly ? .basalOnly : self
+    }
+
     /// Modes offered in Settings.
     static var userSelectable: [DosingMode] { allCases }
 
@@ -42,6 +50,8 @@ enum DosingMode: String, JSON, CaseIterable, Identifiable, Codable, Hashable {
         switch self {
         case .closed:
             return String(localized: "Closed Loop", comment: "Dosing mode")
+        case .basalOnly:
+            return String(localized: "Basal-only Closed Loop")
         case .open:
             return String(localized: "Open Loop", comment: "Dosing mode")
         case .lowGlucoseSuspend:
@@ -55,6 +65,8 @@ enum DosingMode: String, JSON, CaseIterable, Identifiable, Codable, Hashable {
         switch self {
         case .closed:
             return String(localized: "Trio adjusts your insulin automatically.")
+        case .basalOnly:
+            return String(localized: "Automatically adjusts basal insulin without SMB.")
         case .open:
             return String(localized: "Trio only shows what it would do. It never changes your insulin.")
         case .lowGlucoseSuspend:
@@ -67,7 +79,7 @@ enum DosingMode: String, JSON, CaseIterable, Identifiable, Codable, Hashable {
     /// Symbol shown beside the name in the hint sheet.
     var icon: String {
         switch self {
-        case .closed:
+        case .closed, .basalOnly:
             return "circle"
         case .open:
             return "circle.dashed"
@@ -84,6 +96,8 @@ enum DosingMode: String, JSON, CaseIterable, Identifiable, Codable, Hashable {
             return String(
                 localized: "Trio checks your glucose every five minutes and changes your insulin for you. You need a working CGM and a connected pump."
             )
+        case .basalOnly:
+            return String(localized: "Trio automatically raises or lowers basal insulin using its existing algorithm. Automatic SMB is off. Your saved SMB preferences and safety limits stay unchanged. Manual boluses remain available.")
         case .open:
             return String(
                 localized: "Trio still shows what it would do, but it never changes your insulin. Your pump keeps running the basal rates you set, and every dose is your choice. Trio is running in manual mode. It will not stop a low or fix a high for you."

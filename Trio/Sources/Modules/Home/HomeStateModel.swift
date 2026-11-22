@@ -564,6 +564,7 @@ extension Home {
                 DispatchQueue.main.async { [weak self] in
                     guard let self else { return }
                     self.timerDate = Date()
+                    self.dosingMode = self.settingsManager.settings.dosingMode.effectiveForPump(self.apsManager.pumpManager)
                     // pump status is not observable; a status-only change writes no event
                     if self.manualTempBasal != self.apsManager.isManualTempBasal {
                         self.manualTempBasal = self.apsManager.isManualTempBasal
@@ -724,7 +725,7 @@ extension Home {
 
         @MainActor private func setupSettings() async {
             units = settingsManager.settings.units
-            dosingMode = settingsManager.settings.dosingMode
+            dosingMode = settingsManager.settings.dosingMode.effectiveForPump(apsManager.pumpManager)
             lastLoopDate = apsManager.lastLoopDate
             alarm = provider.glucoseStorage.alarm
             manualTempBasal = apsManager.isManualTempBasal
@@ -1041,7 +1042,7 @@ extension Home.StateModel:
     }
 
     func settingsDidChange(_ settings: TrioSettings) {
-        dosingMode = settings.dosingMode
+        dosingMode = settings.dosingMode.effectiveForPump(apsManager.pumpManager)
         units = settingsManager.settings.units
         manualTempBasal = apsManager.isManualTempBasal
         isSmoothingEnabled = settingsManager.settings.smoothGlucose

@@ -16,7 +16,7 @@ import Testing
 
     @Test("Closed and open loop see the user's own preferences") func unclampedModes() {
         let preferences = userPreferences()
-        for mode in [DosingMode.closed, .open] {
+        for mode in [DosingMode.closed, .basalOnly, .open] {
             #expect(preferences.clamped(for: mode) == preferences)
         }
     }
@@ -88,6 +88,7 @@ import Testing
         captured.pumpSessionStartedAt = now.addingTimeInterval(-431_999)
         var current = captured
         current.automaticBolusAllowed = false
+        current.mode = .basalOnly
         #expect(!captured.permitsDelivery(current: current, deliverAt: now, now: now))
         #expect(current.permitsDelivery(current: current, deliverAt: now, now: now))
         #expect(captured.canRecalculateBasalOnly(current: current))

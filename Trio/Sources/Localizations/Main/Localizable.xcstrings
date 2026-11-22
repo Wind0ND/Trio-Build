@@ -1,6 +1,11 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Basal-only Closed Loop" : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "基础率闭环"}}}},
+    "Automatically adjusts basal insulin without SMB." : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "自动调整基础率，不使用 SMB。"}}}},
+    "Trio automatically raises or lowers basal insulin using its existing algorithm. Automatic SMB is off. Your saved SMB preferences and safety limits stay unchanged. Manual boluses remain available." : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "Trio 使用原有算法自动升降基础率，停用自动 SMB。已保存的 SMB 偏好与安全上限保持原样，仍可手动输注大剂量。"}}}},
+    "Currently running basal-only closed loop because of the patch lifetime limit. Your selected mode resumes with a new patch." : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "因药贴使用时长限制，当前运行基础率闭环。确认换新药贴后恢复你原先选择的模式。"}}}},
+    "Delivery settings changed before the command was sent." : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "发送指令前输注条件已改变，本次指令未发送。"}}}},
     "Loop timeout reminders" : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "闭环超时提醒"}}}},
     "Notify when automatic dosing has not completed for 20 minutes or longer. Turning this off also disables the two-hour escalation for this reminder. Other alerts remain enabled." : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "自动输注超过 20 分钟未成功完成时提醒。关闭后也将停用此提醒的两小时升级警报，其他警报不受影响。"}}}},
     "External insulin was recorded." : { "localizations" : { "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已记录外部胰岛素。" } } } },

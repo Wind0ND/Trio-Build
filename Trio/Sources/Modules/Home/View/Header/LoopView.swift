@@ -162,7 +162,7 @@ struct LoopView: View {
     private var loopStatus: some View {
         HStack(alignment: .center) {
             ZStack {
-                if dosingMode == .closed, !manualTempBasal {
+                if dosingMode.automation == .full, !manualTempBasal {
                     Image(systemName: "circle")
                 } else {
                     Circle()

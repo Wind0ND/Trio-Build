@@ -327,7 +327,7 @@ final class OpenAPS {
             profile: profile,
             autosens: autosens,
             meal: meal,
-            microBolusAllowed: automaticBolusAllowed,
+            microBolusAllowed: automaticBolusAllowed && dosingMode.allowsAutomaticSMB,
             preferences: preferences,
             trioCustomOrefVariables: trioCustomOrefVariables
         )

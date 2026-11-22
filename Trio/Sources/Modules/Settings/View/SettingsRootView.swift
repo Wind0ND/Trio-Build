@@ -222,6 +222,10 @@ extension Settings {
                                 }
                                 .padding(.top)
                                 .disabled(dosingModeDisabled)
+                                if state.effectiveDosingMode != state.dosingMode {
+                                    Text("Currently running basal-only closed loop because of the patch lifetime limit. Your selected mode resumes with a new patch.")
+                                        .font(.footnote).foregroundStyle(.secondary)
+                                }
 
                                 HStack(alignment: .center) {
                                     Text(

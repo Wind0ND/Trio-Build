@@ -123,7 +123,7 @@ private actor LoopGuard {
 }
 
 struct AutomaticDeliveryContext: Equatable {
-    let mode: DosingMode
+    var mode: DosingMode
     let modeRevision: UUID
     let sourceRevision: UUID
     let pumpID: ObjectIdentifier?
@@ -137,6 +137,7 @@ struct AutomaticDeliveryContext: Equatable {
     func canRecalculateBasalOnly(current: Self) -> Bool {
         var expected = self
         expected.automaticBolusAllowed = false
+        expected.mode = mode.effectiveForDevice(basalOnly: true)
         return automaticBolusAllowed && !current.automaticBolusAllowed && expected == current
     }
 
@@ -146,7 +147,10 @@ struct AutomaticDeliveryContext: Equatable {
     }
 }
 
-private enum AutomaticDeliveryInvalidation: Error { case contextChanged }
+private enum AutomaticDeliveryInvalidation: LocalizedError {
+    case contextChanged
+    var errorDescription: String? { String(localized: "Delivery settings changed before the command was sent.") }
+}
 
 final class BaseAPSManager: APSManager, Injectable {
     private let processQueue = DispatchQueue(label: "BaseAPSManager.processQueue")
@@ -404,7 +408,7 @@ final class BaseAPSManager: APSManager, Injectable {
         let settings = settingsManager.settings
         let capability = (pump as? MedtrumPumpManager)?.automaticBolusContext()
         return AutomaticDeliveryContext(
-            mode: settings.dosingMode,
+            mode: settings.dosingMode.effectiveForDevice(basalOnly: capability?.restrictionReason == "basal_only"),
             modeRevision: settingsManager.dosingModeRevision,
             sourceRevision: deviceDataManager.glucoseSourceRevision,
             pumpID: pump.map { ObjectIdentifier($0) },
@@ -427,20 +431,19 @@ final class BaseAPSManager: APSManager, Injectable {
                 for: inputs.mode, simulatedPump: inputs.mockPump, automaticBolusAllowed: inputs.automaticBolusAllowed
             )
             if inputs.mode.automation == .off { break }
+            // Recalculate only before entering any driver. Once a command has been attempted,
+            // confirmed-event persistence may still be asynchronous; the next normal loop handles it.
+            if attempt == 0, inputs.canRecalculateBasalOnly(current: automaticDeliveryContext) {
+                await reportEnacted(determinationID, wasEnacted: false)
+                DiagnosticEventStore.shared.record(feature: "medtrum", stage: "delivery_guard", outcome: "invalidated")
+                continue
+            }
             do {
                 let enacted = try await enactDetermination(determinationID, inputs: inputs)
                 await reportEnacted(determinationID, wasEnacted: enacted)
                 break
             } catch {
                 await reportEnacted(determinationID, wasEnacted: false)
-                if error is AutomaticDeliveryInvalidation, attempt == 0,
-                   inputs.canRecalculateBasalOnly(current: automaticDeliveryContext),
-                   pumpManager?.status.deliveryIsUncertain == false, !isSuspended, !isManualTempBasal {
-                    // A confirmed basal is part of the next calculation's current-temp/IOB inputs.
-                    // Never replay a bolus or retry an uncertain delivery.
-                    DiagnosticEventStore.shared.record(feature: "medtrum", stage: "delivery_guard", outcome: "invalidated")
-                    continue
-                }
                 throw error
             }
         }
@@ -681,14 +684,16 @@ final class BaseAPSManager: APSManager, Injectable {
         simulatedCarbsDate: Date? = nil
     ) async -> Determination? {
         do {
-            let simulatedPump = pumpManager is MockPumpManager
+            let inputs = automaticDeliveryContext
+            let simulatedPump = inputs.mockPump
             let temp = try await fetchCurrentTempBasal(date: Date.now, simulatedPump: simulatedPump)
             return try await openAPS.determineBasal(
-                for: settingsManager.settings.dosingMode,
+                for: inputs.mode,
                 simulatedPump: simulatedPump,
                 currentTemp: temp,
                 supportedBasalRates: supportedBasalRates,
                 shouldSmoothGlucose: settingsManager.settings.smoothGlucose,
+                automaticBolusAllowed: inputs.automaticBolusAllowed,
                 clock: Date(),
                 simulatedCarbsAmount: simulatedCarbsAmount,
                 simulatedBolusAmount: simulatedBolusAmount,
@@ -868,9 +873,10 @@ final class BaseAPSManager: APSManager, Injectable {
             throw APSError.apsError(message: "Pump changed during determination")
         }
 
-        if pump.status.pumpStatus.suspended {
-            info(.loop, "Determination not enacted: pump suspended")
-            return false
+        guard !pump.status.deliveryIsUncertain else { throw PumpManagerError.uncertainDelivery }
+        guard let basalState = pump.status.basalDeliveryState,
+              !basalState.isSuspended, basalState != .pumpInoperable, !pump.status.pumpStatus.suspended else {
+            throw APSError.invalidPumpState(message: "Pump is suspended or unavailable")
         }
 
         // Unable to do temp basal during manual temp basal 😁
@@ -879,26 +885,32 @@ final class BaseAPSManager: APSManager, Injectable {
         }
 
         let (rateDecimal, durationInSeconds, smbToDeliver, deliverAt) = try await setValues(determinationID: determinationID)
-        func checkDelivery() throws {
+        func checkDelivery(allowReservedBolus: Bool = false) throws {
             guard inputs.permitsDelivery(current: automaticDeliveryContext, deliverAt: deliverAt, now: Date()) else {
                 throw AutomaticDeliveryInvalidation.contextChanged
             }
             guard !pump.status.deliveryIsUncertain else { throw PumpManagerError.uncertainDelivery }
-            guard !isManualTempBasal, !pump.status.pumpStatus.suspended, !pump.status.pumpStatus.bolusing else {
+            guard let basalState = pump.status.basalDeliveryState,
+                  !basalState.isSuspended, basalState != .pumpInoperable,
+                  !isManualTempBasal, !pump.status.pumpStatus.suspended,
+                  (allowReservedBolus || !pump.status.pumpStatus.bolusing) else {
                 throw APSError.invalidPumpState(message: "Pump delivery state changed")
             }
         }
         try checkDelivery()
+        func commandStillValid() -> Bool {
+            do { try checkDelivery(allowReservedBolus: true); return true } catch { return false }
+        }
 
         if let rate = rateDecimal, let duration = durationInSeconds {
-            try await performBasal(pump: pump, rate: rate, duration: duration)
+            try await performBasal(pump: pump, rate: rate, duration: duration, validation: commandStillValid)
             info(.loop, "Temp basal enacted: \(rate) U/h for \(Int(duration / 60)) min")
         }
 
         // only perform a bolus if smbToDeliver is > 0
         if let smb = smbToDeliver, smb.compare(NSDecimalNumber(value: 0)) == .orderedDescending {
             try checkDelivery()
-            try await performBolus(pump: pump, smbToDeliver: smb)
+            try await performBolus(pump: pump, smbToDeliver: smb, validation: commandStillValid)
             info(.loop, "SMB enacted: \(smb) U")
         }
         return true
@@ -920,18 +932,35 @@ final class BaseAPSManager: APSManager, Injectable {
         }
     }
 
-    private func performBasal(pump: PumpManager, rate: NSDecimalNumber, duration: TimeInterval) async throws {
+    private func performBasal(pump: PumpManager, rate: NSDecimalNumber, duration: TimeInterval,
+                              validation: @escaping () -> Bool) async throws {
         // the algorithm already floored this against the pump's own table, so don't floor it
         // again here: the Decimal -> Double hop can land a hair low and cost a whole increment
         let unitsPerHour = rate.decimalValue.nearestDouble
         if pump.roundToSupportedBasalRate(unitsPerHour: unitsPerHour) != unitsPerHour {
             debug(.pump, "Temp basal \(unitsPerHour) U/h is not on the pump's rate table")
         }
-        try await pump.enactTempBasal(unitsPerHour: unitsPerHour, for: duration)
+        if let medtrum = pump as? MedtrumPumpManager {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                medtrum.enactGuardedAutomaticTempBasal(unitsPerHour: unitsPerHour, duration: duration, isValid: validation) { error in
+                    if let error { continuation.resume(throwing: error) } else { continuation.resume() }
+                }
+            }
+        } else {
+            try await pump.enactTempBasal(unitsPerHour: unitsPerHour, for: duration)
+        }
     }
 
-    private func performBolus(pump: PumpManager, smbToDeliver: NSDecimalNumber) async throws {
-        try await pump.enactBolus(units: smbToDeliver.decimalValue.nearestDouble, automatic: true)
+    private func performBolus(pump: PumpManager, smbToDeliver: NSDecimalNumber, validation: @escaping () -> Bool) async throws {
+        if let medtrum = pump as? MedtrumPumpManager {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                medtrum.enactGuardedAutomaticBolus(units: smbToDeliver.decimalValue.nearestDouble, isValid: validation) { error in
+                    if let error { continuation.resume(throwing: error) } else { continuation.resume() }
+                }
+            }
+        } else {
+            try await pump.enactBolus(units: smbToDeliver.decimalValue.nearestDouble, automatic: true)
+        }
         bolusProgress.send(0)
     }
 

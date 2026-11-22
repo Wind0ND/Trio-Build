@@ -228,9 +228,9 @@ extension Stat.StateModel {
             ),
             importantSettings: ReportMetadata.ImportantSettings(
                 dynamicISFEnabled: preferences.useNewFormula,
-                smbEnabled: smbEnabled,
+                smbEnabled: smbEnabled && settingsManager.settings.dosingMode.effectiveForPump(apsManager.pumpManager).allowsAutomaticSMB,
                 uamEnabled: preferences.enableUAM,
-                closedLoopActive: settingsManager.settings.dosingMode == .closed
+                closedLoopActive: settingsManager.settings.dosingMode.automation == .full
             )
         )
     }

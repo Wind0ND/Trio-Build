@@ -273,7 +273,7 @@ extension BaseTidepoolManager: RemoteDataServiceDelegate {
     }
 
     func automationHistory(from start: Date, to end: Date) async throws -> [AbsoluteScheduleValue<Bool>] {
-        let isAutomated = settingsManager.settings.dosingMode == .closed
+        let isAutomated = settingsManager.settings.dosingMode.automation == .full
         return [AbsoluteScheduleValue(startDate: start, endDate: end, value: isAutomated)]
     }
 }

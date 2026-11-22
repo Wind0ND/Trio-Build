@@ -30,6 +30,8 @@ final class NotLoopingMonitor: Injectable {
     private var lastLoopDate = Date()
     private var hasLoopAnchor = false
     private var remindersEnabled = true
+    private var hasReceivedPreference = false
+    private var lastDosingMode: DosingMode?
     private let alarmLock = NSRecursiveLock()
 
     /// Minutes of staleness for each Time-Sensitive warning step.
@@ -62,6 +64,7 @@ final class NotLoopingMonitor: Injectable {
     init(resolver: Resolver) {
         injectServices(resolver)
         lastLoopDate = apsManager.lastLoopDate
+        lastDosingMode = settingsManager.settings.dosingMode
         hasLoopAnchor = true
         subscribe(to: apsManager.lastLoopDateSubject.eraseToAnyPublisher())
         subscribe(to: HiroLoopReminderPreferences.shared.$enabled.eraseToAnyPublisher())
@@ -96,20 +99,27 @@ final class NotLoopingMonitor: Injectable {
         enabled.removeDuplicates().sink { [weak self] value in
             guard let self else { return }
             self.alarmLock.withLock {
+                let previous = self.remindersEnabled
+                let initialized = self.hasReceivedPreference
                 self.remindersEnabled = value
-                if self.hasLoopAnchor { self.rescheduleAlarm() }
+                self.hasReceivedPreference = true
+                if !value { self.retractAll() }
+                else if initialized, !previous, self.hasLoopAnchor { self.rescheduleAlarm(includeOverdue: true) }
+                // An enabled initial value must preserve OS alarms and unresolved history for cold-start replay.
             }
         }.store(in: &subscriptions)
     }
 
-    private func rescheduleAlarm() {
+    private func retractAll() {
+        for identifier in Self.allIDs { trioAlertManager.retractAlert(identifier: identifier) }
+    }
+
+    private func rescheduleAlarm(includeOverdue: Bool = false) {
         alarmLock.lock()
         defer { alarmLock.unlock() }
         // Retract first — clears pending UN, modal timer, and throttler so the
         // next issueAlert isn't blocked by 5-min duplicate suppression.
-        for identifier in Self.allIDs {
-            trioAlertManager.retractAlert(identifier: identifier)
-        }
+        retractAll()
 
         // Skip when Trio isn't expected to be auto-enacting: open loop, an
         // active manual temp basal, or a suspended pump. In all three the
@@ -128,6 +138,15 @@ final class NotLoopingMonitor: Injectable {
             issue(identifier: Self.warningID(index + 1), after: minutes, level: .timeSensitive, now: now)
         }
         issue(identifier: Self.alertID, after: Self.criticalMinutes, level: .critical, now: now)
+        if includeOverdue {
+            let elapsedMinutes = now.timeIntervalSince(lastLoopDate) / 60
+            if elapsedMinutes >= Double(Self.criticalMinutes) {
+                issue(identifier: Self.alertID, after: Self.criticalMinutes, level: .critical, now: now, allowOverdue: true)
+            } else if let index = Self.warningMinutes.lastIndex(where: { Double($0) <= elapsedMinutes }) {
+                issue(identifier: Self.warningID(index + 1), after: Self.warningMinutes[index], level: .timeSensitive,
+                      now: now, allowOverdue: true)
+            }
+        }
     }
 
     /// The catalog decides the interruption level for `trio.aps` alerts, so the
@@ -136,10 +155,11 @@ final class NotLoopingMonitor: Injectable {
     /// Steps are measured from the last successful loop, not from `now`, so a
     /// mid-window re-arm keeps the original schedule. A step whose moment has
     /// already passed is skipped rather than fired late.
-    private func issue(identifier: Alert.Identifier, after minutes: Int, level: Alert.InterruptionLevel, now: Date) {
+    private func issue(identifier: Alert.Identifier, after minutes: Int, level: Alert.InterruptionLevel, now: Date,
+                       allowOverdue: Bool = false) {
         let fireDate = lastLoopDate.addingTimeInterval(TimeInterval(minutes * 60))
         let remaining = fireDate.timeIntervalSince(now)
-        guard remaining > 0 else { return }
+        guard remaining > 0 || allowOverdue else { return }
         let content = Alert.Content(
             title: String(localized: "Loop Execution Overdue"),
             body: String(
@@ -152,7 +172,7 @@ final class NotLoopingMonitor: Injectable {
             identifier: identifier,
             foregroundContent: content,
             backgroundContent: content,
-            trigger: .delayed(interval: remaining),
+            trigger: remaining > 0 ? .delayed(interval: remaining) : .immediate,
             interruptionLevel: level,
             sound: .sound(name: "honk.caf")
         )
@@ -166,10 +186,25 @@ extension NotLoopingMonitor: SnoozeObserver {
     /// the ones inside it. Re-arm from the same anchor; `TrioAlertManager`
     /// drops the steps that fall inside the window and keeps the rest.
     @MainActor func snoozeDidChange(_: Date) {
-        rescheduleAlarm()
+        alarmLock.withLock {
+            guard remindersEnabled, hasLoopAnchor else { return }
+            // Snooze clears warning notifications; preserve critical alarms and their history.
+            let now = Date()
+            for (index, minutes) in Self.warningMinutes.enumerated() {
+                issue(identifier: Self.warningID(index + 1), after: minutes, level: .timeSensitive, now: now)
+            }
+        }
     }
 }
 
 extension NotLoopingMonitor: SettingsObserver {
-    func settingsDidChange(_: TrioSettings) { rescheduleAlarm() }
+    func settingsDidChange(_ settings: TrioSettings) {
+        alarmLock.withLock {
+            let previous = lastDosingMode
+            lastDosingMode = settings.dosingMode
+            guard let previous, previous != settings.dosingMode else { return }
+            if settings.dosingMode.automation == .off { retractAll() }
+            else if previous.automation == .off, remindersEnabled, hasLoopAnchor { rescheduleAlarm(includeOverdue: true) }
+        }
+    }
 }

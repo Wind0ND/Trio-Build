@@ -8,6 +8,7 @@ extension Preferences {
 
         switch mode {
         case .closed,
+             .basalOnly,
              .open:
             return self
 
