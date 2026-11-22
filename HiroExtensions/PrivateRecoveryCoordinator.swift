@@ -1,13 +1,12 @@
 import Foundation
 import PrivacyKit
-import Swinject
 import UIKit
 
 /// Explicit user recovery works independently of the automatic audio preference and viewing lock.
 @MainActor enum HiroPrivateRecovery {
-    static func configure(resolver: Resolver) {
+    static func configure(manager: FetchGlucoseManager?, activity: LiveActivityManager?) {
         PrivateRecoveryBridge.shared.configure { request in
-            guard let manager = resolver.resolve(FetchGlucoseManager.self),
+            guard let manager,
                   manager.cgmGlucoseSourceType != .none, manager.cgmGlucoseSourceType != .simulator,
                   request.isCurrent() else { request.complete(false); return }
             let permit = Permit(sourceRevision: manager.recoverySourceRevision, expiresAt: request.expiresAtUptime)
@@ -38,7 +37,7 @@ import UIKit
                     guard manager.recoverySourceRevision == permit.sourceRevision else {
                         timeout.cancel(); finish(false); return
                     }
-                    await resolver.resolve(LiveActivityManager.self)?.refreshCurrentContent(isAuthorized: {
+                    await activity?.refreshCurrentContent(fromActivityIntent: true, isAuthorized: {
                         request.isCurrent() && permit.isValid && manager.recoverySourceRevision == permit.sourceRevision
                     })
                     timeout.cancel()

@@ -6,7 +6,7 @@ import Testing
 @Suite("Container Resolution Tests", .serialized) struct ContainerResolutionTests {
     private static func makeResolver() async throws -> Resolver {
         let coreDataStack = try await CoreDataStack.createForTests()
-        return Assembler([
+        return LockedResolver.assemble([
             StorageAssembly(),
             ServiceAssembly(),
             APSAssembly(),
@@ -14,7 +14,30 @@ import Testing
             UIAssembly(),
             SecurityAssembly(),
             TestAssembly(testContext: coreDataStack.newTaskContext())
-        ]).resolver
+        ])
+    }
+
+    @Test("Factories keep the synchronized resolver across concurrent background callbacks")
+    func backgroundResolver() throws {
+        final class Dependency {}
+        final class Consumer {
+            let resolver: Resolver
+            init(_ resolver: Resolver) { self.resolver = resolver }
+        }
+        struct Services: Assembly {
+            func assemble(container: Container) {
+                container.register(Dependency.self) { _ in Dependency() }
+                container.register(Consumer.self) { Consumer($0) }
+            }
+        }
+        let root = LockedResolver.assemble([Services()])
+        let nested = try #require(root.resolve(Consumer.self)).resolver
+        let expected = try #require(root.resolve(Dependency.self))
+        #expect((root as AnyObject) === (nested as AnyObject))
+        DispatchQueue.concurrentPerform(iterations: 100) { i in
+            let service = (i.isMultiple(of: 2) ? root : nested).resolve(Dependency.self)
+            #expect(service === expected)
+        }
     }
 
     @Test("Every eagerly loaded service resolves") func testEagerServiceGraph() async throws {

@@ -1,10 +1,10 @@
 {
   "en-US": {
     "description": "hiro is a personal test build with customizable on-screen presentation, viewing protection and device connectivity.",
-    "whats_new": "Improved reference lines in the compact trend display: clearer neutral strokes, longer ends and foreground layering. Existing dimensions and color themes are preserved. Please compare overlapping lines and both reference styles on the island and lock screen."
+    "whats_new": "Improves overnight stability, schedules the next Live Activity on iOS 26 and aligns the trend guides with the cover. Please check the handoff and both curve styles."
   },
   "zh-Hans": {
     "description": "hiro 是用于个人测试的应用版本，提供可自定义的界面展示、查看保护和设备连接功能。",
-    "whats_new": "优化小型趋势图的参考线：提高线条辨识度、延长两端，并置于曲线上层；保留现有尺寸与配色。请核对两种参考样式在灵动岛、锁屏及线条重叠时的显示。"
+    "whats_new": "修复夜间后台运行时的一处崩溃。在 iOS 26 上可预排下一场实时活动，趋势参考线与封面对齐。请测试长时间后台后的接班及两种曲线样式。"
   }
 }

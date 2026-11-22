@@ -16,7 +16,7 @@ struct PrivateActivityControls: View {
             HStack {
                 PrivacyCoverView(data: privacy.cover, size: coverSize)
                 Spacer(minLength: 12)
-                PrivacyWaveformView(state: privacy, stale: stale)
+                PrivacyWaveformView(state: privacy, stale: stale, coverHeight: coverSize)
             }
             .padding(.vertical, 4)
             .frame(maxWidth: .infinity, minHeight: 32)

@@ -45,29 +45,16 @@ extension Notification.Name {
     @State private var showOnboardingCompletedSplash = false
     @State private var showMigrationError: Bool = false
 
-    // Dependencies Assembler
-    // contain all dependencies Assemblies
-    // TODO: Remove static key after update "Use Dependencies" logic
-    private static var assembler = Assembler([
+    static let resolver = LockedResolver.assemble([
         StorageAssembly(),
         ServiceAssembly(),
         APSAssembly(),
         NetworkAssembly(),
         UIAssembly(),
         SecurityAssembly()
-    ], parent: nil, defaultObjectScope: .container)
+    ])
 
-    // Simple thread-safe wrapper
-    private static let resolverLock = NSRecursiveLock()
-
-    var resolver: Resolver {
-        TrioApp.resolver
-    }
-
-    static var resolver: Resolver {
-        // Return a simple wrapper that adds locking
-        LockedResolver(resolver: assembler.resolver, lock: resolverLock)
-    }
+    var resolver: Resolver { Self.resolver }
 
     private func loadServices() {
         resolver.resolve(AppearanceManager.self)!.setupGlobalAppearance()
@@ -210,18 +197,20 @@ extension Notification.Name {
                     // Only load services after successful Core Data initialization
                     loadServices()
                     await HiroAlertJournal.shared.importDeliveredWatchdog()
-                    HiroPrivateRecovery.configure(resolver: resolver)
+                    let source = resolver.resolve(FetchGlucoseManager.self)
+                    let activity = resolver.resolve(LiveActivityManager.self)
+                    HiroPrivateRecovery.configure(manager: source, activity: activity)
                     if let settingsManager = resolver.resolve(SettingsManager.self) {
                         BackgroundKeepAlive.shared.configure(
                             initialSample: nil,
                             hasSource: { settingsManager.settings.cgm != .none && settingsManager.settings.cgm != .simulator },
                             refresh: { request in
-                                guard let manager = resolver.resolve(FetchGlucoseManager.self) else { request.complete(false); return }
+                                guard let manager = source else { request.complete(false); return }
                                 let revision = manager.recoverySourceRevision
                                 manager.requestRecovery { success in
                                     Task { @MainActor in
                                         guard request.isCurrent(), manager.recoverySourceRevision == revision else { request.complete(false); return }
-                                        await resolver.resolve(LiveActivityManager.self)?.refreshCurrentContent(isAuthorized: {
+                                        await activity?.refreshCurrentContent(isAuthorized: {
                                             request.isCurrent() && manager.recoverySourceRevision == revision
                                         })
                                         request.complete(success)
@@ -230,7 +219,7 @@ extension Notification.Name {
                             },
                             privateReminderTitle: { PrivacyPreference.alertsEnabled ? PrivacyText.attention : nil },
                             interruptionChanged: { HiroAlertJournal.shared.dataInterruption(deadline: $0) },
-                            sourceID: { resolver.resolve(FetchGlucoseManager.self)?.freshnessSourceID },
+                            sourceID: { source?.freshnessSourceID },
                             interruptionDelivered: { HiroAlertJournal.shared.dataInterruption(deadline: $0, deliveredAt: $1) }
                         )
                         BackgroundKeepAlive.shared.setBackground(scenePhase == .background)

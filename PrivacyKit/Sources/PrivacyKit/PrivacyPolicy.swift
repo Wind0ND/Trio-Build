@@ -1,6 +1,10 @@
 import Foundation
 
 public enum PrivacyPreference {
+    public static let scheduledHandoffKey = "hiro.activity.scheduledHandoff"
+    public static var scheduledHandoffEnabled: Bool {
+        UserDefaults.standard.object(forKey: scheduledHandoffKey) as? Bool ?? true
+    }
     public static let changed = Notification.Name("com.trio.privacy.changed")
     public static let displayKey = "privacy.waveform.enabled"
     public static let alertsKey = "privacy.alerts.enabled"

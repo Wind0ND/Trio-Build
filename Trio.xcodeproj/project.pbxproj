@@ -11,6 +11,7 @@
 		AA9300000000000000000012 /* AlertJournalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9300000000000000000002 /* AlertJournalStore.swift */; };
 		AA9300000000000000000013 /* AlertJournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9300000000000000000003 /* AlertJournalView.swift */; };
 		AA9300000000000000000014 /* PrivateRecoveryCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9300000000000000000004 /* PrivateRecoveryCoordinator.swift */; };
+		BE5500000000000000000014 /* HiroActivityHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE5500000000000000000004 /* HiroActivityHandoff.swift */; };
 		AA9300000000000000000015 /* PrivateRecoveryIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9300000000000000000005 /* PrivateRecoveryIntent.swift */; };
 		AA9300000000000000000031 /* PrivateRecoveryIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9300000000000000000005 /* PrivateRecoveryIntent.swift */; };
 		AA9200000000000000000001 /* Hiro assets in Resources */ = {isa = PBXBuildFile; fileRef = AA9200000000000000000002 /* Assets.xcassets */; };
@@ -1297,6 +1298,7 @@
 		AA9300000000000000000002 /* AlertJournalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertJournalStore.swift; sourceTree = "<group>"; };
 		AA9300000000000000000003 /* AlertJournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertJournalView.swift; sourceTree = "<group>"; };
 		AA9300000000000000000004 /* PrivateRecoveryCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateRecoveryCoordinator.swift; sourceTree = "<group>"; };
+		BE5500000000000000000004 /* HiroActivityHandoff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiroActivityHandoff.swift; sourceTree = "<group>"; };
 		AA9300000000000000000005 /* PrivateRecoveryIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateRecoveryIntent.swift; sourceTree = "<group>"; };
 		AA9200000000000000000002 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA9200000000000000000005 /* HiroAppIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiroAppIcon.swift; sourceTree = "<group>"; };
@@ -2545,6 +2547,7 @@
 				AA9300000000000000000002 /* AlertJournalStore.swift */,
 				AA9300000000000000000003 /* AlertJournalView.swift */,
 				AA9300000000000000000004 /* PrivateRecoveryCoordinator.swift */,
+				BE5500000000000000000004 /* HiroActivityHandoff.swift */,
 				AA9300000000000000000005 /* PrivateRecoveryIntent.swift */,
 			);
 			path = HiroExtensions;
@@ -5897,6 +5900,7 @@
 				AA9300000000000000000012 /* AlertJournalStore.swift in Sources */,
 				AA9300000000000000000013 /* AlertJournalView.swift in Sources */,
 				AA9300000000000000000014 /* PrivateRecoveryCoordinator.swift in Sources */,
+				BE5500000000000000000014 /* HiroActivityHandoff.swift in Sources */,
 				AA9300000000000000000015 /* PrivateRecoveryIntent.swift in Sources */,
 				AA9200000000000000000004 /* HiroAppIcon.swift in Sources */,
 				AA910000000000000000000B /* TrioPrivacyIntegration.swift in Sources */,

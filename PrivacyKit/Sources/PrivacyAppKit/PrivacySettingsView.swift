@@ -12,6 +12,7 @@ public struct PrivacySettingsView: View {
     @AppStorage(PrivacyPreference.patternTraceKey) private var patternTrace = false
     @AppStorage(PrivacyPreference.paletteKey) private var palette = PrivacyPalettePreset.quiet.rawValue
     @AppStorage(PrivacyPreference.meterStyleKey) private var meterStyle = PrivacyMeterStyle.history.rawValue
+    @AppStorage(PrivacyPreference.scheduledHandoffKey) private var scheduledHandoff = true
     @State private var showSetup = false
     @State private var method: PrivacyLockMethod = .pin
     @State private var selectedPhoto: PhotosPickerItem?
@@ -29,6 +30,11 @@ public struct PrivacySettingsView: View {
         Form {
             Section {
                 Toggle(privacyText("Private Live Activity"), isOn: protected($privateDisplay))
+                if #available(iOS 26.0, *) {
+                    Toggle(privacyText("Schedule the next Live Activity"), isOn: protected($scheduledHandoff))
+                    Text(privacyText("While hiro is open, prepare one more eight-hour session. iOS announces its start as hiro."))
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
                 Toggle(privacyText("Private alert wording"), isOn: protected($privateAlerts))
                 Text(privacyText("Private activities show a cover and a small trend. Public glucose alerts say Attention. The existing alert sounds and schedules still apply."))
                     .font(.footnote).foregroundStyle(.secondary)
@@ -85,7 +91,7 @@ public struct PrivacySettingsView: View {
                         referenceField("Reference line", index: 2)
                     }
                     Button(privacyText("Save curve references"), action: saveCurveReferences)
-                    Text(privacyText("Reference lines guide the display only. They do not change alert thresholds. The curve can cross them; missing readings leave a gap. References above 12 extend the curve scale."))
+                    Text(privacyText("The two guides align with the cover edges. The single guide aligns with its center. Changing a reference moves the curve. Missing readings leave a gap."))
                         .font(.footnote).foregroundStyle(.secondary)
                 } else {
                 Text(privacyText("The reference style shows the latest five readings, followed by a fixed 5 mmol/L marker at 41.7% height. The entire group, including the marker, uses the latest reading's color."))

@@ -3,6 +3,18 @@ import Foundation
 public enum ActivityLifecycleState: Equatable, Sendable { case active, stale, ended, dismissed }
 public enum ActivityLifecycleAction: Equatable, Sendable { case update, create, waitForForeground, end }
 public enum ActivityLifecyclePolicy {
+    public static let sessionDuration: TimeInterval = 8 * 60 * 60
+
+    public static func shouldRenew(start: Date, now: Date, foreground: Bool) -> Bool {
+        foreground && now.timeIntervalSince(start) >= 3600
+    }
+
+    /// Foreground registration is required. Keep just the next session pending.
+    public static func successorDate(start: Date, now: Date) -> Date? {
+        let expiry = start.addingTimeInterval(sessionDuration)
+        return expiry > now ? expiry : nil
+    }
+
     public static func action(state: ActivityLifecycleState?, foreground: Bool, enabled: Bool) -> ActivityLifecycleAction {
         guard enabled else { return .end }
         switch state {

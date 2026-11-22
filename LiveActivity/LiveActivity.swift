@@ -4,6 +4,7 @@ import SwiftUI
 import WidgetKit
 
 struct LiveActivity: Widget {
+    private let compactCoverSize: CGFloat = 20
     var body: some WidgetConfiguration {
         let configuration = ActivityConfiguration(for: LiveActivityAttributes.self) { context in
             LiveActivityView(context: context)
@@ -44,7 +45,7 @@ struct LiveActivity: Widget {
                 }
             } compactLeading: {
                 if let privacy = context.state.privacy {
-                    PrivacyCoverView(data: privacy.cover, size: 20)
+                    PrivacyCoverView(data: privacy.cover, size: compactCoverSize)
                         .frame(width: 22, height: 22)
                 } else {
                 LiveActivityCompactLeadingView(
@@ -54,7 +55,7 @@ struct LiveActivity: Widget {
                 }
             } compactTrailing: {
                 if let privacy = context.state.privacy {
-                    PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()), presentation: .compact)
+                    PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()), presentation: .compact, coverHeight: compactCoverSize)
                         .frame(width: 22, height: 22)
                 } else {
                 LiveActivityCompactTrailingView(

@@ -26,10 +26,7 @@ public struct PrivacyCurveReferences: Codable, Hashable, Sendable {
               let value = try? JSONDecoder().decode(Self.self, from: data) else { return .init() }
         return value
     }
-    public func ceiling(dual: Bool) -> Double {
-        let reference = dual ? upper : single
-        return reference > 12 ? reference * 1.1 : 12
-    }
+
 }
 
 public struct PrivacyCurveGeometry: Sendable {
@@ -40,12 +37,20 @@ public struct PrivacyCurveGeometry: Sendable {
     public let referenceY: [Double]
     public let segments: [Segment]
     public let isolatedPoints: [Point]
-    public init(values: [Double?], width: Double, height: Double, references: PrivacyCurveReferences, dual: Bool) {
+    public init(values: [Double?], width: Double, height: Double, coverHeight: Double = 12, references: PrivacyCurveReferences, dual: Bool) {
         let w = width.isFinite ? max(0, width) : 22
         let h = height.isFinite ? max(0, height) : 16
-        let ceiling = references.ceiling(dual: dual)
-        func y(_ value: Double) -> Double { h * (1 - min(ceiling, max(0, value)) / ceiling) }
-        referenceY = (dual ? [references.lower, references.upper] : [references.single]).map(y)
+        let span = min(h, coverHeight.isFinite ? max(0, coverHeight) : 12)
+        let middle = h / 2
+        let lowerY = middle + span / 2
+        let upperY = middle - span / 2
+        referenceY = dual ? [lowerY, upperY] : [middle]
+        func y(_ value: Double) -> Double {
+            let position = dual
+                ? lowerY - (value - references.lower) * span / (references.upper - references.lower)
+                : middle - (value - references.single) * h / 12
+            return min(h, max(0, position))
+        }
         let points: [Point?] = values.enumerated().map { index, value in
             guard let value, value.isFinite, value > 0 else { return nil }
             return Point(x: values.count < 2 ? w / 2 : Double(index) * w / Double(values.count - 1), y: y(value))

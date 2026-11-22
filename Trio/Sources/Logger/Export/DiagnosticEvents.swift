@@ -89,8 +89,8 @@ enum DiagnosticEventContract {
             stages: ["audio", "reminder", "data", "source", "lifecycle", "recovery", "audio_minutes", "audio_starts", "cycle_delay_seconds", "missed_windows"],
             outcomes: ["started", "stopped", "failed", "interrupted", "capped", "scheduled", "recovered", "received", "stored", "background", "foreground", "requested", "completed", "timed_out", "reset", "overdue", "sampled"]
         ),
-        "activity": Feature(stages: ["state", "lifecycle"],
-            outcomes: ["active", "stale", "ended", "dismissed", "unknown", "created", "updated", "deferred", "failed"]),
+        "activity": Feature(stages: ["state", "lifecycle", "handoff"],
+            outcomes: ["active", "stale", "ended", "dismissed", "unknown", "created", "updated", "deferred", "failed", "scheduled"]),
         "alerts": Feature(stages: ["plan", "trigger", "delivery", "cancel", "alarm"],
             outcomes: ["scheduled", "fired", "delivered", "cancelled", "stopped", "failed"]),
         "branding": Feature(stages: ["bundle"], outcomes: ["consistent", "mismatch"]),

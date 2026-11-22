@@ -9,24 +9,6 @@ import OttaiKit
 
 @available(iOS 16.2, *) private struct ActiveActivity {
     let activity: Activity<LiveActivityAttributes>
-
-    /// Determines if the current activity needs to be recreated.
-    ///
-    /// Private content can refresh an expired reading in place; a stale flag alone need not recreate its activity.
-    func needsRecreation(updatingPrivateContent: Bool) -> Bool {
-        switch activity.activityState {
-        case .dismissed,
-             .ended:
-            return true
-        case .stale:
-            break
-        case .active:
-            break
-        @unknown default:
-            return true
-        }
-        return false
-    }
 }
 
 final class LiveActivityData: ObservableObject {
@@ -77,6 +59,8 @@ final class LiveActivityData: ObservableObject {
     @MainActor private static var publicationQueue: ActivityPublicationQueue?
     private var activityStateTask: Task<Void, Never>?
     private var retryTask: Task<Void, Never>?
+    @MainActor private lazy var handoff = HiroActivityHandoff()
+    private var lastLifecycleOutcome: String?
     private var creationWindow: TimeInterval = 0
     private var creationAttempts = 0
 
@@ -186,12 +170,12 @@ final class LiveActivityData: ObservableObject {
         iobService.iobPublisher
             .debounce(for: .seconds(2), scheduler: DispatchQueue.global(qos: .utility))
             .sink { [weak self] _ in
-                self?.data.iob = self?.iobService.currentIOB
+                Task { @MainActor in self?.data.iob = self?.iobService.currentIOB }
             }.store(in: &subscriptions)
     }
 
     /// Fetches and maps new determination data and updates the live activity content state.
-    private func loadDetermination() async {
+    @MainActor private func loadDetermination() async {
         do {
             data.determination = try await fetchAndMapDetermination()
         } catch {
@@ -200,7 +184,7 @@ final class LiveActivityData: ObservableObject {
     }
 
     /// Fetches and maps override data and updates the live activity content state.
-    private func loadOverrides() async {
+    @MainActor private func loadOverrides() async {
         do {
             data.override = try await fetchAndMapOverride()
         } catch {
@@ -209,7 +193,7 @@ final class LiveActivityData: ObservableObject {
     }
 
     /// Fetches and maps temp target data and updates the live activity content state.
-    private func loadTempTarget() async {
+    @MainActor private func loadTempTarget() async {
         do {
             data.tempTarget = try await fetchAndMapTempTarget()
         } catch {
@@ -221,6 +205,10 @@ final class LiveActivityData: ObservableObject {
     ///
     /// Loads widget items from user defaults and triggers an update to the live activity order.
     @objc private func loadWidgetItems() {
+        Task { @MainActor in self.updateWidgetItems() }
+    }
+
+    @MainActor private func updateWidgetItems() {
         data.widgetItems = UserDefaults.standard.loadLiveActivityOrderFromUserDefaults() ?? LiveActivityAttributes
             .LiveActivityItem.defaultItems
     }
@@ -235,23 +223,22 @@ final class LiveActivityData: ObservableObject {
     }
 
     private func loadInitialData() {
-        Task {
+        Task { @MainActor in
             await self.loadGlucose()
             await self.loadOverrides()
             await self.loadTempTarget()
             await self.loadDetermination()
-            self.loadWidgetItems()
+            self.updateWidgetItems()
         }
     }
 
     /// Monitors live activity authorization changes and updates the `systemEnabled` flag.
     private func monitorForLiveActivityAuthorizationChanges() {
-        Task {
+        Task { @MainActor in
             for await activityState in activityAuthorizationInfo.activityEnablementUpdates {
                 if activityState != systemEnabled {
-                    await MainActor.run {
-                        systemEnabled = activityState
-                    }
+                    systemEnabled = activityState
+                    await pushCurrentContent()
                 }
             }
         }
@@ -264,15 +251,17 @@ final class LiveActivityData: ObservableObject {
     ///
     /// - Parameter state: The new content state to push to the live activity.
     @MainActor private func pushUpdate(_ state: LiveActivityAttributes.ContentState,
+                                      fromActivityIntent: Bool = false,
                                       isAuthorized: @escaping @MainActor () -> Bool = { true }) async {
         let queue = Self.publicationQueue ?? ActivityPublicationQueue()
         Self.publicationQueue = queue
-        await queue.run(coalescing: true) { [weak self] in
-            await self?.pushUpdateInOrder(state, isAuthorized: isAuthorized)
+        await queue.run(coalescing: !fromActivityIntent) { [weak self] in
+            await self?.pushUpdateInOrder(state, fromActivityIntent: fromActivityIntent, isAuthorized: isAuthorized)
         }
     }
 
     @MainActor private func pushUpdateInOrder(_ state: LiveActivityAttributes.ContentState,
+                                             fromActivityIntent: Bool,
                                              isAuthorized: @escaping @MainActor () -> Bool) async {
         guard isAuthorized() else { return }
         // Reject an older queued update after the user switches display mode.
@@ -282,157 +271,108 @@ final class LiveActivityData: ObservableObject {
             return
         }
 
-        // Elect a usable owner before retiring duplicates; the tracked owner may have just ended.
-        if let currentActivity, currentActivity.needsRecreation(updatingPrivateContent: state.privacy != nil) {
-            self.currentActivity = nil
+        let now = Date()
+        let foreground = UIApplication.shared.applicationState == .active
+        let sessions = Activity<LiveActivityAttributes>.activities.filter {
+            $0.activityState == .active || $0.activityState == .stale
+        }
+        // A pending session may have started while the app was suspended. Elect the
+        // newest live owner even when our old handle still claims to be active.
+        let existing = sessions.max { $0.attributes.startDate < $1.attributes.startDate }
+        if existing?.id != currentActivity?.activity.id {
             activityStateTask?.cancel()
+            currentActivity = existing.map { ActiveActivity(activity: $0) }
+            if let existing { observeState(of: existing) }
         }
-        if currentActivity == nil {
-            // try to restore an existing activity
-            currentActivity = Activity<LiveActivityAttributes>.activities
-                .filter { $0.activityState == .active || $0.activityState == .stale }
-                .max { $0.attributes.startDate < $1.attributes.startDate }.map {
-                    ActiveActivity(activity: $0)
-                }
-
-            if let currentActivity {
-                debug(.liveActivity, "Restored Live Activity \(currentActivity.activity.id)")
-                observeState(of: currentActivity.activity)
-            }
-        }
-
-        // End all unknown activities except the current one
-        for unknownActivity in Activity<LiveActivityAttributes>.activities
-            .filter({ self.currentActivity?.activity.id != $0.id && ($0.activityState == .active || $0.activityState == .stale) })
-        {
-            guard isAuthorized() else { return }
-            await unknownActivity.end(nil, dismissalPolicy: .immediate)
-        }
-
-        guard isAuthorized(), (state.privacy != nil) == PrivacyPreference.displayEnabled else { return }
-        if let currentActivity {
-            let terminal = currentActivity.needsRecreation(updatingPrivateContent: state.privacy != nil)
-            if terminal && UIApplication.shared.applicationState != .active {
-                self.currentActivity = nil
-                activityStateTask?.cancel()
-                recordLifecycle("deferred")
-                return
-            }
-            if terminal {
-                debug(.liveActivity, "Recreating Live Activity \(currentActivity.activity.id)")
-                await endActivity(isAuthorized: isAuthorized)
-                guard isAuthorized() else { return }
-                // After endActivity(), currentActivity is guaranteed to be nil
-                // No recursive task, but explicitly restart
-                debug(.liveActivity, "Pushing update after recreation")
-                await pushUpdateInOrder(state, isAuthorized: isAuthorized)
-            } else {
-                let content = ActivityContent(
-                    state: state,
-                    staleDate: state.privacy?.staleDate ?? min(state.glucoseMeasuredAt ?? state.date ?? Date.now, Date.now).addingTimeInterval(300)
-                )
-                // Before the update, check if currentActivity is still valid
-                if let stillCurrent = self.currentActivity, stillCurrent.activity.id == currentActivity.activity.id {
-                    guard isAuthorized(), (state.privacy != nil) == PrivacyPreference.displayEnabled else { return }
-                    debug(.liveActivity, "Updating Live Activity \(stillCurrent.activity.id)")
-                    await stillCurrent.activity.update(content)
-                    recordPublication()
-                } else {
-                    debug(.liveActivity, "Update skipped, activity changed during push")
-                }
-            }
-        } else {
-            guard ActivityLifecyclePolicy.action(state: nil,
-                foreground: UIApplication.shared.applicationState == .active, enabled: true) == .create else {
-                recordLifecycle("deferred")
-                return
-            }
+        let content = ActivityContent(state: state, staleDate: state.privacy?.staleDate
+            ?? min(state.glucoseMeasuredAt ?? state.date ?? now, now).addingTimeInterval(300))
+        let renew = existing.map {
+            ActivityLifecyclePolicy.shouldRenew(start: $0.attributes.startDate, now: now, foreground: foreground)
+        } ?? false
+        if existing == nil || renew {
+            guard foreground || fromActivityIntent else { recordLifecycle("deferred"); return }
             let uptime = ProcessInfo.processInfo.systemUptime
             if uptime - creationWindow >= 60 { creationWindow = uptime; creationAttempts = 0 }
-            guard creationAttempts < 3 else { scheduleRetry(); recordLifecycle("deferred"); return }
-            creationAttempts += 1
-            // ... Activity is newly created ...
-            do {
-                let expired = ActivityContent(
-                    state: LiveActivityAttributes
-                        .ContentState(
-                            unit: settings.units.rawValue,
-                            bg: "--",
-                            glucose: nil,
-                            direction: nil,
-                            change: "--",
-                            date: Date.now,
-                            highGlucose: settings.high,
-                            lowGlucose: settings.low,
-                            target: data.determination?.target ?? 100 as Decimal,
-                            glucoseColorScheme: settings.glucoseColorScheme.rawValue,
-                            useDetailedViewIOS: false,
-                            useDetailedViewWatchOS: false,
-                            simpleViewStyle: LiveActivityAttributes.SimpleViewStyle(settings: settings),
-                            detailedViewState: LiveActivityAttributes.ContentAdditionalState(
-                                chart: [],
-                                rotationDegrees: 0,
-                                cob: 0,
-                                iob: 0,
-                                tdd: 0,
-                                isOverrideActive: false,
-                                overrideName: "",
-                                overrideDate: Date.now,
-                                overrideDuration: 0,
-                                overrideTarget: 0,
-                                isTempTargetActive: false,
-                                tempTargetName: "",
-                                tempTargetDate: Date.now,
-                                tempTargetDuration: 0,
-                                tempTargetTarget: 0,
-                                widgetItems: [],
-                                minForecast: [],
-                                maxForecast: [],
-                                forecastLines: [],
-                                forecastDisplayType: ForecastDisplayType.cone.rawValue
-                            ),
-                            isInitialState: true,
-                            privacy: PrivacyPreference.displayEnabled ? PrivacyActivityState(
-                                readings: [], now: Date(),
-                                cover: UserDefaults.standard.data(forKey: PrivacyPreference.coverKey)
-                            ) : nil
-                        ),
-                    staleDate: Date.now.addingTimeInterval(60)
-                )
-
-                // A private start already has a sanitized snapshot. Do not briefly publish an empty ring first.
-                let initialContent = state.privacy != nil
-                    ? ActivityContent(state: state, staleDate: state.privacy?.staleDate)
-                    : expired
-                guard isAuthorized(), (state.privacy != nil) == PrivacyPreference.displayEnabled else { return }
-                let activity = try Activity.request(
-                    attributes: LiveActivityAttributes(startDate: Date.now),
-                    content: initialContent,
-                    pushType: nil
-                )
-                currentActivity = ActiveActivity(activity: activity)
-                observeState(of: activity)
-                retryTask?.cancel(); retryTask = nil
-                recordLifecycle("created")
-                recordPublication()
-                info(.liveActivity, "Started Live Activity \(activity.id)")
-
-                // Update the newly created activity with actual data
-                let updateContent = ActivityContent(
-                    state: state,
-                    staleDate: state.privacy?.staleDate ?? min(state.glucoseMeasuredAt ?? state.date ?? Date.now, Date.now).addingTimeInterval(300)
-                )
-                guard isAuthorized() else { return }
-                await activity.update(updateContent)
-                debug(.liveActivity, "Set initial content for Live Activity \(activity.id)")
-            } catch {
-                warning(.liveActivity, "Starting Live Activity failed, will retry on next update", error: error)
-                // Reset currentActivity on error to allow retry on next update
-                currentActivity = nil
-                recordLifecycle("failed")
-                scheduleRetry()
-            }
+            if creationAttempts < 3 {
+                creationAttempts += 1
+                do {
+                    let initial = state.privacy == nil ? publicInitialContent() : content
+                    let next = try Activity.request(attributes: LiveActivityAttributes(startDate: now),
+                        content: initial, pushType: nil)
+                    currentActivity = ActiveActivity(activity: next)
+                    observeState(of: next)
+                    retryTask?.cancel()
+                    retryTask = nil
+                    recordLifecycle("created")
+                    info(.liveActivity, "Started Live Activity")
+                } catch {
+                    // The existing activity remains usable if renewal fails.
+                    warning(.liveActivity, "Starting Live Activity failed", error: error)
+                    recordLifecycle("failed")
+                    scheduleRetry()
+                }
+            } else { scheduleRetry() }
         }
+        guard let owner = currentActivity?.activity, isAuthorized(),
+              (state.privacy != nil) == PrivacyPreference.displayEnabled else { return }
+        if owner.id == existing?.id || state.privacy == nil { await owner.update(content) }
+        recordPublication()
+        for other in sessions where other.id != owner.id {
+            guard isAuthorized() else { return }
+            await other.end(nil, dismissalPolicy: .immediate)
+        }
+        if #available(iOS 26.0, *), isAuthorized() {
+            await handoff.prepare(after: owner,
+                foreground: UIApplication.shared.applicationState == .active,
+                placeholder: { .privateFallback(previous: state, settings: self.settings) },
+                onStart: { [weak self] in await self?.pushCurrentContent() })
+        }
+    }
+
+    @MainActor private func publicInitialContent() -> ActivityContent<LiveActivityAttributes.ContentState> {
+        return ActivityContent(
+            state: LiveActivityAttributes
+                .ContentState(
+                    unit: settings.units.rawValue,
+                    bg: "--",
+                    glucose: nil,
+                    direction: nil,
+                    change: "--",
+                    date: Date.now,
+                    highGlucose: settings.high,
+                    lowGlucose: settings.low,
+                    target: data.determination?.target ?? 100 as Decimal,
+                    glucoseColorScheme: settings.glucoseColorScheme.rawValue,
+                    useDetailedViewIOS: false,
+                    useDetailedViewWatchOS: false,
+                    simpleViewStyle: LiveActivityAttributes.SimpleViewStyle(settings: settings),
+                    detailedViewState: LiveActivityAttributes.ContentAdditionalState(
+                        chart: [],
+                        rotationDegrees: 0,
+                        cob: 0,
+                        iob: 0,
+                        tdd: 0,
+                        isOverrideActive: false,
+                        overrideName: "",
+                        overrideDate: Date.now,
+                        overrideDuration: 0,
+                        overrideTarget: 0,
+                        isTempTargetActive: false,
+                        tempTargetName: "",
+                        tempTargetDate: Date.now,
+                        tempTargetDuration: 0,
+                        tempTargetTarget: 0,
+                        widgetItems: [],
+                        minForecast: [],
+                        maxForecast: [],
+                        forecastLines: [],
+                        forecastDisplayType: ForecastDisplayType.cone.rawValue
+                    ),
+                    isInitialState: true,
+                    privacy: nil
+                ),
+            staleDate: Date.now.addingTimeInterval(60)
+        )
     }
 
     @MainActor private func observeState(of activity: Activity<LiveActivityAttributes>) {
@@ -451,6 +391,7 @@ final class LiveActivityData: ObservableObject {
                 DiagnosticEventStore.shared.record(feature: "activity", stage: "state", outcome: outcome)
                 if state == .ended || state == .dismissed {
                     self.currentActivity = nil
+                    if #available(iOS 26.0, *), state == .dismissed { await self.handoff.cancel() }
                     self.scheduleRetry()
                     return
                 }
@@ -470,12 +411,15 @@ final class LiveActivityData: ObservableObject {
     }
 
     @MainActor private func recordLifecycle(_ outcome: String) {
+        if outcome == "deferred", lastLifecycleOutcome == outcome { return }
+        lastLifecycleOutcome = outcome
         DiagnosticEventStore.shared.record(feature: "activity", stage: "lifecycle", outcome: outcome)
     }
 
     /// Ends the current live activity and ensures that all unknown activities are terminated.
     @MainActor private func endActivity(isAuthorized: @escaping @MainActor () -> Bool = { true }) async {
         guard isAuthorized() else { return }
+        if #available(iOS 26.0, *) { await handoff.cancel() }
         debug(.liveActivity, "Ending all Live Activities")
 
         if let currentActivity {
@@ -506,18 +450,18 @@ final class LiveActivityData: ObservableObject {
         let queue = Self.publicationQueue ?? ActivityPublicationQueue()
         Self.publicationQueue = queue
         await queue.run { [weak self] in await self?.endActivity() }
-        await pushCurrentContent()
+        await pushContent(glucose: data.glucoseFromPersistence, fromActivityIntent: true, isAuthorized: { true })
 
         info(.liveActivity, "Restarted Live Activity from shortcut")
     }
 }
 
 @available(iOS 16.2, *) extension LiveActivityManager {
-    @MainActor func refreshCurrentContent(isAuthorized: @escaping @MainActor () -> Bool) async {
+    @MainActor func refreshCurrentContent(fromActivityIntent: Bool = false, isAuthorized: @escaping @MainActor () -> Bool) async {
         do {
             try await AuthorizedSnapshot.publish(fetch: { try await self.fetchAndMapGlucose() },
                 isAuthorized: isAuthorized, commit: { snapshot, authorized in
-                    await self.pushContent(glucose: snapshot, isAuthorized: authorized)
+                    await self.pushContent(glucose: snapshot, fromActivityIntent: fromActivityIntent, isAuthorized: authorized)
                 })
         } catch { warning(.liveActivity, "Recovery snapshot fetch failed", error: error) }
     }
@@ -527,12 +471,12 @@ final class LiveActivityData: ObservableObject {
     }
 
     /// Recovery snapshots stay local: they cannot trigger an observer-owned unguarded publication.
-    @MainActor private func pushContent(glucose: [GlucoseData]?, isAuthorized: @escaping @MainActor () -> Bool) async {
+    @MainActor private func pushContent(glucose: [GlucoseData]?, fromActivityIntent: Bool = false, isAuthorized: @escaping @MainActor () -> Bool) async {
         guard isAuthorized() else { return }
         guard let glucose, let bg = glucose.first else {
             if PrivacyPreference.displayEnabled {
                 let previous = currentActivity?.activity.content.state ?? Activity<LiveActivityAttributes>.activities.first?.content.state
-                await pushUpdate(.privateFallback(previous: previous, settings: settings), isAuthorized: isAuthorized)
+                await pushUpdate(.privateFallback(previous: previous, settings: settings), fromActivityIntent: fromActivityIntent, isAuthorized: isAuthorized)
             }
             debug(.liveActivity, "Live Activity not updated, no glucose available")
             return
@@ -567,7 +511,7 @@ final class LiveActivityData: ObservableObject {
             privateRecoveredAt: recoveredAt
         )
 
-        await pushUpdate(content, isAuthorized: isAuthorized)
+        await pushUpdate(content, fromActivityIntent: fromActivityIntent, isAuthorized: isAuthorized)
     }
 
     @MainActor private func recordPublication() {

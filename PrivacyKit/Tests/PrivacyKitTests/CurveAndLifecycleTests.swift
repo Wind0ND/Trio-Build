@@ -3,23 +3,28 @@ import XCTest
 @testable import PrivacyKit
 
 final class CurveAndLifecycleTests: XCTestCase {
-    func testReferencesAreDisplayCoordinatesAndDoNotClipCrossings() {
-        let geometry = PrivacyCurveGeometry(values: [3.6, 5.8, 10.7, 8.2, 4.4, 6.2], width: 100, height: 120,
-                                            references: .init(), dual: true)
-        XCTAssertEqual(geometry.referenceY.count, 2)
-        XCTAssertEqual(geometry.referenceY.first ?? -1, 80, accuracy: 0.001)
-        XCTAssertEqual(geometry.referenceY.last ?? -1, 20, accuracy: 0.001)
-        XCTAssertTrue(geometry.segments.contains { $0.start.y > 80 })
-        XCTAssertTrue(geometry.segments.contains { $0.end.y < 20 })
-    }
-
-    func testAdjustableSingleLineAndExtendedRangeUseStableScale() {
-        let config = PrivacyCurveReferences(lower: 3.9, upper: 15, single: 6)
-        let single = PrivacyCurveGeometry(values: [4, 6, 8], width: 100, height: 120, references: config, dual: false)
-        XCTAssertEqual(single.referenceY.first ?? -1, 60, accuracy: 0.001)
-        let dual = PrivacyCurveGeometry(values: [4, 6, 8], width: 100, height: 120, references: config, dual: true)
-        XCTAssertTrue(dual.referenceY.allSatisfy { $0 >= 0 && $0 <= 120 })
-        XCTAssertEqual(dual.segments.last?.end.y ?? -1, 120 * (1 - 8 / 16.5), accuracy: 0.001)
+    func testReferencesAndSamplesShareTheCoverCoordinateSystem() {
+        for (height, cover) in [(22.0, 20.0), (30, 24), (16, 12)] {
+            let middle = height / 2
+            let top = middle - cover / 2
+            let bottom = middle + cover / 2
+            let references = PrivacyCurveReferences(lower: 3.9, upper: 15, single: 7)
+            let dual = PrivacyCurveGeometry(values: [3, 3.9, 15, 16], width: 20,
+                height: height, coverHeight: cover, references: references, dual: true)
+            XCTAssertEqual(dual.referenceY, [bottom, top])
+            XCTAssertEqual(dual.segments[0].end.y, bottom, accuracy: 0.001)
+            XCTAssertEqual(dual.segments[1].end.y, top, accuracy: 0.001)
+            XCTAssertGreaterThan(dual.segments[0].start.y, bottom)
+            XCTAssertLessThan(dual.segments[2].end.y, top)
+            for value in [5.0, 7, 12] {
+                let single = PrivacyCurveGeometry(values: [value - 1, value, value + 1], width: 20,
+                    height: height, coverHeight: cover, references: .init(single: value), dual: false)
+                XCTAssertEqual(single.referenceY, [middle])
+                XCTAssertEqual(single.segments[0].end.y, middle, accuracy: 0.001)
+                XCTAssertGreaterThan(single.segments[0].start.y, middle)
+                XCTAssertLessThan(single.segments[1].end.y, middle)
+            }
+        }
     }
 
     func testInvalidReferenceConfigurationCannotProduceInvalidGeometry() {
@@ -42,6 +47,17 @@ final class CurveAndLifecycleTests: XCTestCase {
             XCTAssertTrue(bounds.contains(segment.control1.y))
             XCTAssertTrue(bounds.contains(segment.control2.y))
         }
+    }
+
+    func testSuccessorUsesOriginalSessionStartAcrossProcessRelaunch() {
+        let start = Date(timeIntervalSince1970: 1000)
+        let deadline = start.addingTimeInterval(8 * 3600)
+        XCTAssertEqual(ActivityLifecyclePolicy.successorDate(start: start,
+            now: start.addingTimeInterval(6 * 3600)), deadline)
+        XCTAssertNil(ActivityLifecyclePolicy.successorDate(start: start, now: deadline))
+        XCTAssertFalse(ActivityLifecyclePolicy.shouldRenew(start: start, now: start, foreground: true))
+        XCTAssertFalse(ActivityLifecyclePolicy.shouldRenew(start: start, now: deadline, foreground: false))
+        XCTAssertTrue(ActivityLifecyclePolicy.shouldRenew(start: start, now: deadline, foreground: true))
     }
 
     func testEndedBackgroundActivityWaitsInsteadOfReceivingUpdates() {

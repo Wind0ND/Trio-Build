@@ -883,19 +883,32 @@
         }
       }
     },
-    "Reference lines guide the display only. They do not change alert thresholds. The curve can cross them; missing readings leave a gap. References above 12 extend the curve scale.": {
-      "extractionState": "manual",
+    "Schedule the next Live Activity": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reference lines guide the display only. They do not change alert thresholds. The curve can cross them; missing readings leave a gap. References above 12 extend the curve scale."
-          }
-        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "参考线仅用于辅助查看，不改变警报阈值。曲线可穿过参考线；缺失读数处会断开。参照值超过 12 时，曲线显示范围会相应扩大。"
+            "value": "预排下一场实时活动"
+          }
+        }
+      }
+    },
+    "The two guides align with the cover edges. The single guide aligns with its center. Changing a reference moves the curve. Missing readings leave a gap.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "双参考线与封面上下沿对齐，单参考线与封面中心对齐。修改参照值会调整曲线位置。缺少读数时，曲线会断开。"
+          }
+        }
+      }
+    },
+    "While hiro is open, prepare one more eight-hour session. iOS announces its start as hiro.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开 hiro 时会预排下一场八小时的实时活动。接班时系统提示 hiro。"
           }
         }
       }
