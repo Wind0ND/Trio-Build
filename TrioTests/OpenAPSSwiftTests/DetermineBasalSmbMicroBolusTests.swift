@@ -3,6 +3,34 @@ import Testing
 @testable import Trio
 
 @Suite("determineBasal SMB microbolus behavior") struct DetermineBasalSmbMicroBolusTests {
+    @Test("Device SMB restriction selects the complete native basal-only algorithm", arguments: [-1, 0, 5])
+    func deviceRestrictionMatchesNativeBasalOnly(delta: Decimal) throws {
+        let inputs = buildInputs(lastBolusOffsetMinutes: 10)
+        var profile = inputs.profile
+        profile.skipNeutralTemps = false
+        let glucoseStatus = GlucoseStatus(
+            delta: delta, glucose: 140, noise: 1, shortAvgDelta: delta, longAvgDelta: delta,
+            date: inputs.currentTime, lastCalIndex: nil, device: "test"
+        )
+        func calculate(deviceAllowsSMB: Bool, userDisablesSMB: Bool) throws -> Determination? {
+            var variables = inputs.trioCustomOrefVariables
+            variables.smbIsOff = userDisablesSMB
+            return try DeterminationGenerator.determineBasal(
+                profile: profile, preferences: inputs.preferences, currentTemp: inputs.currentTemp,
+                iobData: inputs.iobData, mealData: inputs.mealData, autosensData: inputs.autosensData,
+                glucoseStatus: glucoseStatus, microBolusAllowed: deviceAllowsSMB,
+                trioCustomOrefVariables: variables, currentTime: inputs.currentTime
+            )
+        }
+        let native = try #require(calculate(deviceAllowsSMB: true, userDisablesSMB: true))
+        let restricted = try #require(calculate(deviceAllowsSMB: false, userDisablesSMB: false))
+        #expect(native.units == nil)
+        #expect(restricted.units == nil)
+        #expect(restricted.rate == native.rate)
+        #expect(restricted.duration == native.duration)
+        #expect(restricted.iob == native.iob)
+    }
+
     private func buildInputs(lastBolusOffsetMinutes: Decimal) -> (
         profile: Profile,
         preferences: Preferences,

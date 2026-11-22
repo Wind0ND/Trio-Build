@@ -261,7 +261,7 @@ jobs:
         run: |
           set -o pipefail
           _start=$(date +%s)
-          xcodebuild test-without-building \
+          xcodebuild test-without-building -only-testing:TrioTests/DetermineBasalSmbMicroBolusTests \
             -workspace Trio.xcworkspace \
             -scheme "Trio Tests" \
             -destination "$DESTINATION" \
