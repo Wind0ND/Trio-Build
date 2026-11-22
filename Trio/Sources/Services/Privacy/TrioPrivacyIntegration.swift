@@ -35,7 +35,7 @@ enum PrivacyNotificationLifecycle {
         mutations.serialized { generations }
     }
 
-    static func schedule(_ request: UNNotificationRequest, center: UNUserNotificationCenter, completion: @escaping (Error?) -> Void) {
+    static func schedule(_ request: UNNotificationRequest, center: UNUserNotificationCenter, completion: @escaping (Error?, UInt64) -> Void) {
         mutations.serialized {
         generations[request.identifier, default: 0] &+= 1
         cancelled.remove(request.identifier)
@@ -54,10 +54,10 @@ enum PrivacyNotificationLifecycle {
         let prepared = outgoing
         mutations.schedule(request.identifier) {
             guard generations[prepared.identifier, default: 0] == revision, !cancelled.contains(prepared.identifier) else {
-                completion(CocoaError(.userCancelled)); return
+                completion(CocoaError(.userCancelled), revision); return
             }
             center.add(prepared) { error in
-                completion(error)
+                completion(error, revision)
                 if error == nil, PrivacyPreference.alertsEnabled { TrioPrivacyCoordinator.reconcile() }
             }
         }
@@ -86,6 +86,26 @@ enum PrivacyNotificationLifecycle {
         mutations.serialized {
         for identifier in identifiers { generations[identifier, default: 0] &+= 1 }
         cancelled.formUnion(identifiers)
+        }
+    }
+
+    /// Hand sound to the confirmed AlarmKit alarm without moving the visible
+    /// notification's deadline or reviving a retracted/replaced occurrence.
+    static func silencePending(identifier: String, occurrence: String, revision: UInt64,
+                              fireDate: Date, center: UNUserNotificationCenter) {
+        center.getPendingNotificationRequests { requests in
+            guard let request = requests.first(where: { $0.identifier == identifier }),
+                  request.content.userInfo[HiroAlertJournal.occurrenceKey] as? String == occurrence,
+                  let content = request.content.mutableCopy() as? UNMutableNotificationContent else { return }
+            mutations.serialized {
+                let remaining = fireDate.timeIntervalSinceNow
+                guard remaining > 1, generations[identifier, default: 0] == revision,
+                      !cancelled.contains(identifier), !mutations.isRetiring(identifier) else { return }
+                content.sound = nil
+                let trigger = UNTimeIntervalNotificationTrigger(timeInterval: remaining, repeats: false)
+                schedule(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger),
+                         center: center) { _, _ in }
+            }
         }
     }
 

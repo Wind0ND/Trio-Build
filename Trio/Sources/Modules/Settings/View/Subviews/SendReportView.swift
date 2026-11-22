@@ -77,6 +77,15 @@ struct SendReportView: View {
             logsSection
             contactSection
             alsoSentSection
+            if draft.attachLogs || !screenshots.isEmpty {
+                Section("Attachments to send") {
+                    if draft.attachLogs { Text("logs.zip — 3 days of detailed logs") }
+                    ForEach(screenshots.indices, id: \.self) { index in
+                        Text(verbatim: screenshots[index].attachment.filename)
+                    }
+                }
+                .listRowBackground(Color.chart)
+            }
         }
         .scrollContentBackground(.hidden)
         .background(appState.trioBackgroundColor(for: colorScheme))

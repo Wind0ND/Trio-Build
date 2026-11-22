@@ -23,6 +23,8 @@ import PrivacyKit
 /// Ported from Loop's `CriticalAlertAlarmScheduler`.
 @MainActor
 final class CriticalAlertAlarmScheduler {
+    private var pendingSchedules: [UUID: (token: UUID, task: Task<Void, Never>)] = [:]
+    private var burstStops: [UUID: Task<Void, Never>] = [:]
     /// The AlarmKit alarm ID for an alert, derived from the alert identifier so
     /// a relaunched app can still stop an alarm scheduled by an earlier process.
     static func alarmID(for identifier: Alert.Identifier) -> UUID {
@@ -64,13 +66,17 @@ final class CriticalAlertAlarmScheduler {
     /// date schedules silently and never fires, so nudge it a couple seconds ahead.
     private static let immediateFireDelay: TimeInterval = 2
 
-    /// Schedule an (effectively immediate) AlarmKit alarm for the alert.
+    /// Schedule the alert at its fixed deadline, or immediately if none is supplied.
     /// Returns true if AlarmKit will handle it, so the caller skips the audio
     /// fallback. `onScheduleFailure` runs if the async schedule throws, so the
     /// caller can still play the fallback rather than leaving the alert silent.
-    @discardableResult func scheduleAlarm(for alert: Alert, onScheduleFailure: @escaping () -> Void) -> Bool {
+    @discardableResult func scheduleAlarm(for alert: Alert, at deadline: Date? = nil,
+                                         onScheduled: @escaping () -> Void = {},
+                                         onScheduleFailure: @escaping () -> Void) -> Bool {
         guard #available(iOS 26, *), isAuthorizedAndAvailable else { return false }
         #if canImport(AlarmKit)
+            let id = Self.alarmID(for: alert.identifier)
+            let previous = pendingSchedules[id]?.task
             cancelAlarm(for: alert.identifier)
 
             let stopButton = AlarmButton(
@@ -92,28 +98,45 @@ final class CriticalAlertAlarmScheduler {
             // Library/Sounds — which is where Trio's tones now live.
             let sound: AlertConfiguration.AlertSound = alert.sound?.filename
                 .map { .named($0) } ?? .default
+            let fireDate = deadline ?? Date().addingTimeInterval(Self.immediateFireDelay)
             let configuration = AlarmManager.AlarmConfiguration<EmptyAlarmMetadata>.alarm(
-                schedule: .fixed(Date().addingTimeInterval(Self.immediateFireDelay)),
+                schedule: .fixed(fireDate),
                 attributes: attributes,
                 stopIntent: StopCriticalAlertIntent(identifier: alert.identifier),
                 sound: sound
             )
 
-            let id = Self.alarmID(for: alert.identifier)
             let identifier = alert.identifier
             // AlarmKit rings until stopped, so end it after the same burst the
             // in-app player would play. Best-effort: if iOS suspends Trio, it
             // stops on Trio's next wake (the next CGM reading at the latest).
             let burst = alert.sound?.filename
                 .map(CriticalAlertAudioPlayer.burstDuration(forSoundNamed:)) ?? CriticalAlertAudioPlayer.minBurstDuration
-            Task {
+            let token = UUID()
+            let operation = Task {
+                // An earlier schedule can finish after cancellation. Wait for
+                // its cleanup before reusing this alert's stable system ID.
+                await previous?.value
+                defer { if pendingSchedules[id]?.token == token { pendingSchedules[id] = nil } }
+                guard !Task.isCancelled else { return }
+                guard fireDate > Date() else { onScheduleFailure(); return }
                 do {
                     _ = try await AlarmManager.shared.schedule(id: id, configuration: configuration)
+                    guard !Task.isCancelled else {
+                        cancelSystemAlarm(for: identifier)
+                        return
+                    }
                     DiagnosticEventStore.shared.record(feature: "alerts", stage: "alarm", outcome: "scheduled")
                     info(.alerts, "AlarmKit alarm scheduled for \(identifier.value)")
-                    try? await Task.sleep(for: .seconds(Self.immediateFireDelay + burst))
-                    stopIfAlerting(id: id, identifier: identifier)
+                    onScheduled()
+                    burstStops[id] = Task {
+                        do { try await Task.sleep(for: .seconds(max(0, fireDate.timeIntervalSinceNow + burst))) }
+                        catch { return }
+                        stopIfAlerting(id: id, identifier: identifier)
+                        burstStops[id] = nil
+                    }
                 } catch let scheduleError {
+                    guard !Task.isCancelled else { return }
                     DiagnosticEventStore.shared.record(feature: "alerts", stage: "alarm", outcome: "failed")
                     warning(
                         .alerts,
@@ -123,6 +146,7 @@ final class CriticalAlertAlarmScheduler {
                     onScheduleFailure()
                 }
             }
+            pendingSchedules[id] = (token, operation)
             return true
         #else
             return false
@@ -146,6 +170,13 @@ final class CriticalAlertAlarmScheduler {
 
     /// Cancel/stop the AlarmKit alarm scheduled for the given alert, if any.
     func cancelAlarm(for identifier: Alert.Identifier) {
+        let id = Self.alarmID(for: identifier)
+        pendingSchedules[id]?.task.cancel()
+        burstStops.removeValue(forKey: id)?.cancel()
+        cancelSystemAlarm(for: identifier)
+    }
+
+    private func cancelSystemAlarm(for identifier: Alert.Identifier) {
         guard #available(iOS 26, *) else { return }
         #if canImport(AlarmKit)
             let id = Self.alarmID(for: identifier)

@@ -9,9 +9,10 @@ import SwiftUI
 import Swinject
 
 protocol GlucoseStorage {
+    var permitsSimulatedTherapy: Bool { get set }
     var updatePublisher: AnyPublisher<Void, Never> { get }
-    func storeGlucose(_ glucose: [BloodGlucose]) async throws
-    func backfillGlucose(_ glucose: [BloodGlucose]) async throws
+    @discardableResult func storeGlucose(_ glucose: [BloodGlucose]) async throws -> [BloodGlucose]
+    @discardableResult func backfillGlucose(_ glucose: [BloodGlucose]) async throws -> [BloodGlucose]
     func addManualGlucose(glucose: Int)
     func isGlucoseDataFresh(_ glucoseDate: Date?) -> Bool
     func syncDate() -> Date
@@ -47,16 +48,20 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
         static let minimumGlucose: Int = 39
     }
 
+    @SyncAccess var permitsSimulatedTherapy = false
+    private let writeContext: NSManagedObjectContext
     private let makeContext: () -> NSManagedObjectContext
 
     init(resolver: Resolver, contextProvider: (() -> NSManagedObjectContext)? = nil) {
         makeContext = contextProvider ?? { CoreDataStack.shared.newTaskContext() }
+        writeContext = makeContext()
+        writeContext.name = "glucoseStorageWriter"
         injectServices(resolver)
         // One-off cleanup: a future-dated row saved by an older build must go even if no
         // CGM write happens after this launch. An empty array still runs the purge.
         Task { [weak self] in
             guard let self else { return }
-            try? await self.storeGlucose([])
+            _ = try? await self.storeGlucose([])
         }
     }
 
@@ -73,72 +78,64 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
     ///  to deal with source switching perfectly, so instead we will backfill glucose if and only if
     ///  it isn't within 3.5 minutes of an existing glucose reading, which is simple but not perfect.
     ///  But since this is a corner case that really shouldn't happen often, it's good enough.
-    func backfillGlucose(_ glucose: [BloodGlucose]) async throws {
-        let context = makeContext()
-        context.name = "backfillGlucose"
+    @discardableResult func backfillGlucose(_ glucose: [BloodGlucose]) async throws -> [BloodGlucose] {
+        try await writeGlucose(glucose, timeBuffer: Config.filterTime, recordSensorState: false)
+    }
+
+    @discardableResult func storeGlucose(_ glucose: [BloodGlucose]) async throws -> [BloodGlucose] {
+        try await writeGlucose(glucose, timeBuffer: 1, recordSensorState: true)
+    }
+
+    private func writeGlucose(_ glucose: [BloodGlucose], timeBuffer: TimeInterval, recordSensorState: Bool) async throws -> [BloodGlucose] {
+        let context = writeContext
         let clamped = clampToMinimum(glucose)
-
-        try await context.perform {
-            // remove already deleted glucose values
-            let withoutDeletedGlucose = self.filterGlucoseValues(
-                self.dropFutureDatedGlucose(clamped, in: context),
-                fetchRequest: DeletedGlucoseStored.fetchRequest(),
-                timeBuffer: 1,
-                context: context
-            )
-
-            // check for a 3.5 minute difference between existing values
-            let filteredGlucose = self.filterGlucoseValues(
-                withoutDeletedGlucose,
-                fetchRequest: GlucoseStored.fetchRequest(),
-                timeBuffer: 3.5 * 60,
-                // Manual entries must not shadow CGM readings
-                predicate: .cgmGlucose,
-                context: context
-            )
-
-            guard !filteredGlucose.isEmpty else { return }
-
+        return try await context.perform {
             do {
-                // Store glucose values in Core Data
-                try self.storeGlucoseInCoreData(filteredGlucose, context: context)
-            } catch {
-                throw CoreDataError.creationError(
-                    function: #function,
-                    file: #fileID
+                let plausible = try self.dropFutureDatedGlucose(clamped, in: context)
+                let undeleted = try self.filterGlucoseValues(
+                    plausible, fetchRequest: DeletedGlucoseStored.fetchRequest(), timeBuffer: 1, context: context
                 )
+                let stored = try self.storeDistinctGlucose(undeleted, timeBuffer: timeBuffer, in: context)
+                if recordSensorState, !stored.isEmpty { self.storeCGMState(stored.filter { !$0.isSimulated }) }
+                return stored
+            } catch {
+                context.rollback()
+                throw error
             }
         }
     }
 
-    func storeGlucose(_ glucose: [BloodGlucose]) async throws {
-        let context = makeContext()
-        context.name = "storeGlucose"
-        let clamped = clampToMinimum(glucose)
-
-        try await context.perform {
-            // Get new glucose values that don't exist yet
-            let newGlucose = self.filterGlucoseValues(
-                self.dropFutureDatedGlucose(clamped, in: context),
-                fetchRequest: GlucoseStored.fetchRequest(),
-                timeBuffer: 1,
-                context: context
-            )
-            guard !newGlucose.isEmpty else { return }
-
-            do {
-                // Store glucose values in Core Data
-                try self.storeGlucoseInCoreData(newGlucose, context: context)
-            } catch {
-                throw CoreDataError.creationError(
-                    function: #function,
-                    file: #fileID
+    private func storeDistinctGlucose(
+        _ glucose: [BloodGlucose], timeBuffer: TimeInterval, in context: NSManagedObjectContext
+    ) throws -> [BloodGlucose] {
+        var accepted: [BloodGlucose] = []
+        for (_, group) in Dictionary(grouping: glucose, by: { $0.isSimulated }) {
+            guard let first = group.first else { continue }
+            for (manual, entries) in Dictionary(grouping: group, by: { $0.mbg != nil }) {
+                let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                    Self.provenancePredicate(simulated: first.isSimulated),
+                    NSPredicate(format: "isManual == %@", NSNumber(value: manual))
+                ])
+                accepted += try filterGlucoseValues(
+                    entries, fetchRequest: GlucoseStored.fetchRequest(), timeBuffer: timeBuffer,
+                    predicate: predicate, deduplicateBatch: true, context: context
                 )
             }
-
-            // Store CGM state if needed
-            self.storeCGMState(clamped)
         }
+        return try storeGlucoseInCoreData(accepted, context: context)
+    }
+
+    /// Legacy simulator rows lack provenance. Keep manual entries and withhold ambiguous
+    /// legacy CGM history through the last run of the old simulator from treatment queries.
+    static func provenancePredicate(
+        simulated: Bool,
+        legacyLastSimulation: Date? = UserDefaults.standard.getValue(Date.self, forKey: "GlucoseSimulatorLastFetchDate")
+    ) -> NSPredicate {
+        if simulated { return NSPredicate(format: "isSimulated == YES") }
+        return NSPredicate(
+            format: "isSimulated == NO OR (isSimulated == nil AND (isManual == YES OR date > %@))",
+            (legacyLastSimulation ?? .distantPast) as NSDate
+        )
     }
 
     /// Drops incoming readings dated ahead of the phone clock and purges any row a
@@ -151,7 +148,7 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
     private func dropFutureDatedGlucose(
         _ glucose: [BloodGlucose],
         in context: NSManagedObjectContext
-    ) -> [BloodGlucose] {
+    ) throws -> [BloodGlucose] {
         let sanityLimit = Date().addingTimeInterval(300)
         let futureDated = glucose.filter { $0.dateString > sanityLimit }
         if !futureDated.isEmpty {
@@ -159,9 +156,10 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
         }
         let request = GlucoseStored.fetchRequest()
         request.predicate = NSPredicate(format: "date > %@", sanityLimit as NSDate)
-        if let stale = try? context.fetch(request), !stale.isEmpty {
+        let stale = try context.fetch(request)
+        if !stale.isEmpty {
             stale.forEach { context.delete($0) }
-            try? context.save()
+            try context.save()
             debug(.cgm, "Deleted \(stale.count) future-dated glucose reading(s)")
         }
         return glucose.filter { $0.dateString <= sanityLimit }
@@ -176,6 +174,7 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
     /// line so the raw reading survives for diagnostics.
     private func clampToMinimum(_ glucose: [BloodGlucose]) -> [BloodGlucose] {
         glucose.map { entry in
+            guard !entry.isSensorError else { return entry }
             var clamped = entry
             if let raw = entry.glucose, raw < Config.minimumGlucose {
                 debug(.cgm, "Clamped BG \(raw) mg/dL at \(entry.dateString) to \(Config.minimumGlucose) mg/dL")
@@ -198,8 +197,9 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
         fetchRequest: NSFetchRequest<NSFetchRequestResult>,
         timeBuffer: TimeInterval,
         predicate: NSPredicate? = nil,
+        deduplicateBatch: Bool = false,
         context: NSManagedObjectContext
-    ) -> [BloodGlucose] {
+    ) throws -> [BloodGlucose] {
         let datesToCheck = glucose.map(\.dateString).sorted()
         guard let firstDate = datesToCheck.first.map({ $0.addingTimeInterval(-timeBuffer) }),
               let lastDate = datesToCheck.last.map({ $0.addingTimeInterval(timeBuffer) })
@@ -213,29 +213,17 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
         fetchRequest.propertiesToFetch = ["date"]
         fetchRequest.resultType = .dictionaryResultType
 
-        var existingDates = [Date]()
-        do {
-            let results = try context.fetch(fetchRequest) as? [NSDictionary]
-            existingDates = results?.compactMap({ $0["date"] as? Date }) ?? []
-        } catch {
-            warning(.storage, "Fetching existing glucose dates failed", error: error)
-        }
-
-        // This is an inefficient filtering algorithm, but I'm assuming that the
-        // time spans are short and that duplicates are rare, so in the common
-        // case there won't be any existing dates.
-        return glucose.filter { glucose in
-            for existingDate in existingDates {
-                let difference = abs(existingDate.timeIntervalSince(glucose.dateString))
-                if difference <= timeBuffer {
-                    return false
-                }
-            }
+        let results = try context.fetch(fetchRequest) as? [NSDictionary]
+        var existingDates = results?.compactMap { $0["date"] as? Date } ?? []
+        return glucose.sorted { $0.dateString < $1.dateString }.filter { reading in
+            guard !existingDates.contains(where: { abs($0.timeIntervalSince(reading.dateString)) <= timeBuffer })
+            else { return false }
+            if deduplicateBatch { existingDates.append(reading.dateString) }
             return true
         }
     }
 
-    private func storeGlucoseInCoreData(_ glucose: [BloodGlucose], context: NSManagedObjectContext) throws {
+    private func storeGlucoseInCoreData(_ glucose: [BloodGlucose], context: NSManagedObjectContext) throws -> [BloodGlucose] {
         // The single choke point every stored reading passes through (calibrations,
         // live CGM, backfill, Nightscout import all reach here). Enforcing the clock
         // invariant here means no caller can put a future-dated row in the database,
@@ -245,13 +233,13 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
         if plausible.count != glucose.count {
             debug(.cgm, "Refused \(glucose.count - plausible.count) future-dated glucose reading(s) at the store choke point")
         }
-        guard !plausible.isEmpty else { return }
+        guard !plausible.isEmpty else { return [] }
         if plausible.count > 1 {
             try storeGlucoseBatch(plausible, context: context)
         } else {
             try storeGlucoseRegular(plausible, context: context)
         }
-
+        return plausible
     }
 
     private func storeGlucoseRegular(_ glucose: [BloodGlucose], context: NSManagedObjectContext) throws {
@@ -290,9 +278,11 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
         entry.date = glucose.dateString
         entry.direction = glucose.direction?.rawValue
         entry.isManual = glucose.mbg != nil
-        entry.isUploadedToNS = false
-        entry.isUploadedToHealth = false
-        entry.isUploadedToTidepool = false
+        entry.isSimulated = NSNumber(value: glucose.isSimulated)
+        entry.noise = glucose.noise.map { NSNumber(value: $0) }
+        entry.isUploadedToNS = glucose.isSimulated
+        entry.isUploadedToHealth = glucose.isSimulated
+        entry.isUploadedToTidepool = glucose.isSimulated
     }
 
     private func storeCGMState(_ glucose: [BloodGlucose]) {
@@ -401,6 +391,7 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
         // Only CGM readings; a manual entry would filter out the next CGM reading
         fr.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
             NSPredicate.predicateForOneDayAgo,
+            Self.provenancePredicate(simulated: settingsManager.settings.cgm == .simulator),
             NSPredicate.cgmGlucose
         ])
         fr.propertiesToFetch = ["date"]
@@ -433,6 +424,7 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
         // CGM plugins drop readings older than this, so manual entries must not count
         fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
             NSPredicate.predicateForOneDayAgo,
+            Self.provenancePredicate(simulated: settingsManager.settings.cgm == .simulator),
             NSPredicate.cgmGlucose
         ])
         fetchRequest.sortDescriptors = [NSSortDescriptor(keyPath: \GlucoseStored.date, ascending: false)]
@@ -489,6 +481,8 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
     /// (just enough glucose to cover the longest tracked meal absorption plus a small lead-in); Autosens
     /// uses the default 24h because its sensitivity algorithm needs that full window.
     func getGlucoseForAlgorithm(shouldSmoothGlucose: Bool, fetchHours: Decimal) async throws -> [BloodGlucose] {
+        let simulated = settingsManager.settings.cgm == .simulator
+        guard !simulated || permitsSimulatedTherapy else { return [] }
         let context = makeContext()
         let cutoff = Date().addingTimeInterval(-(Double(truncating: fetchHours as NSNumber) * 3600))
 
@@ -497,11 +491,10 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
             onContext: context,
             // Upper bound as well as lower: a future-dated row would otherwise be the
             // newest thing the algorithm sees and the loop would act on it.
-            predicate: NSPredicate(
-                format: "date >= %@ AND date <= %@",
-                cutoff as NSDate,
-                Date().addingTimeInterval(300) as NSDate
-            ),
+            predicate: NSCompoundPredicate(andPredicateWithSubpredicates: [
+                NSPredicate(format: "date >= %@ AND date <= %@", cutoff as NSDate, Date().addingTimeInterval(300) as NSDate),
+                Self.provenancePredicate(simulated: simulated)
+            ]),
             key: "date",
             ascending: false,
             batchSize: 48
@@ -537,7 +530,7 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
         shouldSmoothGlucose: Bool,
         roundingBehavior: NSDecimalNumberHandler
     ) -> Int16 {
-        if shouldSmoothGlucose {
+        if shouldSmoothGlucose, (glucose.noise?.intValue ?? 0) < 3 {
             if !glucose.isManual, let smoothedGlucose = glucose.smoothedGlucose, smoothedGlucose != 0 {
                 return smoothedGlucose.rounding(accordingToBehavior: roundingBehavior).int16Value
             } else {
@@ -579,6 +572,7 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
             direction: glucose.direction.flatMap { BloodGlucose.Direction(rawValue: $0) },
             date: dateMilliseconds,
             dateString: dateString,
+            noise: glucose.noise?.intValue,
             glucose: isManual ? Int(glucoseValue) : nil,
             type: "sgv"
         )
@@ -623,7 +617,7 @@ final class BaseGlucoseStorage: GlucoseStorage, Injectable {
                         dateString: dateString,
                         unfiltered: Decimal(result.glucose),
                         filtered: Decimal(result.glucose),
-                        noise: nil,
+                        noise: result.noise?.intValue,
                         glucose: Int(result.glucose),
                         type: "sgv"
                     )

@@ -64,10 +64,9 @@ final class BaseUserNotificationsManager: NSObject, UserNotificationsManager, In
         notificationCenter.getNotificationCategories { [weak self] existingCategories in
             guard let self else { return }
 
-            let glucoseCategory = NotificationCategoryFactory.createGlucoseCategory()
-
             var categories = existingCategories
-            categories.update(with: glucoseCategory)
+            categories.update(with: NotificationCategoryFactory.makeCategory(.trioAlert))
+            categories.update(with: NotificationCategoryFactory.makeCategory(.quickSnoozeOnly))
             // UNUserNotificationCenter methods should be called on main thread
             Task { @MainActor [weak self] in
                 guard let self else { return }

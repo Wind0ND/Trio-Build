@@ -1,16 +1,20 @@
 import Foundation
 
-// Only an interruption-ended event can release active system ownership.
 struct KeepAliveInterruptionState {
     private var active = false
     private var awaitingResume = false
     var blocked: Bool { active || awaitingResume }
     mutating func began() { active = true; awaitingResume = false }
     mutating func ended(shouldResume: Bool, otherAudio: Bool) { active = false; awaitingResume = !shouldResume && otherAudio }
+    // Returning to the foreground permits recovery if iOS omitted the end notification.
+    mutating func foreground(otherAudio: Bool) { active = false; awaitingResume = otherAudio }
     mutating func wake(otherAudio: Bool) { if !active && !otherAudio { awaitingResume = false } }
 }
 
 struct KeepAliveReminderPolicy {
+    static func fireDate(deadline: Date, snoozeUntil: Date?) -> Date {
+        max(deadline, snoozeUntil ?? deadline)
+    }
     static func acknowledgementAfterSample(_ acknowledged: Date?, sample: Date?, now: Date) -> Date? {
         guard let acknowledged, acknowledged <= now,
               let sample, sample <= now, now.timeIntervalSince(sample) < 360 else { return acknowledged }

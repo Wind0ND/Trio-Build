@@ -41,7 +41,8 @@ public final class BackgroundKeepAlive: ObservableObject {
     }
     public typealias RefreshHandler = (RefreshRequest) -> Void
 
-    private static let reminderID = "background-keep-alive-stall"
+    nonisolated public static let reminderID = "background-keep-alive-stall"
+    nonisolated public static let globalSnoozeUntilKey = "UserNotificationsManager.snoozeUntilDate"
     private static let acknowledgedDeadlineKey = "backgroundKeepAlive.lastScheduledDeadline"
     private let notifications = UNUserNotificationCenter.current()
     private let audio = KeepAliveAudio()
@@ -75,7 +76,13 @@ public final class BackgroundKeepAlive: ObservableObject {
     private var refreshLease: UIBackgroundTaskIdentifier = .invalid
     private var refreshTimeout: Task<Void, Never>?
     private var reminderIsPrivate: Bool?
-    private struct ReminderPlan: Equatable { let deadline: Date?; let privateTitle: String?; var sourceID: String? = nil }
+    private var reminderSnoozeUntil: Date?
+    private struct ReminderPlan: Equatable {
+        let deadline: Date?
+        let privateTitle: String?
+        var sourceID: String? = nil
+        var fireDate: Date? = nil
+    }
     private lazy var reminderWriter = LatestAsyncWriter<ReminderPlan> { [weak self] plan in await self?.applyReminder(plan) }
 
     private init() {
@@ -127,6 +134,9 @@ public final class BackgroundKeepAlive: ObservableObject {
     }
 
     public func setBackground(_ value: Bool) {
+        if !value, interruption.blocked {
+            interruption.foreground(otherAudio: AVAudioSession.sharedInstance().isOtherAudioPlaying)
+        }
         if value != background {
             accountMissedWindows(uptime: ProcessInfo.processInfo.systemUptime)
             windows = PeriodicAudioWindows()
@@ -380,7 +390,9 @@ public final class BackgroundKeepAlive: ObservableObject {
         let privateTitle = privateReminderTitle?()
         let isPrivate = privateTitle != nil
         let privacyChanged = reminderIsPrivate.map { $0 != isPrivate } ?? false
-        if privacyChanged { reminderDeadline = nil }
+        let snoozeUntil = defaults.object(forKey: Self.globalSnoozeUntilKey) as? Date
+        if privacyChanged || reminderSnoozeUntil != snoozeUntil { reminderDeadline = nil }
+        reminderSnoozeUntil = snoozeUntil
         reminderIsPrivate = isPrivate
         if let current = reminderDeadline, current == deadline || (current <= now && deadline <= now) { return }
         if !KeepAliveReminderPolicy.shouldNotify(deadline: deadline, now: now,
@@ -391,7 +403,9 @@ public final class BackgroundKeepAlive: ObservableObject {
         }
         reminderDeadline = deadline
         clearedReminder = false
-        reminderWriter.set(.init(deadline: deadline, privateTitle: privateTitle, sourceID: currentSourceID), force: reminderOutcome == .failed)
+        let fireDate = KeepAliveReminderPolicy.fireDate(deadline: deadline, snoozeUntil: snoozeUntil)
+        reminderWriter.set(.init(deadline: deadline, privateTitle: privateTitle, sourceID: currentSourceID, fireDate: fireDate),
+                           force: reminderOutcome == .failed)
     }
 
     private func applyReminder(_ plan: ReminderPlan) async {
@@ -418,6 +432,8 @@ public final class BackgroundKeepAlive: ObservableObject {
         }
         guard hasSource?() == true, configuration.mode != .off,
               plan.sourceID == currentSourceID,
+              let fireDate = plan.fireDate,
+              fireDate == KeepAliveReminderPolicy.fireDate(deadline: deadline, snoozeUntil: defaults.object(forKey: Self.globalSnoozeUntilKey) as? Date),
               sourceIdentifier == nil || plan.sourceID == sourceIdentifier?(),
               plan.privateTitle == privateReminderTitle?(),
               let current = policy.deadline(interval: 360),
@@ -431,12 +447,12 @@ public final class BackgroundKeepAlive: ObservableObject {
         content.sound = .default
         content.userInfo = ["deadline": deadline.timeIntervalSince1970]
         content.interruptionLevel = .timeSensitive
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, deadline.timeIntervalSinceNow), repeats: false)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, fireDate.timeIntervalSinceNow), repeats: false)
         let request = UNNotificationRequest(identifier: Self.reminderID, content: content, trigger: trigger)
         do {
             try await notifications.add(request)
             guard reminderDeadline == deadline else { return }
-            defaults.set(deadline, forKey: Self.acknowledgedDeadlineKey)
+            defaults.set(fireDate, forKey: Self.acknowledgedDeadlineKey)
             if reminderOutcome != .scheduled { reminderOutcome = .scheduled; record(.reminder, .scheduled) }
         } catch {
             guard reminderDeadline == deadline else { return }

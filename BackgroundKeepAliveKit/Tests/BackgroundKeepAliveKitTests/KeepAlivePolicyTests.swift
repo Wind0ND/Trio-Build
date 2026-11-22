@@ -5,6 +5,26 @@ import XCTest
 final class KeepAlivePolicyTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 10_000)
 
+    func testForegroundRecoversMissingInterruptionEndAndRespectsOtherAudio() {
+        var interruption = KeepAliveInterruptionState()
+        interruption.began()
+        interruption.foreground(otherAudio: true)
+        XCTAssertTrue(interruption.blocked)
+        interruption.wake(otherAudio: false)
+        XCTAssertFalse(interruption.blocked)
+        interruption.began()
+        interruption.foreground(otherAudio: false)
+        XCTAssertFalse(interruption.blocked)
+    }
+
+    func testOutageDueDuringSnoozeKeepsItsDeadlineAndIsDeliveredAtSnoozeEnd() {
+        let deadline = now.addingTimeInterval(360)
+        let snoozeEnd = now.addingTimeInterval(900)
+        XCTAssertEqual(KeepAliveReminderPolicy.fireDate(deadline: deadline, snoozeUntil: snoozeEnd), snoozeEnd)
+        XCTAssertEqual(KeepAliveReminderPolicy.fireDate(deadline: deadline, snoozeUntil: now), deadline)
+        XCTAssertEqual(KeepAliveReminderPolicy.fireDate(deadline: deadline, snoozeUntil: nil), deadline)
+    }
+
     func testAnActiveInterruptionCannotBeClearedByADataWake() {
         var interruption = KeepAliveInterruptionState()
         interruption.began()

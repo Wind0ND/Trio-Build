@@ -4,6 +4,17 @@ import Testing
 @testable import Trio
 
 @Suite("Nightscout Import Round Trip Tests") struct NightscoutImportRoundTripTests {
+    @Test("Malformed Nightscout entries do not discard valid noisy readings") func mixedGlucoseBatch() throws {
+        let payload = Data(#"[{"sgv":127,"dateString":"2026-11-21T09:00:00.000Z","noise":3},{"sgv":130,"dateString":"invalid"}]"#.utf8)
+        let readings = try NightscoutAPI.decodeGlucoseEntries(payload)
+        #expect(readings.count == 1)
+        #expect(readings.first?.glucose == 127)
+        #expect(readings.first?.noise == 3)
+        #expect(throws: URLError.self) {
+            try NightscoutAPI.decodeGlucoseEntries(Data(#"[{"sgv":140,"dateString":"invalid"}]"#.utf8))
+        }
+    }
+
     /// Mirrors the closest value matching in finalizeImport in
     /// OnboardingStateModel+Nightscout.swift.
     private func closestIndex(for value: Decimal, in rateValues: [Decimal]) -> Int {

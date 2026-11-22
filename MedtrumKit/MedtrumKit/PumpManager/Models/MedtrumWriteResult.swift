@@ -14,6 +14,16 @@ enum MedtrumWriteError: LocalizedError {
     case noManager
     case noWriteCharacteristic
 
+    /// A reply lost or damaged after transmission cannot establish whether delivery started.
+    var deliveryMayHaveStarted: Bool {
+        switch self {
+        case .timeout, .noData, .invalidData:
+            return true
+        case .alreadyRunning, .invalidResponse, .noManager, .noWriteCharacteristic:
+            return false
+        }
+    }
+
     public var errorDescription: String {
         switch self {
         case .timeout:

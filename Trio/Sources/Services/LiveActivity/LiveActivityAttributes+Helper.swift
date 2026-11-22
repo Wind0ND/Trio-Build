@@ -30,14 +30,16 @@ extension LiveActivityAttributes.ContentState {
     /// Privacy must take effect even while Core Data is loading or has no recent samples.
     static func privateFallback(
         previous: Self?, settings: TrioSettings,
-        cover: Data? = UserDefaults.standard.data(forKey: PrivacyPreference.coverKey)
+        cover: Data? = UserDefaults.standard.data(forKey: PrivacyPreference.coverKey),
+        islandSymbolTest: Bool = PrivacyPreference.islandSymbolTestEnabled
     ) -> Self {
         // A public chart no longer carries manual provenance. Wait for an accepted CGM snapshot.
         let readings: [PrivacyReading] = []
-        let snapshot = previous?.privacy?.replacingCover(cover).replacingMeterStyle(.stored()).replacingCurveReferences(.stored()) ?? PrivacyActivityState(
+        var snapshot = previous?.privacy?.replacingCover(cover).replacingMeterStyle(.stored()).replacingCurveReferences(.stored()) ?? PrivacyActivityState(
             readings: readings, now: Date(), palette: .stored(),
             cover: cover, meterStyle: .stored()
         )
+        snapshot.islandSymbolTest = islandSymbolTest ? true : nil
         let empty = LiveActivityAttributes.ContentAdditionalState(
             chart: [], rotationDegrees: 0, cob: 0, iob: 0, tdd: 0,
             isOverrideActive: false, overrideName: "", overrideDate: .distantPast, overrideDuration: 0, overrideTarget: 0,
@@ -74,16 +76,18 @@ extension LiveActivityAttributes.ContentState {
         widgetItems: [LiveActivityAttributes.LiveActivityItem]?,
         privateDisplay: Bool = PrivacyPreference.displayEnabled,
         privateCover: Data? = UserDefaults.standard.data(forKey: PrivacyPreference.coverKey),
-        privateRecoveredAt: Date? = nil
+        privateRecoveredAt: Date? = nil,
+        islandSymbolTest: Bool = PrivacyPreference.islandSymbolTestEnabled
     ) {
         let now = Date()
         let privateReadings = chart.filter { !$0.isManual && $0.glucose > 0 && $0.date <= now }
-        let privateSnapshot = privateDisplay ? PrivacyActivityState(
+        var privateSnapshot = privateDisplay ? PrivacyActivityState(
             readings: privateReadings.map { PrivacyReading(mgDL: Double($0.glucose), date: $0.date) },
             now: now, palette: .stored(), cover: privateCover,
             recoveredAt: privateReadings.first?.date == bg.date ? privateRecoveredAt : nil,
             meterStyle: .stored()
         ) : nil
+        privateSnapshot?.islandSymbolTest = islandSymbolTest ? true : nil
         let glucose = bg.glucose
         let formattedBG = glucose.formatted(for: units)
         var rotationDegrees = 0.0

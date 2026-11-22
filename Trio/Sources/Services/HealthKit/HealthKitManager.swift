@@ -277,88 +277,45 @@ final class BaseHealthKitManager: HealthKitManager, Injectable {
     }
 
     func uploadCarbs(_ carbs: [CarbsEntry]) async {
-        guard settingsManager.settings.useAppleHealth,
-              let carbSampleType = AppleHealthConfig.healthCarbObject,
-              let fatSampleType = AppleHealthConfig.healthFatObject,
-              let proteinSampleType = AppleHealthConfig.healthProteinObject,
-              checkWriteToHealthPermissions(objectTypeToHealthStore: carbSampleType),
-              carbs.isNotEmpty
-        else { return }
-
+        guard settingsManager.settings.useAppleHealth, !carbs.isEmpty else { return }
+        let export = Self.nutritionExport(carbs, authorized: checkWriteToHealthPermissions(objectTypeToHealthStore:))
+        guard !export.samples.isEmpty else { return }
         do {
-            var samples: [HKQuantitySample] = []
-
-            // Create HealthKit samples for carbs, fat, and protein
-            for allSamples in carbs {
-                guard let id = allSamples.id else { continue }
-                let fpuID = allSamples.fpuID ?? id
-                let startDate = allSamples.actualDate ?? Date()
-
-                // Carbs Sample (only if value is greater than 0)
-                let carbValue = allSamples.carbs
-                if carbValue > 0 {
-                    let carbSample = HKQuantitySample(
-                        type: carbSampleType,
-                        quantity: HKQuantity(unit: .gram(), doubleValue: Double(carbValue)),
-                        start: startDate,
-                        end: startDate,
-                        metadata: [
-                            HKMetadataKeyExternalUUID: id,
-                            HKMetadataKeySyncIdentifier: id,
-                            HKMetadataKeySyncVersion: 1
-                        ]
-                    )
-                    samples.append(carbSample)
-                }
-
-                // Fat Sample (only if value is greater than 0)
-                if let fatValue = allSamples.fat, fatValue > 0 {
-                    let fatSample = HKQuantitySample(
-                        type: fatSampleType,
-                        quantity: HKQuantity(unit: .gram(), doubleValue: Double(fatValue)),
-                        start: startDate,
-                        end: startDate,
-                        metadata: [
-                            HKMetadataKeyExternalUUID: fpuID,
-                            HKMetadataKeySyncIdentifier: fpuID,
-                            HKMetadataKeySyncVersion: 1
-                        ]
-                    )
-                    samples.append(fatSample)
-                }
-
-                // Protein Sample (only if value is greater than 0)
-                if let proteinValue = allSamples.protein, proteinValue > 0 {
-                    let proteinSample = HKQuantitySample(
-                        type: proteinSampleType,
-                        quantity: HKQuantity(unit: .gram(), doubleValue: Double(proteinValue)),
-                        start: startDate,
-                        end: startDate,
-                        metadata: [
-                            HKMetadataKeyExternalUUID: fpuID,
-                            HKMetadataKeySyncIdentifier: fpuID,
-                            HKMetadataKeySyncVersion: 1
-                        ]
-                    )
-                    samples.append(proteinSample)
-                }
-            }
-
-            // Attempt to save the samples to Apple Health
-            guard samples.isNotEmpty else {
-                debug(.healthKit, "No carb samples to upload")
-                return
-            }
-
-            try await healthKitStore.save(samples)
-            debug(.healthKit, "Uploaded \(samples.count) carb samples to Apple Health")
-
-            // After successful upload, update the isUploadedToHealth flag in Core Data
-            await updateCarbsAsUploaded(carbs)
-
+            try await healthKitStore.save(export.samples)
+            if !export.completed.isEmpty { await updateCarbsAsUploaded(export.completed) }
         } catch {
-            warning(.healthKit, "Uploading carb samples to Apple Health failed", error: error)
+            warning(.healthKit, "Uploading nutrition samples to Apple Health failed", error: error)
         }
+    }
+
+    /// A meal may be partially authorized. Stable sync identifiers let a later grant
+    /// fill in the missing nutrients without duplicating quantities already exported.
+    static func nutritionExport(_ meals: [CarbsEntry], authorized: (HKObjectType) -> Bool)
+        -> (samples: [HKQuantitySample], completed: [CarbsEntry]) {
+        let allowed = Set([AppleHealthConfig.healthCarbObject, AppleHealthConfig.healthFatObject,
+                           AppleHealthConfig.healthProteinObject].compactMap { $0 }.filter { authorized($0) })
+        var samples: [HKQuantitySample] = []
+        var completed: [CarbsEntry] = []
+        for meal in meals {
+            guard let id = meal.id else { continue }
+            let fpuID = meal.fpuID ?? id
+            let date = meal.actualDate ?? meal.createdAt
+            let nutrients: [(HKQuantityType?, Decimal, String)] = [
+                (AppleHealthConfig.healthCarbObject, meal.carbs, id),
+                (AppleHealthConfig.healthFatObject, meal.fat ?? 0, fpuID),
+                (AppleHealthConfig.healthProteinObject, meal.protein ?? 0, fpuID)
+            ]
+            var allAuthorized = true
+            for (type, amount, syncID) in nutrients where amount > 0 {
+                guard let type, allowed.contains(type) else { allAuthorized = false; continue }
+                samples.append(HKQuantitySample(type: type,
+                    quantity: HKQuantity(unit: .gram(), doubleValue: Double(amount)),
+                    start: date, end: date, metadata: [HKMetadataKeyExternalUUID: syncID,
+                        HKMetadataKeySyncIdentifier: syncID, HKMetadataKeySyncVersion: 1]))
+            }
+            if allAuthorized { completed.append(meal) }
+        }
+        return (samples, completed)
     }
 
     private func updateCarbsAsUploaded(_ carbs: [CarbsEntry]) async {

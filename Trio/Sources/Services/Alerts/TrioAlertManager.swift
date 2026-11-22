@@ -1,3 +1,4 @@
+import BackgroundKeepAliveKit
 import Combine
 import Foundation
 import PrivacyKit
@@ -66,7 +67,8 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
     /// Mirror of `CriticalAlertAlarmScheduler.isAuthorizedAndAvailable`, read
     /// off the main actor so `issueAlert` can decide synchronously whether
     /// AlarmKit will sound this alert.
-    private var alarmKitAvailable = false
+    @SyncAccess private var alarmKitAvailable = false
+    @MainActor private var delayedAlarmOccurrences: [Alert.Identifier: String] = [:]
 
     let modalScheduler: TrioModalAlertScheduler
     private let userNotificationScheduler: TrioUserNotificationAlertScheduler
@@ -183,23 +185,51 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
     /// Focus modes then mute — dangerous for an overnight urgent-low.
     /// `.playback` audio session bypasses those.
     ///
-    /// Only fires for immediate-trigger alerts; delayed/repeating go
-    /// through UNNotification at fire time. No-op when muted or non-critical.
-    private func playCriticalAudioFallbackIfNeeded(_ alert: Alert, muted: Bool) {
-        guard alert.interruptionLevel == .critical, !muted else { return }
+    /// Called on an actual fire. A delayed alarm already owned by AlarmKit
+    /// needs no second audible channel when its in-app timer also fires.
+    private func playCriticalAudioFallbackIfNeeded(_ alert: Alert) {
+        guard alert.interruptionLevel == .critical else { return }
         // Honor `playsSound: false` (alert was issued with sound: nil) —
         // user explicitly opted out of audio on this alarm.
         guard let soundName = alert.sound?.filename else { return }
         Task { @MainActor in
+            guard isCurrentOccurrence(alert) else { return }
+            if let occurrence = alert.metadata?[HiroAlertJournal.occurrenceKey]?.wrapped as? String,
+               delayedAlarmOccurrences[alert.identifier] == occurrence { return }
             // AlarmKit pierces silent/Focus and survives app suspension.
             if alarmScheduler == nil { alarmScheduler = CriticalAlertAlarmScheduler() }
-            let scheduled = alarmScheduler?.scheduleAlarm(for: alert) { [weak self] in
-                Task { @MainActor in self?.playAudioFallback(soundNamed: soundName, for: alert.identifier) }
-            } ?? false
+            let scheduled = alarmScheduler?.scheduleAlarm(for: alert, onScheduleFailure: { [weak self] in
+                Task { @MainActor in
+                    guard let self, isCurrentOccurrence(alert) else { return }
+                    playAudioFallback(soundNamed: soundName, for: alert.identifier)
+                }
+            }) ?? false
             guard !scheduled else { return }
             // Fallback: in-process audio. Only sounds while Trio is running.
             playAudioFallback(soundNamed: soundName, for: alert.identifier)
         }
+    }
+
+    private func isCurrentOccurrence(_ alert: Alert) -> Bool {
+        guard let occurrence = alert.metadata?[HiroAlertJournal.occurrenceKey]?.wrapped as? String else { return false }
+        return queue.sync {
+            liveAlerts[alert.identifier]?.metadata?[HiroAlertJournal.occurrenceKey]?.wrapped as? String == occurrence
+        }
+    }
+
+    @MainActor private func armDelayedAlarm(_ alert: Alert, fireDate: Date, occurrence: String, revision: UInt64) {
+        guard isCurrentOccurrence(alert), fireDate > Date() else { return }
+        if alarmScheduler == nil { alarmScheduler = CriticalAlertAlarmScheduler() }
+        let accepted = alarmScheduler?.scheduleAlarm(for: alert, at: fireDate, onScheduled: {
+            guard self.isCurrentOccurrence(alert) else { return }
+            PrivacyNotificationLifecycle.silencePending(identifier: alert.identifier.value, occurrence: occurrence, revision: revision,
+                                                       fireDate: fireDate, center: .current())
+        }, onScheduleFailure: {
+            if self.delayedAlarmOccurrences[alert.identifier] == occurrence {
+                self.delayedAlarmOccurrences.removeValue(forKey: alert.identifier)
+            }
+        }) ?? false
+        if accepted { delayedAlarmOccurrences[alert.identifier] = occurrence }
     }
 
     @MainActor private func playAudioFallback(soundNamed soundName: String, for identifier: Alert.Identifier) {
@@ -278,25 +308,22 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
             self.liveAlerts[tracked.identifier] = tracked
         }
         recordIssued(effective)
-        let muted = muter.shouldMute(at: now)
         modalScheduler.schedule(effective)
-        // AlarmKit sounds critical alerts itself; posting the notification with
-        // a sound too would play the tone twice, at once.
-        let alarmKitWillSound = alarmKitAvailable
-            && effective.interruptionLevel == .critical
-            && effective.sound?.filename != nil
-            && !muted
-        userNotificationScheduler.schedule(
-            effective,
-            muted: muted,
-            soundURL: soundLoader.url(for: effective),
-            silenced: alarmKitWillSound
-        )
-        // `.delayed`/`.repeating` alerts start their audio when the timer
-        // fires (`alertDidFire`), not now — this is only their arm time.
-        if case .immediate = effective.trigger {
+        let soundURL = soundLoader.url(for: effective)
+        let criticalTone = effective.interruptionLevel == .critical && effective.sound?.filename != nil
+        switch effective.trigger {
+        case .immediate:
+            userNotificationScheduler.schedule(effective, soundURL: soundURL, silenced: criticalTone && alarmKitAvailable)
             HiroAlertJournal.shared.triggered(id: occurrence)
-            playCriticalAudioFallbackIfNeeded(effective, muted: muted)
+            playCriticalAudioFallbackIfNeeded(effective)
+        case .delayed where criticalTone:
+            // Arm an audible OS notification first. Only a successful AlarmKit
+            // submission can take over its sound, and both target the same date.
+            userNotificationScheduler.schedule(tracked, soundURL: soundURL) { [weak self] revision in
+                Task { @MainActor in self?.armDelayedAlarm(tracked, fireDate: fireDate, occurrence: occurrence.uuidString, revision: revision) }
+            }
+        default:
+            userNotificationScheduler.schedule(effective, soundURL: soundURL)
         }
     }
 
@@ -335,6 +362,7 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
         throttler.reset(identifier: identifier)
         Task { @MainActor in
             stopCriticalAudio(for: identifier)
+            delayedAlarmOccurrences.removeValue(forKey: identifier)
             alarmScheduler?.cancelAlarm(for: identifier)
         }
         alertHistoryStorage.removeAlert(managerIdentifier: identifier.managerIdentifier, identifier: identifier.alertIdentifier)
@@ -377,6 +405,7 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
         userNotificationScheduler.unschedule(identifier: identifier)
         Task { @MainActor in
             stopCriticalAudio(for: identifier)
+            delayedAlarmOccurrences.removeValue(forKey: identifier)
             alarmScheduler?.cancelAlarm(for: identifier)
         }
         // All matching entries — replay + a genuine re-issue can coexist.
@@ -433,7 +462,9 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
         //
         // The snooze path acknowledges too, so history and the issuing device
         // still see the user's response.
-        let duration = Self.snoozeDuration(forActionIdentifier: response.actionIdentifier)
+        let category = NotificationCategoryIdentifier.alert(isCritical: response.notification.request.content.interruptionLevel == .critical,
+            slug: alertId)
+        let duration = category.limitSnooze(Self.snoozeDuration(forActionIdentifier: response.actionIdentifier))
         modalScheduler.snooze(identifier: identifier, duration: duration)
         userNotificationScheduler.unschedule(identifier: identifier)
     }
@@ -454,7 +485,7 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
             let center = UNUserNotificationCenter.current()
             center.getPendingNotificationRequests { requests in
                 let ids = requests
-                    .filter { $0.content.interruptionLevel != .critical }
+                    .filter { $0.content.interruptionLevel != .critical && $0.identifier != BackgroundKeepAlive.reminderID }
                     .map(\.identifier)
                 if !ids.isEmpty {
                     PrivacyNotificationLifecycle.invalidate(ids)
@@ -479,7 +510,7 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
         let center = UNUserNotificationCenter.current()
         center.getPendingNotificationRequests { requests in
             let ids = requests
-                .filter { $0.content.interruptionLevel != .critical }
+                .filter { $0.content.interruptionLevel != .critical && $0.identifier != BackgroundKeepAlive.reminderID }
                 .map(\.identifier)
             guard !ids.isEmpty else { return }
             PrivacyNotificationLifecycle.invalidate(ids)
@@ -498,12 +529,15 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
 
     /// Persisted under the same key UN reads, so a force-quit + relaunch
     /// during a snooze sees the same end-date.
-    private static let snoozeUntilDateKey = "UserNotificationsManager.snoozeUntilDate"
+    private static let snoozeUntilDateKey = BackgroundKeepAlive.globalSnoozeUntilKey
     private static let legacyGlucoseNotificationID = "Trio.glucoseNotification"
 
     @MainActor func applySnooze(for duration: TimeInterval) async {
         let untilDate = duration > 0 ? Date().addingTimeInterval(duration) : .distantPast
         UserDefaults.standard.set(untilDate, forKey: Self.snoozeUntilDateKey)
+        // The watchdog owns its single pending notification and shifts it to
+        // the end of the snooze if the outage would otherwise ring during it.
+        BackgroundKeepAlive.shared.settingsChanged()
 
         // Legacy glucose-notification UN cleanup (the new pipeline uses
         // per-alarm identifiers; this catches anything still lingering
@@ -629,7 +663,7 @@ extension BaseTrioAlertManager: TrioModalAlertResponder, TrioUserNotificationAle
     func alertDidFire(_ alert: Alert) {
         if let raw = alert.metadata?[HiroAlertJournal.occurrenceKey]?.wrapped as? String,
            let id = UUID(uuidString: raw) { HiroAlertJournal.shared.triggered(id: id) }
-        playCriticalAudioFallbackIfNeeded(alert, muted: muter.shouldMute(at: Date()))
+        playCriticalAudioFallbackIfNeeded(alert)
     }
 
     func isAlertActive(identifier: Alert.Identifier) -> Bool {
@@ -646,11 +680,6 @@ extension BaseTrioAlertManager: TrioModalAlertResponder, TrioUserNotificationAle
 /// `snoozedUntil` field on every matching `GlucoseAlert`.
 protocol GlucoseSnoozeObserver {
     func snoozeGlucoseType(_ type: GlucoseAlertType, until: Date)
-}
-
-enum AlertUserInfoKey: String {
-    case managerIdentifier = "trio.alert.managerIdentifier"
-    case alertIdentifier = "trio.alert.alertIdentifier"
 }
 
 // MARK: - Muter

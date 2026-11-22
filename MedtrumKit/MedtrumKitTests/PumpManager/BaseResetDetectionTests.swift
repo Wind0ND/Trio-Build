@@ -128,3 +128,28 @@ final class BaseResetDetectionTests: XCTestCase {
         XCTAssertEqual(stoppedAt, now)
     }
 }
+
+extension BaseResetDetectionTests {
+    func testWriteFailureOnlyReleasesDoseWhenCommandWasRejectedOrNeverIssued() {
+        for error in [MedtrumWriteError.timeout, .invalidData, .noData] {
+            XCTAssertTrue(error.deliveryMayHaveStarted)
+        }
+        for error in [MedtrumWriteError.noManager, .noWriteCharacteristic, .alreadyRunning, .invalidResponse(code: 1)] {
+            XCTAssertFalse(error.deliveryMayHaveStarted)
+        }
+    }
+
+    func testAReconnectWithoutProgressPreservesLastKnownUnitsAcrossRestart() throws {
+        let state = makeState(pumpState: .active)
+        let dose = UnfinalizedDose(decisionId: nil, units: 3, duration: 120, activationType: .automatic, insulinType: nil)
+        dose.deliveredUnits = 0.5
+        state.bolusDose = dose
+        let manager = try XCTUnwrap(MedtrumPumpManager(rawState: state.rawValue))
+        manager.checkBolusDone()
+        let restored = MedtrumPumpState(rawValue: manager.state.rawValue)
+        XCTAssertEqual(restored.bolusDose?.deliveredUnits, 0.5)
+        XCTAssertEqual(restored.bolusDose?.value, 3)
+        XCTAssertTrue(restored.bolusDeliveryUncertain)
+        XCTAssertTrue(manager.status.deliveryIsUncertain)
+    }
+}

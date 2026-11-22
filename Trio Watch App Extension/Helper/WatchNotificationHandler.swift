@@ -17,10 +17,9 @@ final class WatchNotificationHandler: NSObject, UNUserNotificationCenterDelegate
 
     private func registerCategories(on center: UNUserNotificationCenter) {
         center.getNotificationCategories { existingCategories in
-            let glucoseCategory = NotificationCategoryFactory.createGlucoseCategory()
-
             var categories = existingCategories
-            categories.update(with: glucoseCategory)
+            categories.update(with: NotificationCategoryFactory.makeCategory(.trioAlert))
+            categories.update(with: NotificationCategoryFactory.makeCategory(.quickSnoozeOnly))
             // UNUserNotificationCenter methods should be called on main thread
             Task { @MainActor in
                 center.setNotificationCategories(categories)
@@ -38,7 +37,10 @@ final class WatchNotificationHandler: NSObject, UNUserNotificationCenterDelegate
         defer { completionHandler() }
 
         guard let action = NotificationResponseAction(rawValue: response.actionIdentifier) else { return }
-        sendSnoozeRequest(minutes: action.minutes)
+        let content = response.notification.request.content
+        let category = NotificationCategoryIdentifier.alert(isCritical: content.interruptionLevel == .critical,
+            slug: content.userInfo[AlertUserInfoKey.alertIdentifier.rawValue] as? String ?? "")
+        sendSnoozeRequest(minutes: Int(category.limitSnooze(action.duration) / 60))
     }
 
     /// Sends snooze request to iPhone via WatchConnectivity.

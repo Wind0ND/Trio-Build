@@ -64,9 +64,13 @@ public struct AlertJournal: Codable, Sendable {
     }
     public mutating func prune(now: Date) { entries = recent(now: now) }
     public func recent(now: Date) -> [JournalAlert] {
-        entries.filter {
-            let anchor = $0.triggeredAt ?? $0.issuedAt
-            return anchor >= now.addingTimeInterval(-86_400) && anchor <= now
+        let cutoff = now.addingTimeInterval(-86_400)
+        return entries.filter { entry in
+            guard entry.issuedAt <= now else { return false }
+            if let triggered = entry.triggeredAt { return triggered >= cutoff && triggered <= now }
+            let closed = [entry.acknowledgedAt, entry.cancelledAt, entry.resolvedAt].compactMap { $0 }.min()
+            // Long-running plans need their occurrence ID through the delivery import window.
+            return (closed ?? entry.scheduledFor ?? entry.issuedAt) >= cutoff
         }.sorted { ($0.triggeredAt ?? $0.issuedAt) > ($1.triggeredAt ?? $1.issuedAt) }
     }
 }

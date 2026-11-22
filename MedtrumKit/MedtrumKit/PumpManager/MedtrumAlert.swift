@@ -47,6 +47,10 @@ enum MedtrumAlert {
 
     var alert: Alert {
         let content = alertContent
+        if case .baseResetNotification = self {
+            return Alert(identifier: identifier, foregroundContent: content, backgroundContent: content, trigger: trigger,
+                         interruptionLevel: .critical, sound: .sound(name: "honk.caf"))
+        }
         return Alert(
             identifier: identifier,
             foregroundContent: content,

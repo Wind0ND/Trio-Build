@@ -4,6 +4,7 @@ import CoreData
 import Foundation
 import LoopKit
 import LoopKitUI
+import MockKit
 import SwiftDate
 import Swinject
 import UIKit
@@ -12,7 +13,7 @@ protocol FetchGlucoseManager: SourceInfoProvider {
     func updateGlucoseSource(cgmGlucoseSourceType: CGMType, cgmGlucosePluginId: String, newManager: CGMManagerUI?)
     func deleteGlucoseSource() async
     func removeCalibrations()
-    func newGlucoseFromCgmManager(newGlucose: [BloodGlucose])
+    func newGlucoseFromCgmManager(newGlucose: [BloodGlucose], revision: UUID, completion: @escaping (Bool) -> Void)
     func requestRecovery(completion: @escaping @Sendable (Bool) -> Void)
     func requestRecovery(isAuthorized: @escaping @Sendable () -> Bool, completion: @escaping @Sendable (Bool) -> Void)
     var recoverySourceRevision: UUID { get }
@@ -52,12 +53,7 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
     private let freshnessIdentity = KeepAliveSourceIdentity()
     var freshnessSourceID: String { freshnessIdentity.id }
     private typealias SourceResult = (glucose: [BloodGlucose], owner: String, revision: UUID)
-    private let recoveryRevisionLock = NSLock()
-    private var recoveryRevision = UUID()
-    var recoverySourceRevision: UUID {
-        recoveryRevisionLock.lock(); defer { recoveryRevisionLock.unlock() }
-        return recoveryRevision
-    }
+    var recoverySourceRevision: UUID { deviceDataManager.glucoseSourceRevision }
     private let processQueue = DispatchQueue(label: "BaseGlucoseManager.processQueue")
 
     @Injected() var broadcaster: Broadcaster!
@@ -186,8 +182,8 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
                         defer { self.glucoseStoreAndHeartLock.signal() }
                         guard current() else { completion(false); return }
                         do {
-                            try await self.glucoseStoreAndHeartDecision(syncDate: syncDate, glucose: glucose, isAuthorized: current, sourceID: owner)
-                            completion(current())
+                            let stored = try await self.glucoseStoreAndHeartDecision(syncDate: syncDate, glucose: glucose, isAuthorized: current, sourceID: owner)
+                            completion(current() && stored)
                         } catch {
                             warning(.cgm, "Recovery storage failed", error: error)
                             completion(false)
@@ -204,8 +200,8 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
     /// to the FetchGlucoseManager, bypassing the Combine pipeline. By bypassing the
     /// Combine pipeline CGM managers can send backfill glucose readings, which come
     /// right after a new glucose reading, typically.
-    func newGlucoseFromCgmManager(newGlucose: [BloodGlucose]) {
-        let revision = recoverySourceRevision
+    func newGlucoseFromCgmManager(newGlucose: [BloodGlucose], revision: UUID, completion: @escaping (Bool) -> Void) {
+        guard revision == recoverySourceRevision else { completion(false); return }
         let owner = freshnessSourceID
         glucoseStoreAndHeartLock.wait()
         let syncDate = glucoseStorage.syncDate()
@@ -216,8 +212,10 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
                     glucose: newGlucose,
                     isAuthorized: { self.recoverySourceRevision == revision }, sourceID: owner
                 )
+                completion(recoverySourceRevision == revision)
             } catch {
                 warning(.cgm, "Storing glucose from the CGM failed", error: error)
+                completion(false)
             }
             glucoseStoreAndHeartLock.signal()
         }
@@ -229,7 +227,7 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
 
     var glucoseSource: GlucoseSource? {
         didSet {
-            recoveryRevisionLock.lock(); recoveryRevision = UUID(); recoveryRevisionLock.unlock()
+            deviceDataManager.glucoseSourceRevision = UUID()
             // Drop prior subscriptions so source swaps don't dupe emissions.
             cgmStatusSubscriptions.removeAll()
             cgmDisplayState.value = glucoseSource?.cgmDisplayState.value
@@ -268,7 +266,12 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
     }
 
     func startCGMSensorSession(startedAt: Date) {
-        sensorStateLock.perform { sensorStateLog.startSensor(startedAt: startedAt) }
+        let changed = sensorStateLock.perform {
+            guard sensorStateLog.sensorSessionStart != startedAt else { return false }
+            sensorStateLog.startSensor(startedAt: startedAt)
+            return true
+        }
+        if changed { removeCalibrations() }
     }
 
     @MainActor func deleteGlucoseSource() async {
@@ -325,9 +328,11 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
         // if plugin, if not the same pluginID, need to reset the cgmManager
         // if plugin and newManager provides, update cgmManager
         if let manager = newManager {
-            if replacing { glucoseSource = nil }
+            if replacing {
+                glucoseSource = nil
+                removeCalibrations()
+            }
             cgmManager = manager
-            removeCalibrations()
         } else if self.cgmGlucoseSourceType == .plugin, cgmManager == nil, let rawCGMManager = rawCGMManager {
             cgmManager = cgmManagerFromRawValue(rawCGMManager)
             updateManagerUnits(cgmManager)
@@ -370,82 +375,54 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
         return Manager.init(rawState: rawState)
     }
 
-    private func glucoseStoreAndHeartDecision(syncDate: Date, glucose: [BloodGlucose],
-                                             isAuthorized: @Sendable () -> Bool = { true }, sourceID: String? = nil) async throws {
-        guard isAuthorized() else { return }
-        // calibration add if required only for sensor
+    @discardableResult private func glucoseStoreAndHeartDecision(
+        syncDate: Date, glucose: [BloodGlucose], isAuthorized: @Sendable () -> Bool = { true }, sourceID: String? = nil
+    ) async throws -> Bool {
+        guard isAuthorized() else { return false }
+        if glucose.contains(where: \.isSimulated),
+           let pump = deviceDataManager.pumpManager, !(pump is MockPumpManager) { return false }
         let newGlucose = overcalibrate(entries: glucose.filter { $0.sgv != nil })
-
-        var filteredByDate: [BloodGlucose] = []
-        var filtered: [BloodGlucose] = []
-
-        // Start background task
-        var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
-        backgroundTaskID = startBackgroundTask(withName: "Glucose Store and Heartbeat Decision")
+        var backgroundTaskID = startBackgroundTask(withName: "Glucose Store and Heartbeat Decision")
         defer { endBackgroundTaskSafely(&backgroundTaskID, taskName: "Glucose Store and Heartbeat Decision") }
 
-        // Check if sensor emitted calibrations
         let calibrations = glucose.filter { $0.mbg != nil }
-        if calibrations.isNotEmpty {
-            guard isAuthorized() else { return }
-            debug(.cgm, "Storing \(calibrations.count) calibrations")
+        if !calibrations.isEmpty {
+            guard isAuthorized() else { return false }
             try await glucoseStorage.storeGlucose(calibrations)
         }
 
-        guard newGlucose.isNotEmpty else {
-            return
+        let backfill = newGlucose.filter { $0.dateString <= syncDate }
+        var storedBackfill: [BloodGlucose] = []
+        if !backfill.isEmpty {
+            guard isAuthorized() else { return false }
+            storedBackfill = try await glucoseStorage.backfillGlucose(backfill)
+            guard isAuthorized() else { return false }
+            reportAcceptedSamples(storedBackfill, sourceID: sourceID)
         }
 
-        let backfillGlucose = newGlucose.filter { $0.dateString <= syncDate }
-        var storedBackfill = false
-        if backfillGlucose.isNotEmpty {
-            guard isAuthorized() else { return }
-            debug(.cgm, "Backfilling \(backfillGlucose.count) glucose readings")
-            do {
-                try await glucoseStorage.backfillGlucose(backfillGlucose)
-                storedBackfill = true
-            } catch {
-                warning(.cgm, "Backfilling glucose failed", error: error)
-            }
-        }
-
-        filteredByDate = newGlucose.filter { $0.dateString > syncDate }
-        filtered = glucoseStorage.filterTooFrequentGlucose(filteredByDate, at: syncDate)
-        if filtered.count < filteredByDate.count {
-            debug(
-                .cgm,
-                "Skipped \(filteredByDate.count - filtered.count) glucose readings too close to last CGM reading at \(syncDate)"
-            )
-        }
-
-        guard filtered.isNotEmpty else {
-            if storedBackfill, isAuthorized() { reportAcceptedSamples(backfillGlucose, sourceID: sourceID) }
-            return
-        }
-        debug(.cgm, "Storing \(filtered.count) new glucose readings")
-
-        guard isAuthorized() else { return }
-        try await glucoseStorage.storeGlucose(filtered)
-
-        guard isAuthorized() else { return }
-        reportAcceptedSamples(filtered + (storedBackfill ? backfillGlucose : []), sourceID: sourceID)
+        let fresh = glucoseStorage.filterTooFrequentGlucose(newGlucose.filter { $0.dateString > syncDate }, at: syncDate)
+        guard !fresh.isEmpty, isAuthorized() else { return storedBackfill.contains(where: Self.isValidStoredSample) }
+        let stored = try await glucoseStorage.storeGlucose(fresh)
+        guard !stored.isEmpty, isAuthorized() else { return storedBackfill.contains(where: Self.isValidStoredSample) }
+        reportAcceptedSamples(stored, sourceID: sourceID)
         if settingsManager.settings.smoothGlucose {
-            let smoothingContext = CoreDataStack.shared.newTaskContext()
-            smoothingContext.name = "exponentialSmoothingGlucose"
-            await exponentialSmoothingGlucose(context: smoothingContext)
+            let context = CoreDataStack.shared.newTaskContext()
+            context.name = "exponentialSmoothingGlucose"
+            await exponentialSmoothingGlucose(context: context)
         }
 
-        // Push the fresh reading schedule so the pump can align its BLE heartbeat
-        guard isAuthorized() else { return }
+        guard isAuthorized() else { return false }
         deviceDataManager.updatePumpBLEHeartbeat(
-            lastCGMReadingDate: filtered.map(\.dateString).max(),
+            lastCGMReadingDate: stored.map(\.dateString).max(),
             expectedCGMReadingInterval: cgmManager?.expectedGlucoseSampleInterval
         )
-
         deviceDataManager.heartbeat(date: Date())
-
         TelemetryClient.shared.checkAndSendIfOverdueInBackground()
+        return (stored + storedBackfill).contains(where: Self.isValidStoredSample)
+    }
 
+    private static func isValidStoredSample(_ sample: BloodGlucose) -> Bool {
+        sample.mbg == nil && (sample.glucose ?? 0) > 0 && (sample.noise ?? 0) < 3 && sample.dateString <= Date()
     }
 
     func sourceInfo() -> [String: Any]? {
@@ -454,7 +431,7 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
 
     private func reportAcceptedSamples(_ samples: [BloodGlucose], sourceID: String?) {
         guard let sourceID, sourceID == freshnessSourceID,
-              let date = samples.filter({ $0.mbg == nil && ($0.glucose ?? 0) > 0 && $0.dateString <= Date() })
+              let date = samples.filter(Self.isValidStoredSample)
                 .map(\.dateString).max() else { return }
         BackgroundKeepAlive.reportStoredSample(at: date, sourceID: sourceID)
     }
@@ -470,7 +447,7 @@ final class BaseFetchGlucoseManager: FetchGlucoseManager, Injectable {
         if let overcalibration = overcalibration {
             return entries.map { entry in
                 var entry = entry
-                guard entry.glucose != nil else { return entry }
+                guard entry.glucose != nil, (entry.noise ?? 0) < 3 else { return entry }
                 entry.glucose = Int(overcalibration(entry.glucose!))
                 entry.sgv = Int(overcalibration(entry.sgv!))
                 return entry
@@ -544,7 +521,8 @@ extension BaseFetchGlucoseManager {
         let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
             timePredicate,
             manualPredicate,
-            datePredicate
+            datePredicate,
+            BaseGlucoseStorage.provenancePredicate(simulated: settingsManager.settings.cgm == .simulator)
         ])
 
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
@@ -642,7 +620,7 @@ extension BaseFetchGlucoseManager {
             }
 
             // Ported from AAPS: 38 mg/dL may represent an xDrip error state.
-            if Int(newer.glucose) == xDripErrorGlucose {
+            if Int(newer.glucose) == xDripErrorGlucose || (newer.noise?.intValue ?? 0) >= 3 {
                 validWindowCount = recentOffset // exclude this 38 value
                 break
             }

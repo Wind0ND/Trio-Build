@@ -10,6 +10,8 @@ enum StateSyncer {
         duringReconnect: Bool,
         fullSync: Bool
     ) {
+        pumpManager.deliveryLock.lock()
+        defer { pumpManager.deliveryLock.unlock() }
         let syncDate = Date.now
 
         // Checked on the payload as received: a rebooted base reports a new patch id, and validation
@@ -69,6 +71,22 @@ enum StateSyncer {
         }
 
         var events: [NewPumpEvent] = []
+        if fullSync, !syncResponse.invalidPayload, !syncResponse.truncated,
+           state.basalDeliveryUncertain, let basal = syncResponse.basal {
+            if let requested = state.pendingTempBasal {
+                if let confirmed = confirmedTempBasal(requested, basal: basal, observedAt: syncDate) {
+                    state.basalDose = confirmed
+                    events.append(NewPumpEvent.tempBasal(dose: confirmed.toDoseEntry(isMutable: true)))
+                    state.pendingTempBasal = nil
+                    state.basalDeliveryUncertain = false
+                }
+            } else if basal.type == .STANDARD || basal.type.isSuspendedByPump() ||
+                (basal.type == .ABSOLUTE_TEMP && state.basalDose.type == .tempBasal &&
+                    (basal.rate * 20).rounded() == (state.basalDose.value * 20).rounded()) {
+                // After an uncertain cancellation, a full status describes whether the known temp is still running.
+                state.basalDeliveryUncertain = false
+            }
+        }
         if syncResponse.state.isDeliveryHalted {
             // a halted state is authoritative even when the notification carries a cached basal.
             events.append(contentsOf: recordSuspendIfDelivering(
@@ -173,6 +191,17 @@ enum StateSyncer {
         }
 
         pumpManager.notifyStateDidChange()
+    }
+
+    /// Recover the requested duration only when a fresh patch segment matches its start and rate.
+    static func confirmedTempBasal(_ request: UnfinalizedDose, basal: BasalData, observedAt: Date) -> UnfinalizedDose? {
+        guard basal.type == .ABSOLUTE_TEMP, (basal.rate * 20).rounded() == (request.value * 20).rounded(),
+              basal.startTime.timeIntervalSince1970 >= floor(request.startDate.timeIntervalSince1970),
+              basal.startTime <= observedAt, basal.startTime < request.estimatedEndDate
+        else { return nil }
+        let duration = request.estimatedEndDate.timeIntervalSince(request.startDate)
+        return UnfinalizedDose(decisionId: request.decisionId, tempRate: basal.rate, duration: duration,
+                               insulinType: request.insulinType, automatic: request.automatic, startDate: basal.startTime)
     }
 
     private static func recordSuspendIfDelivering(

@@ -906,15 +906,6 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
                     carbEntry.isUploadedToHealth = false
                     carbEntry.isUploadedToTidepool = false
 
-                    guard context.hasChanges else {
-                        // Acknowledge failure
-                        self.sendAcknowledgment(
-                            toWatch: false,
-                            message: String(localized: "Error! Something went wrong when processing your request."),
-                            ackCode: .genericFailure
-                        )
-                        return
-                    }
                     try context.save()
                     debug(.treatments, "Saved \(carbsAmount) g carbs from watch")
                 }
@@ -932,23 +923,14 @@ final class BaseWatchManager: NSObject, WCSessionDelegate, Injectable, WatchMana
                 // Enact bolus via APS Manager
                 let bolusDouble = NSDecimalNumber(decimal: bolusAmount).doubleValue
                 await apsManager.enactBolus(amount: bolusDouble, isSMB: false) { success, message in
-                    // Acknowledge success or error of bolus
                     self.sendAcknowledgment(
                         toWatch: success,
-                        message: message,
-                        ackCode: success == true ? .genericSuccess : .genericFailure
+                        message: success ? String(localized: "Carbs and Bolus logged successfully.") :
+                            String(localized: "Carbs logged successfully.") + " " + message,
+                        ackCode: success ? .comboComplete : .genericFailure
                     )
                 }
                 debug(.bolus, "Watch bolus of \(bolusDouble) U handed to APS manager")
-                // Notify Watch: "Carbs and bolus logged successfully"
-                sendAcknowledgment(
-                    toWatch: true,
-                    message: String(
-                        localized: "Carbs and Bolus logged successfully.",
-                        comment: "Successful message sent to watch when logging carbs and bolus"
-                    ),
-                    ackCode: .comboComplete
-                )
 
             } catch let requestError {
                 error(.watch, "Logging carbs and bolus from watch failed", error: requestError)

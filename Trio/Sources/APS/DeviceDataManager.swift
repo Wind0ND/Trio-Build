@@ -15,6 +15,7 @@ import Swinject
 import UserNotifications
 
 protocol DeviceDataManager {
+    var glucoseSourceRevision: UUID { get set }
     var pumpManager: PumpManagerUI? { get set }
     var bluetoothManager: BluetoothStateManager { get }
     var loopInProgress: Bool { get set }
@@ -70,10 +71,12 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
 
     @SyncAccess private var pumpUpdateCancellable: AnyCancellable?
     private var pumpUpdatePromise: Future<Bool, Never>.Promise?
+    @SyncAccess var glucoseSourceRevision = UUID()
     @SyncAccess var loopInProgress: Bool = false
 
     var pumpManager: PumpManagerUI? {
         didSet {
+            glucoseStorage.permitsSimulatedTherapy = pumpManager is MockPumpManager
             if let oldValue = oldValue {
                 trioAlertManager?.unregister(managerIdentifier: oldValue.pluginIdentifier)
             }
@@ -93,6 +96,7 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
                 /// Since the pump manager has been successfully instantiated from its saved state,
                 /// copy its rawValue to rawPumpManager which will be saved to persistant storage.
                 processQueue.async {
+                    guard self.pumpManager === pumpManager else { return }
                     self.rawPumpManager = pumpManager.rawValue
                     UserDefaults.standard.clearLegacyPumpManagerRawValue()
                 }
@@ -174,6 +178,8 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
                 if oldValue != nil || rawPumpManager != nil {
                     pumpStatusStorage.storePumpRemoved()
                 }
+                rawPumpManager = nil
+                UserDefaults.standard.clearLegacyPumpManagerRawValue()
                 pumpDisplayState.value = nil
                 pumpExpiresAtDate.send(nil)
                 pumpActivatedAtDate.send(nil)
@@ -385,10 +391,8 @@ extension BaseDeviceDataManager: PumpManagerDelegate {
     }
 
     func pumpManagerDidUpdateState(_ pumpManager: PumpManager) {
+        guard self.pumpManager === pumpManager else { return }
         rawPumpManager = pumpManager.rawValue
-        if self.pumpManager == nil, let newPumpManager = pumpManager as? PumpManagerUI {
-            self.pumpManager = newPumpManager
-        }
         pumpName.send(pumpManager.localizedTitle)
     }
 
@@ -545,9 +549,10 @@ extension BaseDeviceDataManager: PumpManagerDelegate {
         }
     }
 
-    func pumpManagerWantsDeletion(_: PumpManager) async {
+    func pumpManagerWantsDeletion(_ pumpManager: PumpManager) async {
         await withCheckedContinuation { continuation in
             processQueue.async {
+                guard self.pumpManager === pumpManager else { continuation.resume(); return }
                 self.pumpManager = nil
                 self.broadcaster.notify(PumpDeactivatedObserver.self, on: self.processQueue) {
                     $0.pumpDeactivatedDidChange()

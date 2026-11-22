@@ -73,15 +73,19 @@ final class PluginSource: GlucoseSource {
         Future<[BloodGlucose], Error> { [weak self] promise in
             guard let self = self else { return }
             self.processQueue.async {
-                guard let cgmManager = self.cgmManager else { return }
-                cgmManager.fetchNewDataIfNeeded { _ in
-                    // Ignore values returned from fetchNewDataIfNeeded since
-                    // these come from share client and cause a race condition
-                    // that causes the promise to complete before a CGM value
-                    // has a chance to return. From looking at the code this should
-                    // only impact G6 since that is the only CGM manager that will
-                    // return data and only if share credentials are set
-                    promise(.success([]))
+                guard let cgmManager = self.cgmManager else { promise(.success([])); return }
+                let revision = self.glucoseManager?.recoverySourceRevision
+                cgmManager.fetchNewDataIfNeeded { [weak self] result in
+                    guard let self else { promise(.success([])); return }
+                    self.processQueue.async {
+                        guard let current = self.cgmManager,
+                              ObjectIdentifier(current as AnyObject) == ObjectIdentifier(cgmManager as AnyObject),
+                              revision == self.glucoseManager?.recoverySourceRevision,
+                              cgmManager is G5CGMManager || cgmManager is G6CGMManager,
+                              case let .success(readings) = self.readCGMResult(readingResult: result)
+                        else { promise(.success([])); return }
+                        promise(.success(readings))
+                    }
                 }
             }
         }
@@ -160,13 +164,18 @@ extension PluginSource: CGMManagerDelegate {
                   ObjectIdentifier(current as AnyObject) == ObjectIdentifier(manager as AnyObject),
                   let source = glucoseManager.glucoseSource,
                   ObjectIdentifier(source as AnyObject) == ObjectIdentifier(self),
-                  revision == glucoseManager.recoverySourceRevision else { return }
+                  let revision, revision == glucoseManager.recoverySourceRevision else { return }
 
             dispatchPrecondition(condition: .onQueue(self.processQueue))
 
             switch self.readCGMResult(readingResult: readingResult) {
             case let .success(glucose):
-                self.glucoseManager?.newGlucoseFromCgmManager(newGlucose: glucose)
+                self.glucoseManager?.newGlucoseFromCgmManager(newGlucose: glucose, revision: revision) { settled in
+                    guard settled, let ottai = manager as? OttaiKit.OttaiCGMManager,
+                          case let .newData(samples) = readingResult else { return }
+                    let identifiers = samples.map(\.syncIdentifier)
+                    Task { @MainActor in ottai.acknowledgeHistoryGrid(syncIdentifiers: identifiers) }
+                }
             case let .failure(error):
                 debug(.cgm, "CGM reading not usable: \(error.localizedDescription)")
             }
@@ -177,12 +186,18 @@ extension PluginSource: CGMManagerDelegate {
         }
     }
 
-    func cgmManager(_: LoopKit.CGMManager, hasNew events: [LoopKit.PersistedCgmEvent]) {
+    func cgmManager(_ manager: LoopKit.CGMManager, hasNew events: [LoopKit.PersistedCgmEvent]) {
+        let revision = glucoseManager?.recoverySourceRevision
         processQueue.async { [weak self] in
             guard let self = self else { return }
 
             dispatchPrecondition(condition: .onQueue(self.processQueue))
 
+            guard let current = self.cgmManager,
+                  ObjectIdentifier(current as AnyObject) == ObjectIdentifier(manager as AnyObject),
+                  revision == self.glucoseManager?.recoverySourceRevision,
+                  let source = self.glucoseManager?.glucoseSource,
+                  ObjectIdentifier(source as AnyObject) == ObjectIdentifier(self) else { return }
             // TODO: Events in APS ?
             // currently only display in log the date of the event
             events.forEach { event in
@@ -190,7 +205,6 @@ extension PluginSource: CGMManagerDelegate {
 
                 if event.type == .sensorStart {
                     info(.cgm, "Sensor started")
-                    self.glucoseManager?.removeCalibrations()
                     self.glucoseManager?.startCGMSensorSession(startedAt: event.date)
                 }
             }
@@ -315,11 +329,10 @@ extension PluginSource: CGMManagerDelegate {
                 sensorTransmitterID = cgmTransmitterManager.state.mac
             }
 
-            // isDisplayOnly means "shifted for visual consistency after calibration"
-            // (LoopKit), not "unsafe to dose"; drivers withhold sensor-reported faults.
             let bloodGlucose = values.compactMap { newGlucoseSample -> BloodGlucose? in
-                if newGlucoseSample.isDisplayOnly {
-                    debug(.cgm, "Display-only reading at \(newGlucoseSample.date), storing it")
+                if newGlucoseSample.isDisplayOnly, cgmManager is LibreLoopCGMManager {
+                    debug(.cgm, "Libre display-only reading at \(newGlucoseSample.date) withheld from glucose storage")
+                    return nil
                 }
 
                 let quantity = newGlucoseSample.quantity

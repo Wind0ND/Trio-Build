@@ -7,6 +7,7 @@ public extension PrivacyColor {
 }
 
 public struct PrivacyCoverView: View {
+    @Environment(\.displayScale) private var displayScale
     private let data: Data?
     private let size: CGFloat
 
@@ -17,7 +18,7 @@ public struct PrivacyCoverView: View {
 
     public var body: some View {
         Group {
-            if let data, data.count <= 1200, let image = UIImage(data: data) {
+            if let data, data.count <= 1200, let image = UIImage(data: data, scale: max(1, displayScale)) {
                 Image(uiImage: image).resizable().scaledToFill()
             } else {
                 ZStack {
@@ -50,29 +51,44 @@ public struct PrivacyWaveformView: View {
 
     public var body: some View {
         Group {
-        if !stale, state.measuredAt != nil, state.curveReadings != nil,
-           let style = PrivacyMeterStyle(rawValue: state.meterStyle ?? ""), style.isCurve {
-            let anchor = coverHeight ?? max(0, height - 4)
-            let plotHeight = coverHeight.map { $0 + (presentation == .compact ? 2 : 6) } ?? height
-            PrivacyCurveView(state: state, dual: style == .rangeCurve, height: plotHeight,
-                             coverHeight: anchor, presentation: presentation)
-                .frame(height: coverHeight ?? height)
-        } else {
-        PrivacyMeterLayout(heights: state.waveformHeights, height: height, presentation: presentation) {
-            if stale || state.measuredAt == nil {
-                Circle().strokeBorder(lineWidth: 1.5)
+            if !stale, state.measuredAt != nil, state.curveReadings != nil,
+               let style = PrivacyMeterStyle(rawValue: state.meterStyle ?? ""), style.isCurve {
+                let anchor = coverHeight ?? max(0, height - 4)
+                let plotHeight = coverHeight.map { $0 + (presentation == .compact ? 2 : 6) } ?? height
+                PrivacyCurveView(state: state, dual: style == .rangeCurve, height: plotHeight,
+                                 coverHeight: anchor, presentation: presentation)
+                    .frame(height: coverHeight ?? height)
             } else {
-                ForEach(0 ..< 6, id: \.self) { index in
-                    let value = state.waveformHeights.indices.contains(index) ? state.waveformHeights[index] : nil
-                    Capsule().fill(value == nil ? Color.secondary.opacity(0.25) : state.color.swiftUIColor)
-                }
+                meter
             }
         }
-        .foregroundStyle(state.color.swiftUIColor)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(stale ? "Reading overdue" : "Private activity", bundle: .module))
+    }
+
+    private var meter: some View {
+        GeometryReader { proxy in
+            let geometry = PrivacyMeterGeometry(heights: state.waveformHeights,
+                availableWidth: proxy.size.width, height: proxy.size.height, presentation: presentation)
+            ZStack(alignment: .topLeading) {
+                if stale || state.measuredAt == nil {
+                    let ring = geometry.ring
+                    Circle().strokeBorder(state.color.swiftUIColor, lineWidth: 1.5)
+                        .frame(width: ring.width, height: ring.height).offset(x: ring.x, y: ring.y)
+                } else {
+                    ForEach(geometry.bars.indices, id: \.self) { index in
+                        let frame = geometry.bars[index]
+                        let heights = state.waveformHeights
+                        let missing = !heights.indices.contains(index) || heights[index] == nil
+                        Capsule().fill(missing ? Color.secondary.opacity(0.25) : state.color.swiftUIColor)
+                            .frame(width: frame.width, height: frame.height).offset(x: frame.x, y: frame.y)
+                    }
+                }
+            }
+            .frame(width: geometry.width, height: geometry.height, alignment: .topLeading)
         }
-        }
+        .frame(idealWidth: presentation.preferredWidth, maxWidth: presentation.preferredWidth)
+        .frame(height: height)
     }
 }
 
@@ -84,65 +100,33 @@ private struct PrivacyCurveView: View {
     let presentation: PrivacyMeterPresentation
 
     var body: some View {
-        Canvas { context, size in
-            // References extend 2pt beyond each end of the curve without enlarging the activity.
+        GeometryReader { proxy in
+            let size = proxy.size
             let geometry = PrivacyCurveGeometry(values: state.effectiveCurveReadings,
                 width: max(0, size.width - 6), height: size.height, coverHeight: coverHeight,
                 references: state.curveReferences ?? .init(), dual: dual)
-            func point(_ p: PrivacyCurveGeometry.Point) -> CGPoint { CGPoint(x: p.x + 3, y: p.y) }
-            var curve = Path()
-            for segment in geometry.segments {
-                curve.move(to: point(segment.start))
-                curve.addCurve(to: point(segment.end), control1: point(segment.control1), control2: point(segment.control2))
-            }
-            for p in geometry.isolatedPoints {
-                curve.move(to: point(p))
-                curve.addLine(to: CGPoint(x: p.x + 3.1, y: p.y))
-            }
-            context.stroke(curve, with: .color(state.color.swiftUIColor),
-                           style: StrokeStyle(lineWidth: 1.25, lineCap: .round, lineJoin: .round))
-            // Draw references last so they stay above the curve at crossings and overlaps.
-            for y in geometry.referenceY {
-                var path = Path()
-                path.move(to: CGPoint(x: 1, y: y))
-                path.addLine(to: CGPoint(x: size.width - 1, y: y))
-                context.stroke(path, with: .color(Color(white: 0.45)), lineWidth: 1)
+            ZStack {
+                Path { path in
+                    func point(_ p: PrivacyCurveGeometry.Point) -> CGPoint { CGPoint(x: p.x + 3, y: p.y) }
+                    for segment in geometry.segments {
+                        path.move(to: point(segment.start))
+                        path.addCurve(to: point(segment.end), control1: point(segment.control1), control2: point(segment.control2))
+                    }
+                    for p in geometry.isolatedPoints {
+                        path.move(to: point(p))
+                        path.addLine(to: CGPoint(x: p.x + 3.1, y: p.y))
+                    }
+                }.stroke(state.color.swiftUIColor, style: StrokeStyle(lineWidth: 1.25, lineCap: .round, lineJoin: .round))
+                Path { path in
+                    for y in geometry.referenceY {
+                        path.move(to: CGPoint(x: 1, y: y))
+                        path.addLine(to: CGPoint(x: size.width - 1, y: y))
+                    }
+                }.stroke(Color(white: 0.45), lineWidth: 1)
             }
         }
-        .frame(width: presentation.preferredWidth, height: height)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Private activity", bundle: .module))
-    }
-}
-
-/// Uses the actual proposed region instead of allowing a fixed-width HStack to be cropped.
-private struct PrivacyMeterLayout: Layout {
-    let heights: [Double?]
-    let height: CGFloat
-    let presentation: PrivacyMeterPresentation
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let geometry = geometry(width: proposal.width, proposedHeight: proposal.height)
-        return CGSize(width: geometry.width, height: geometry.height)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let geometry = geometry(width: bounds.width, proposedHeight: bounds.height)
-        let frames = subviews.count == 1 ? [geometry.ring] : geometry.bars
-        let offset = CGPoint(x: bounds.midX - geometry.width / 2, y: bounds.midY - geometry.height / 2)
-        for (subview, frame) in zip(subviews, frames) {
-            subview.place(
-                at: CGPoint(x: offset.x + frame.x, y: offset.y + frame.y), anchor: .topLeading,
-                proposal: ProposedViewSize(width: frame.width, height: frame.height)
-            )
-        }
-    }
-
-    private func geometry(width: CGFloat?, proposedHeight: CGFloat?) -> PrivacyMeterGeometry {
-        PrivacyMeterGeometry(
-            heights: heights, availableWidth: Double(width ?? presentation.preferredWidth),
-            height: Double(min(height, proposedHeight ?? height)), presentation: presentation
-        )
+        .frame(idealWidth: presentation.preferredWidth, maxWidth: presentation.preferredWidth)
+        .frame(height: height)
     }
 }
 #endif

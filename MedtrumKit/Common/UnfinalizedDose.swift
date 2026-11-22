@@ -37,10 +37,11 @@ public class UnfinalizedDose {
         automatic = false
     }
 
-    public init(decisionId: UUID?, tempRate: Double, duration: TimeInterval, insulinType: InsulinType?, automatic: Bool) {
+    public init(decisionId: UUID?, tempRate: Double, duration: TimeInterval, insulinType: InsulinType?, automatic: Bool,
+                startDate: Date = Date.now) {
         type = .tempBasal
         value = tempRate
-        startDate = Date.now
+        self.startDate = startDate
         self.insulinType = insulinType
         estimatedEndDate = startDate.addingTimeInterval(duration)
         self.automatic = automatic

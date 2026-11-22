@@ -1,6 +1,8 @@
 import Foundation
 
 public enum PrivacyPreference {
+    public static let islandSymbolTestKey = "hiro.activity.islandSymbolTest"
+    public static var islandSymbolTestEnabled: Bool { UserDefaults.standard.bool(forKey: islandSymbolTestKey) }
     public static let scheduledHandoffKey = "hiro.activity.scheduledHandoff"
     public static var scheduledHandoffEnabled: Bool {
         UserDefaults.standard.object(forKey: scheduledHandoffKey) as? Bool ?? true
@@ -121,6 +123,7 @@ public struct PrivacyActivityState: Codable, Hashable, Sendable {
     public private(set) var cover: Data?
     // Optional string keeps old snapshots decodable and unknown future styles harmless.
     public private(set) var meterStyle: String?
+    public var islandSymbolTest: Bool?
     private let recentHeights: [Double]?
     public private(set) var curveReadings: [Double?]?
     public private(set) var curveReferences: PrivacyCurveReferences?

@@ -214,9 +214,8 @@ struct TrioAlertBanner: View {
     /// 15-minute quick snooze — the safety floor. Other alerts get the full
     /// 15m / 1h / 3h / 6h menu.
     private var isQuickSnoozeOnly: Bool {
-        if alert.interruptionLevel == .critical { return true }
-        if GlucoseAlertType(slug: alert.identifier.alertIdentifier) == .urgentLow { return true }
-        return false
+        NotificationCategoryIdentifier.alert(isCritical: alert.interruptionLevel == .critical,
+            slug: alert.identifier.alertIdentifier) == .quickSnoozeOnly
     }
 
     private var content: LoopKit.Alert.Content? {

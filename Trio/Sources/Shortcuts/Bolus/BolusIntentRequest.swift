@@ -32,15 +32,15 @@ final class BolusIntentRequest: BaseIntentsRequest {
     }
 
     func bolusExternal(_ bolusAmount: Double) async throws -> String {
-        var bolusQuantity: Decimal = 0
+        guard bolusAmount.isFinite, bolusAmount > 0 else { return BaseAPSManager.invalidBolusAmountMessage }
+        let bolusQuantity = Decimal(bolusAmount)
         var maxExternal: Decimal { settingsManager.pumpSettings.maxBolus * 3 }
-        if Decimal(bolusAmount) > maxExternal {
+        if bolusQuantity > maxExternal {
             return String(
                 localized:
                 "The external bolus cannot be larger than 3 x the pump setting max bolus (\(settingsManager.pumpSettings.maxBolus.description))."
             )
         } else {
-            bolusQuantity = apsManager.roundBolus(amount: Decimal(bolusAmount))
             await pumpHistoryStorage.storeExternalInsulinEvent(amount: bolusQuantity, timestamp: Date())
             // perform determine basal sync
             try await apsManager.determineBasalSync()

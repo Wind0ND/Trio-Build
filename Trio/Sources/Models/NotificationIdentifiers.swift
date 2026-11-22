@@ -1,8 +1,23 @@
 import Foundation
 import UserNotifications
 
+enum AlertUserInfoKey: String {
+    case managerIdentifier = "trio.alert.managerIdentifier"
+    case alertIdentifier = "trio.alert.alertIdentifier"
+}
+
 enum NotificationCategoryIdentifier: String {
     case trioAlert = "Trio.alert"
+    case quickSnoozeOnly = "Trio.alert.quickSnoozeOnly"
+
+    static func alert(isCritical: Bool, slug: String) -> Self {
+        isCritical || slug.split(separator: ".").prefix(2).elementsEqual(["glucose", "urgentLow"])
+            ? .quickSnoozeOnly : .trioAlert
+    }
+
+    func limitSnooze(_ duration: TimeInterval) -> TimeInterval {
+        self == .quickSnoozeOnly ? min(duration, NotificationResponseAction.snooze15.duration) : duration
+    }
 }
 
 enum NotificationResponseAction: String, CaseIterable {
@@ -45,8 +60,9 @@ enum NotificationResponseAction: String, CaseIterable {
 // MARK: - NotificationCategoryFactory
 
 enum NotificationCategoryFactory {
-    static func createGlucoseCategory() -> UNNotificationCategory {
-        let snoozeActions = NotificationResponseAction.allCases.map { action in
+    static func makeCategory(_ category: NotificationCategoryIdentifier) -> UNNotificationCategory {
+        let actions: [NotificationResponseAction] = category == .quickSnoozeOnly ? [.snooze15] : NotificationResponseAction.allCases
+        let snoozeActions = actions.map { action in
             UNNotificationAction(
                 identifier: action.rawValue,
                 title: action.localizedTitle,
@@ -57,7 +73,7 @@ enum NotificationCategoryFactory {
         // `.customDismissAction` — otherwise iOS swallows swipes silently and
         // the in-app banner outlives the notification.
         return UNNotificationCategory(
-            identifier: NotificationCategoryIdentifier.trioAlert.rawValue,
+            identifier: category.rawValue,
             actions: snoozeActions,
             intentIdentifiers: [],
             options: [.customDismissAction]

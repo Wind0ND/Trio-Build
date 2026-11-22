@@ -155,6 +155,15 @@ final class DiagnosticEventStore: @unchecked Sendable {
     private let defaults: UserDefaults
     private let notificationCenter: Foundation.NotificationCenter
     private let now: () -> Date
+    private struct Page: Codable {
+        let generation: UUID?
+        let events: [DiagnosticEvent]
+    }
+
+    private static let tailKey = defaultsKey + ".tail"
+    private static let pageSize = 64
+    private var generation: UUID?
+    private var tail: [DiagnosticEvent]
     private var events: [DiagnosticEvent]
     private var observer: NSObjectProtocol?
 
@@ -166,8 +175,14 @@ final class DiagnosticEventStore: @unchecked Sendable {
         self.defaults = defaults
         self.notificationCenter = notificationCenter
         self.now = now
-        events = Self.load(from: defaults)
-        prune(at: now())
+        let checkpoint = Self.loadCheckpoint(from: defaults)
+        generation = checkpoint.generation
+        let savedTail = defaults.data(forKey: Self.tailKey).flatMap {
+            try? JSONDecoder.diagnosticStore.decode(Page.self, from: $0)
+        }
+        tail = savedTail?.generation == checkpoint.generation ? (savedTail?.events ?? []).filter(\.isValid) : []
+        events = checkpoint.events.filter(\.isValid) + tail
+        pruneLocked(at: now())
     }
 
     deinit {
@@ -220,8 +235,13 @@ final class DiagnosticEventStore: @unchecked Sendable {
         )
         lock.lock()
         events.append(event)
+        tail.append(event)
         pruneLocked(at: now())
-        saveLocked()
+        if tail.count >= Self.pageSize {
+            checkpointLocked()
+        } else if let data = try? JSONEncoder.diagnosticStore.encode(Page(generation: generation, events: tail)) {
+            defaults.set(data, forKey: Self.tailKey)
+        }
         lock.unlock()
         return true
     }
@@ -244,7 +264,7 @@ final class DiagnosticEventStore: @unchecked Sendable {
     func removeAll() {
         lock.lock()
         events.removeAll()
-        saveLocked()
+        checkpointLocked()
         lock.unlock()
     }
 
@@ -263,13 +283,6 @@ final class DiagnosticEventStore: @unchecked Sendable {
             attempt: userInfo["attempt"] as? Int,
             count: userInfo["count"] as? Int
         )
-    }
-
-    private func prune(at date: Date) {
-        lock.lock()
-        pruneLocked(at: date)
-        saveLocked()
-        lock.unlock()
     }
 
     private func pruneLocked(at date: Date) {
@@ -299,16 +312,22 @@ final class DiagnosticEventStore: @unchecked Sendable {
         }
     }
 
-    private func saveLocked() {
-        guard let data = try? JSONEncoder.diagnosticStore.encode(events) else { return }
+    private func checkpointLocked() {
+        let next = UUID()
+        guard let data = try? JSONEncoder.diagnosticStore.encode(Page(generation: next, events: events)) else { return }
+        // Write the new generation first. A crash before deleting the old tail cannot replay it.
         defaults.set(data, forKey: Self.defaultsKey)
+        generation = next
+        tail.removeAll(keepingCapacity: true)
+        defaults.removeObject(forKey: Self.tailKey)
     }
 
-    private static func load(from defaults: UserDefaults) -> [DiagnosticEvent] {
-        guard let data = defaults.data(forKey: defaultsKey),
-              let decoded = try? JSONDecoder.diagnosticStore.decode([DiagnosticEvent].self, from: data)
-        else { return [] }
-        return decoded.filter(\.isValid)
+    private static func loadCheckpoint(from defaults: UserDefaults) -> Page {
+        guard let data = defaults.data(forKey: defaultsKey) else { return Page(generation: nil, events: []) }
+        let decoder = JSONDecoder.diagnosticStore
+        if let page = try? decoder.decode(Page.self, from: data) { return page }
+        let legacy = (try? decoder.decode([DiagnosticEvent].self, from: data)) ?? []
+        return Page(generation: nil, events: legacy)
     }
 }
 

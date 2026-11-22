@@ -116,6 +116,10 @@ public class MedtrumPumpState: RawRepresentable {
             alarmSetting = .BeepOnly
         }
 
+        bolusDeliveryUncertain = rawValue["bolusDeliveryUncertain"] as? Bool ?? false
+        basalDeliveryUncertain = rawValue["basalDeliveryUncertain"] as? Bool ?? false
+        pendingTempBasal = (rawValue["pendingTempBasal"] as? UnfinalizedDose.RawValue).flatMap(UnfinalizedDose.init(rawValue:))
+
         if let rawDoseEntry = rawValue["bolusDose"] as? UnfinalizedDose.RawValue {
             bolusDose = UnfinalizedDose(rawValue: rawDoseEntry)
         } else {
@@ -194,6 +198,9 @@ public class MedtrumPumpState: RawRepresentable {
         value["basalSchedule"] = basalSchedule.rawValue
         value["initialReservoir"] = initialReservoir
         value["bolusDose"] = bolusDose?.rawValue
+        value["bolusDeliveryUncertain"] = bolusDeliveryUncertain
+        value["basalDeliveryUncertain"] = basalDeliveryUncertain
+        value["pendingTempBasal"] = pendingTempBasal?.rawValue
         value["basalDose"] = basalDose.rawValue
         value["reservoir"] = reservoir
         value["battery"] = battery
@@ -294,6 +301,10 @@ public class MedtrumPumpState: RawRepresentable {
     // **** END ****
 
     public var bolusDose: UnfinalizedDose?
+    var bolusDeliveryUncertain = false
+    var basalDeliveryUncertain = false
+    /// Present for an unacknowledged set command. A cancellation targets the existing basal dose.
+    var pendingTempBasal: UnfinalizedDose?
 
     private var isCancelingBolus: Bool {
         guard let since = cancelingBolusSince else {

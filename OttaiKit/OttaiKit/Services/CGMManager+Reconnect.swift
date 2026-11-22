@@ -26,7 +26,7 @@ extension OttaiCGMManager {
         self.monitor = monitor
         // Keep the cursor from before reconnect even if an unusable live
         // frame reaches the grid watermark before the first valid frame.
-        pendingBackfillFrom = pendingBackfillFrom ?? state.lastGridSequence
+        pendingBackfillFrom = state.historyCursor ?? pendingBackfillFrom ?? state.lastGridSequence
         connectedAt = Date()
         firstConnectionFailed = false
 

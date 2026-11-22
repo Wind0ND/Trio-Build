@@ -1,3 +1,4 @@
+import HealthKit
 import Foundation
 import LoopKit
 import Testing
@@ -19,6 +20,19 @@ import Testing
             isFPU: false,
             fpuID: nil
         )
+    }
+
+    @Test("A partially authorized meal exports allowed quantities and keeps remaining nutrients pending")
+    func mealAuthorization() throws {
+        let meal = CarbsEntry(id: "test-meal", createdAt: Date(), actualDate: nil, carbs: 15,
+                              fat: 8, protein: 0, note: nil, enteredBy: nil, isFPU: false, fpuID: nil)
+        let fat = try #require(AppleHealthConfig.healthFatObject)
+        let partial = BaseHealthKitManager.nutritionExport([meal], authorized: { $0 == fat })
+        #expect(partial.samples.map(\.quantityType) == [fat])
+        #expect(partial.completed.isEmpty)
+        let full = BaseHealthKitManager.nutritionExport([meal], authorized: { _ in true })
+        #expect(full.samples.count == 2)
+        #expect(full.completed.compactMap(\.id) == ["test-meal"])
     }
 
     @Test("An entry without id converts without a uuid or sync identifier") func testNilID() {

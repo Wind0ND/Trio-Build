@@ -79,7 +79,7 @@ struct AppGroupSource: GlucoseSource {
             guard
                 let glucose = sgv["Value"] as? Int,
                 let timestamp = sgv["DT"] as? String,
-                let date = parseDate(timestamp)
+                let date = Self.parseDate(timestamp)
             else { continue }
 
             var direction: String?
@@ -109,7 +109,7 @@ struct AppGroupSource: GlucoseSource {
                     dateString: date,
                     unfiltered: Decimal(glucose),
                     filtered: nil,
-                    noise: nil,
+                    noise: glucose == 38 ? 4 : nil,
                     glucose: glucose,
                     type: "sgv"
                 )
@@ -193,17 +193,11 @@ struct AppGroupSource: GlucoseSource {
         }
     }
 
-    private func parseDate(_ timestamp: String) -> Date? {
-        // timestamp looks like "/Date(1462404576000)/"
-        guard let re = try? NSRegularExpression(pattern: "\\((.*)\\)"),
-              let match = re.firstMatch(in: timestamp, range: NSMakeRange(0, timestamp.count))
-        else {
-            return nil
-        }
-
-        let matchRange = match.range(at: 1)
-        let epoch = Double((timestamp as NSString).substring(with: matchRange))! / 1000
-        return Date(timeIntervalSince1970: epoch)
+    static func parseDate(_ timestamp: String) -> Date? {
+        guard timestamp.hasPrefix("/Date("), timestamp.hasSuffix(")/") else { return nil }
+        let field = timestamp.dropFirst(6).dropLast(2)
+        guard let milliseconds = Int64(field), (0 ... 253_402_300_799_999).contains(milliseconds) else { return nil }
+        return Date(timeIntervalSince1970: Double(milliseconds) / 1000)
     }
 
     func sourceInfo() -> [String: Any]? {

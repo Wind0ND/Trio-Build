@@ -15,6 +15,23 @@ public struct OttaiCGMManagerState: RawRepresentable, Equatable {
 
     public var latestReadingTimestamp: Date?
     public var lastGridSequence: UInt16?
+    /// Grid positions not yet processed by host storage. Unlike the receive watermark,
+    /// this survives process termination, including while a delegate batch is in flight.
+    var pendingHistoryGrid = Set<UInt16>()
+    var historyCursor: UInt16? {
+        pendingHistoryGrid.min().map { $0 == 0 ? 0 : $0 - 1 }
+    }
+
+    mutating func observeGrid(_ sequence: UInt16, firstUsable: UInt16) {
+        guard sequence >= firstUsable, sequence > (lastGridSequence ?? 0) else { return }
+        let step = Int(OttaiCGMManager.forwardGridStep)
+        let lower = max(Int(firstUsable), lastGridSequence.map { Int($0) + 1 } ?? Int(sequence))
+        let start = (lower + step - 1) / step * step
+        for value in stride(from: start, through: Int(sequence), by: step) {
+            pendingHistoryGrid.insert(UInt16(value))
+        }
+        lastGridSequence = sequence
+    }
 
     /// The sensor's own elapsed-seconds field for the newest live record, and
     /// the wall-clock instant that record arrived. Sensor age is
@@ -53,6 +70,7 @@ public struct OttaiCGMManagerState: RawRepresentable, Equatable {
     public mutating func resetSensorSession() {
         latestReadingTimestamp = nil
         lastGridSequence = nil
+        pendingHistoryGrid.removeAll()
         latestElapsedSeconds = nil
         latestElapsedReceivedAt = nil
         latestSample = nil
@@ -73,6 +91,7 @@ public struct OttaiCGMManagerState: RawRepresentable, Equatable {
         }
         latestReadingTimestamp = rawValue["latestReadingTimestamp"] as? Date
         lastGridSequence = (rawValue["lastGridSequence"] as? Int).map { UInt16(clamping: $0) }
+        pendingHistoryGrid = Set((rawValue["pendingHistoryGrid"] as? [Int] ?? []).compactMap { UInt16(exactly: $0) })
         latestElapsedSeconds = rawValue["latestElapsedSeconds"] as? Double
         latestElapsedReceivedAt = rawValue["latestElapsedReceivedAt"] as? Date
         if let latestRaw = rawValue["latestSample"] as? [String: Any] {
@@ -120,6 +139,7 @@ public struct OttaiCGMManagerState: RawRepresentable, Equatable {
         raw["sensors"] = sensors.rawValue
         raw["latestReadingTimestamp"] = latestReadingTimestamp
         raw["lastGridSequence"] = lastGridSequence.map { Int($0) }
+        if !pendingHistoryGrid.isEmpty { raw["pendingHistoryGrid"] = pendingHistoryGrid.sorted().map { Int($0) } }
         raw["latestElapsedSeconds"] = latestElapsedSeconds
         raw["latestElapsedReceivedAt"] = latestElapsedReceivedAt
         raw["latestSample"] = latestSample?.rawValue

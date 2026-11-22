@@ -89,7 +89,7 @@ extension Notification.Name {
     /// `TelemetryClient` constructs the APS/device graph, whose first pump/CGM
     /// save crashes while the persistent stores are still loading.
     ///
-    /// Materialize the install ID even when sharing is disabled, then record
+    /// When sharing is enabled, record
     /// this cold launch into the sliding 7-day window, then drive cadence via
     /// layered triggers — listed below in priority of reliability:
     ///
@@ -107,7 +107,7 @@ extension Notification.Name {
         let telemetry = resolver.resolve(TelemetryClient.self)!
         // hands the foreground-transition hook its reference; nil until now
         appDelegate.telemetry = telemetry
-        telemetry.initializeInstallID()
+        guard PropertyPersistentFlags.shared.telemetrySharingEnabled != false else { return }
         telemetry.recordColdLaunch()
         Task.detached {
             if telemetry.buildShaChangedSinceLastSend() {

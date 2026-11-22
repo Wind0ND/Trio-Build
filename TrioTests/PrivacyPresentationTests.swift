@@ -8,6 +8,20 @@ import UIKit
 @testable import Trio
 
 @Suite("Private Live Activity payload") struct PrivacyPresentationTests {
+    @Test("The island-only diagnostic survives a recovery snapshot and has no effect on freshness")
+    func islandDiagnostic() throws {
+        let reading = GlucoseData(glucose: 100, date: Date(), direction: nil)
+        let state = LiveActivityAttributes.ContentState(new: reading, prev: nil, units: .mmolL, chart: [reading],
+            settings: TrioSettings(), determination: nil, iob: nil, override: nil, tempTarget: nil,
+            widgetItems: [], privateDisplay: true, islandSymbolTest: true)
+        let original = try #require(state.privacy)
+        #expect(original.islandSymbolTest == true)
+        let normal = LiveActivityAttributes.ContentState.privateFallback(previous: state, settings: TrioSettings(), islandSymbolTest: false)
+        #expect(normal.privacy?.islandSymbolTest == nil)
+        #expect(normal.privacy?.staleDate == original.staleDate)
+        #expect(normal.privacy?.heights == original.heights)
+    }
+
     @Test("A manual entry cannot revive private CGM bars") func manualDoesNotRevive() {
         let now = Date()
         let sensor = GlucoseData(glucose: 100, date: now.addingTimeInterval(-600), direction: nil)

@@ -1,6 +1,26 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "logs.zip — 3 days of detailed logs" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "logs.zip · 最近三天的详细日志"
+          }
+        }
+      }
+    },
+    "Attachments to send" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将发送的附件"
+          }
+        }
+      }
+    },
     "Enable private activity": {
       "localizations": {
         "zh-Hans": {

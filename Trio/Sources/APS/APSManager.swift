@@ -3,6 +3,7 @@ import CoreData
 import Foundation
 import LoopKit
 import LoopKitUI
+import MockKit
 import SwiftDate
 import Swinject
 
@@ -120,6 +121,19 @@ private actor LoopGuard {
     }
 }
 
+struct AutomaticDeliveryContext: Equatable {
+    let mode: DosingMode
+    let sourceRevision: UUID
+    let pumpID: ObjectIdentifier?
+    let simulatorSource: Bool
+    let mockPump: Bool
+
+    func permitsDelivery(current: Self, deliverAt: Date, now: Date) -> Bool {
+        self == current && pumpID != nil && mode.automation != .off &&
+            (!simulatorSource || mockPump) && (0 ... 30 * 60).contains(now.timeIntervalSince(deliverAt))
+    }
+}
+
 final class BaseAPSManager: APSManager, Injectable {
     private let processQueue = DispatchQueue(label: "BaseAPSManager.processQueue")
     @Injected() private var storage: FileStorage!
@@ -128,7 +142,6 @@ final class BaseAPSManager: APSManager, Injectable {
     @Injected() private var tempTargetsStorage: TempTargetsStorage!
     @Injected() private var carbsStorage: CarbsStorage!
     @Injected() private var glucoseStorage: GlucoseStorage!
-    @Injected() private var determinationStorage: DeterminationStorage!
     @Injected() private var deviceDataManager: DeviceDataManager!
     @Injected() private var settingsManager: SettingsManager!
     @Injected() private var tddStorage: TDDStorage!
@@ -350,12 +363,12 @@ final class BaseAPSManager: APSManager, Injectable {
             )
 
             do {
-                let enacted = try await executeLoop(loopStatRecord: &loopStatRecord)
+                try await executeLoop(loopStatRecord: &loopStatRecord)
                 requestNightscoutUpload(
                     [.carbs, .pumpHistory, .overrides, .tempTargets],
                     source: "APSManager"
                 )
-                await finalizeLoop(enacted: enacted, loopStatRecord: loopStatRecord)
+                await finalizeLoop(loopStatRecord: loopStatRecord)
             } catch {
                 let endDate = Date()
                 loopStatRecord.end = endDate
@@ -372,21 +385,35 @@ final class BaseAPSManager: APSManager, Injectable {
         }
     }
 
-    /// Returns whether the determination was enacted.
-    private func executeLoop(loopStatRecord: inout LoopStats) async throws -> Bool {
-        try await determineBasal()
+    private var automaticDeliveryContext: AutomaticDeliveryContext {
+        let pump = pumpManager
+        let settings = settingsManager.settings
+        return AutomaticDeliveryContext(
+            mode: settings.dosingMode,
+            sourceRevision: deviceDataManager.glucoseSourceRevision,
+            pumpID: pump.map { ObjectIdentifier($0) },
+            simulatorSource: settings.cgm == .simulator,
+            mockPump: pump is MockPumpManager
+        )
+    }
 
-        // Closed loop: also enact the determination.
-        var enacted = false
-        if settings.dosingMode.automation != .off {
-            enacted = try await enactDetermination()
+    private func executeLoop(loopStatRecord: inout LoopStats) async throws {
+        let inputs = automaticDeliveryContext
+        let determinationID = try await calculateDetermination(for: inputs.mode)
+        if inputs.mode.automation != .off {
+            do {
+                let enacted = try await enactDetermination(determinationID, inputs: inputs)
+                await reportEnacted(determinationID, wasEnacted: enacted)
+            } catch {
+                await reportEnacted(determinationID, wasEnacted: false)
+                throw error
+            }
         }
 
         let endDate = Date()
         loopStatRecord.end = endDate
         loopStatRecord.duration = roundDouble((endDate - loopStatRecord.start).timeInterval / 60, 2)
         loopStatRecord.loopStatus = "Success"
-        return enacted
     }
 
     private func calculateLoopInterval(loopStartDate: Date) async -> Double? {
@@ -416,7 +443,7 @@ final class BaseAPSManager: APSManager, Injectable {
     }
 
     /// Single exit point for loop — replaces the old `loopCompleted()`.
-    private func finalizeLoop(error: Error? = nil, enacted: Bool = false, loopStatRecord: LoopStats) async {
+    private func finalizeLoop(error: Error? = nil, loopStatRecord: LoopStats) async {
         await loopGuard.finish()
         isLooping.send(false)
 
@@ -433,15 +460,13 @@ final class BaseAPSManager: APSManager, Injectable {
 
         loopStats(loopStatRecord: loopStatRecord)
 
-        if settings.dosingMode.automation != .off {
-            await reportEnacted(wasEnacted: error == nil && enacted)
-        }
     }
 
     private func verifyStatus() -> Error? {
         guard let pump = pumpManager else {
             return APSError.invalidPumpState(message: String(localized: "Pump not set"))
         }
+        guard !pump.status.deliveryIsUncertain else { return PumpManagerError.uncertainDelivery }
         let status = pump.status.pumpStatus
 
         guard !status.bolusing else {
@@ -486,6 +511,10 @@ final class BaseAPSManager: APSManager, Injectable {
     }
 
     func determineBasal() async throws {
+        _ = try await calculateDetermination(for: settingsManager.settings.dosingMode)
+    }
+
+    private func calculateDetermination(for mode: DosingMode) async throws -> NSManagedObjectID {
         try await calculateAndStoreTDD()
 
         var invalidGlucoseError: String?
@@ -534,12 +563,12 @@ final class BaseAPSManager: APSManager, Injectable {
             let now = Date()
 
             // put profile creation up front since autosens needs it
-            try await openAPS.createProfiles(for: settingsManager.settings.dosingMode)
+            try await openAPS.createProfiles(for: mode)
             let currentTemp = try await fetchCurrentTempBasal(date: now)
             _ = try await autosense()
 
-            let determination = try await openAPS.determineBasal(
-                for: settingsManager.settings.dosingMode,
+            let (determination, storedID) = try await openAPS.determineBasal(
+                for: mode,
                 currentTemp: currentTemp,
                 supportedBasalRates: supportedBasalRates,
                 shouldSmoothGlucose: settingsManager.settings.smoothGlucose,
@@ -551,19 +580,19 @@ final class BaseAPSManager: APSManager, Injectable {
                 throw APSError.glucoseError(message: "Glucose validation failed")
             }
 
-            if let determination = determination {
-                info(
-                    .loop,
-                    "Determination: eventual BG \(determination.eventualBG.map { "\($0) mg/dL" } ?? "none"), temp basal \(determination.rate.map { "\($0) U/h for \(determination.duration ?? 0) min" } ?? "none"), SMB \(determination.units ?? 0) U"
-                )
-                // Capture weak self in closure
-                await MainActor.run { [weak self] in
-                    guard let self else { return }
-                    self.broadcaster.notify(DeterminationObserver.self, on: .main) {
-                        $0.determinationDidUpdate(determination)
-                    }
+            guard let storedID else { throw APSError.apsError(message: "Determination was not saved") }
+            info(
+                .loop,
+                "Determination: eventual BG \(determination.eventualBG.map { "\($0) mg/dL" } ?? "none"), temp basal \(determination.rate.map { "\($0) U/h for \(determination.duration ?? 0) min" } ?? "none"), SMB \(determination.units ?? 0) U"
+            )
+            // Capture weak self in closure
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.broadcaster.notify(DeterminationObserver.self, on: .main) {
+                    $0.determinationDidUpdate(determination)
                 }
             }
+            return storedID
         } catch {
             iobFileDidUpdate.send(())
 
@@ -611,7 +640,7 @@ final class BaseAPSManager: APSManager, Injectable {
                 simulatedBolusAmount: simulatedBolusAmount,
                 simulatedCarbsDate: simulatedCarbsDate,
                 simulation: true
-            )
+            ).determination
         } catch {
             warning(.algorithm, "Simulated determination failed", error: error)
             return nil
@@ -780,15 +809,9 @@ final class BaseAPSManager: APSManager, Injectable {
     }
 
     /// Returns false when the determination is skipped because the pump is suspended.
-    private func enactDetermination() async throws -> Bool {
-        guard let determinationID = try await determinationStorage
-            .fetchLastDeterminationObjectID(predicate: NSPredicate.predicateFor30MinAgoForDetermination).first
-        else {
-            throw APSError.apsError(message: "Determination not found")
-        }
-
-        guard let pump = pumpManager else {
-            throw APSError.apsError(message: "Pump not set")
+    private func enactDetermination(_ determinationID: NSManagedObjectID, inputs: AutomaticDeliveryContext) async throws -> Bool {
+        guard let pump = pumpManager, ObjectIdentifier(pump) == inputs.pumpID else {
+            throw APSError.apsError(message: "Pump changed during determination")
         }
 
         if pump.status.pumpStatus.suspended {
@@ -801,7 +824,17 @@ final class BaseAPSManager: APSManager, Injectable {
             throw APSError.manualBasalTemp(message: "Loop not possible during the manual basal temp")
         }
 
-        let (rateDecimal, durationInSeconds, smbToDeliver) = try await setValues(determinationID: determinationID)
+        let (rateDecimal, durationInSeconds, smbToDeliver, deliverAt) = try await setValues(determinationID: determinationID)
+        func checkDelivery() throws {
+            guard inputs.permitsDelivery(current: automaticDeliveryContext, deliverAt: deliverAt, now: Date()) else {
+                throw APSError.apsError(message: "Determination expired or delivery settings changed")
+            }
+            guard !pump.status.deliveryIsUncertain else { throw PumpManagerError.uncertainDelivery }
+            guard !isManualTempBasal, !pump.status.pumpStatus.suspended else {
+                throw APSError.invalidPumpState(message: "Pump delivery state changed")
+            }
+        }
+        try checkDelivery()
 
         if let rate = rateDecimal, let duration = durationInSeconds {
             try await performBasal(pump: pump, rate: rate, duration: duration)
@@ -810,6 +843,7 @@ final class BaseAPSManager: APSManager, Injectable {
 
         // only perform a bolus if smbToDeliver is > 0
         if let smb = smbToDeliver, smb.compare(NSDecimalNumber(value: 0)) == .orderedDescending {
+            try checkDelivery()
             try await performBolus(pump: pump, smbToDeliver: smb)
             info(.loop, "SMB enacted: \(smb) U")
         }
@@ -817,22 +851,18 @@ final class BaseAPSManager: APSManager, Injectable {
     }
 
     private func setValues(determinationID: NSManagedObjectID) async throws
-        -> (NSDecimalNumber?, TimeInterval?, NSDecimalNumber?)
+        -> (NSDecimalNumber?, TimeInterval?, NSDecimalNumber?, Date)
     {
         let context = CoreDataStack.shared.newTaskContext()
         context.name = "setValues"
         return try await context.perform {
-            do {
-                let determination = try context.existingObject(with: determinationID) as? OrefDetermination
-
-                let rate = determination?.rate
-                let duration = determination?.duration.flatMap { TimeInterval(truncating: $0) * 60 }
-                let smbToDeliver = determination?.smbToDeliver ?? 0
-
-                return (rate, duration, smbToDeliver)
-            } catch {
-                throw error
+            guard let determination = try context.existingObject(with: determinationID) as? OrefDetermination,
+                  !determination.enacted, let deliverAt = determination.deliverAt
+            else {
+                throw APSError.apsError(message: "Determination is missing or already enacted")
             }
+            let duration = determination.duration.map { TimeInterval(truncating: $0) * 60 }
+            return (determination.rate, duration, determination.smbToDeliver, deliverAt)
         }
     }
 
@@ -851,15 +881,8 @@ final class BaseAPSManager: APSManager, Injectable {
         bolusProgress.send(0)
     }
 
-    private func reportEnacted(wasEnacted: Bool) async {
+    private func reportEnacted(_ determinationID: NSManagedObjectID, wasEnacted: Bool) async {
         do {
-            guard let determinationID = try await determinationStorage
-                .fetchLastDeterminationObjectID(predicate: NSPredicate.predicateFor30MinAgoForDetermination).first
-            else {
-                debug(.loop, "No recent determination to mark as enacted")
-                return
-            }
-
             let context = CoreDataStack.shared.newTaskContext()
             context.name = "reportEnacted"
             try await context.perform {

@@ -2,6 +2,7 @@ import CGMBLEKit
 import Combine
 import G7SensorKit
 import LoopKitUI
+import MockKit
 import SwiftUI
 
 /// For a full description of the events that can happen for the CGM lifecycle, see comment at the top
@@ -56,6 +57,15 @@ extension CGMSettings {
 
         var shouldRunDeleteOnSettingsChange = true
 
+        private var simulatorAllowed: Bool {
+            guard let pump = provider?.deviceManager?.pumpManager else { return true }
+            return pump is MockPumpManager
+        }
+
+        var availableSources: [CGMCatalogEntry] {
+            DeviceCatalog.cgms.filter { $0.cgmType != .simulator || simulatorAllowed }
+        }
+
         override func subscribe() {
             units = settingsManager.settings.units
             broadcaster.register(SettingsObserver.self, observer: self)
@@ -100,6 +110,7 @@ extension CGMSettings {
 
         // this function will get called for all CGM types (plugin and non plugin)
         func addCGM(cgm: CGMModel) {
+            guard cgm.type != .simulator || simulatorAllowed else { return }
             cgmCurrent = cgm
             switch cgm.type {
             case .plugin:

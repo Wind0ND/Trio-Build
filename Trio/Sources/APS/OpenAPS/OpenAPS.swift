@@ -38,8 +38,8 @@ final class OpenAPS {
     }
 
     // Use the helper function for cleaner code
-    func processDetermination(_ determination: Determination, on context: NSManagedObjectContext) async {
-        await context.perform {
+    func processDetermination(_ determination: Determination, on context: NSManagedObjectContext) async throws -> NSManagedObjectID {
+        try await context.perform {
             let newOrefDetermination = OrefDetermination(context: context)
             newOrefDetermination.id = UUID()
             newOrefDetermination.insulinSensitivity = self.decimalToNSDecimalNumber(determination.isf)
@@ -84,20 +84,8 @@ final class OpenAPS {
                         }
                     }
             }
-        }
-
-        // First save the current Determination to Core Data
-        await attemptToSaveContext(on: context)
-    }
-
-    func attemptToSaveContext(on context: NSManagedObjectContext) async {
-        await context.perform {
-            do {
-                guard context.hasChanges else { return }
-                try context.save()
-            } catch {
-                warning(.storage, "Saving the determination failed", error: error)
-            }
+            try context.save()
+            return newOrefDetermination.objectID
         }
     }
 
@@ -242,7 +230,7 @@ final class OpenAPS {
         simulatedBolusAmount: Decimal? = nil,
         simulatedCarbsDate: Date? = nil,
         simulation: Bool = false
-    ) async throws -> Determination? {
+    ) async throws -> (determination: Determination, storedID: NSManagedObjectID?) {
         let context = newContext("determineBasal")
 
         // Perform asynchronous calls in parallel
@@ -358,10 +346,11 @@ final class OpenAPS {
                 storage.save(cobEntries, as: Monitor.cob)
 
                 // save to core data asynchronously
-                await processDetermination(determination, on: context)
+                let storedID = try await processDetermination(determination, on: context)
+                return (determination, storedID)
             }
 
-            return determination
+            return (determination, nil)
         } else {
             warning(.algorithm, "No determination produced\(orefDetermination == nil ? "" : ": missing delivery time")")
             throw APSError.apsError(message: "No determination data.")
