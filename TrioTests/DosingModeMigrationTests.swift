@@ -7,6 +7,16 @@ import Testing
         try JSONDecoder().decode(TrioSettings.self, from: Data(json.utf8))
     }
 
+    @Test("Settings can render mode status before its services are injected")
+    @MainActor func settingsModeBeforeInjection() {
+        let state = Settings.StateModel()
+        #expect(state.effectiveDosingMode == .open)
+        state.dosingMode = .closed
+        #expect(state.effectiveDosingMode == .closed)
+        state.dosingMode = .basalOnly
+        #expect(state.effectiveDosingMode == .basalOnly)
+    }
+
     @Test("Legacy closedLoop true migrates to closed") func legacyClosedLoopTrue() throws {
         #expect(try decode(#"{"closedLoop": true}"#).dosingMode == .closed)
     }

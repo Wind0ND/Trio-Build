@@ -18,7 +18,7 @@ extension Settings {
 
         @Published var units: GlucoseUnits = .mgdL
         @Injected() private var apsManager: APSManager!
-        var effectiveDosingMode: DosingMode { dosingMode.effectiveForPump(apsManager.pumpManager) }
+        var effectiveDosingMode: DosingMode { dosingMode.effectiveForPump(apsManager?.pumpManager) }
         @Published var dosingMode: DosingMode = .open
         @Published var debugOptions = false
         @Published var serviceUIType: ServiceUI.Type?
