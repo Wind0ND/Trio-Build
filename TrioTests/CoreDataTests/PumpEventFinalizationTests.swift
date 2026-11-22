@@ -343,7 +343,7 @@ import Testing
     }
 
     @Test("External doses expose no insulin type to uploaders") func testExternalDoseHasNoInsulinType() async throws {
-        await storage.storeExternalInsulinEvent(amount: 2.0, timestamp: Date().addingTimeInterval(-10.minutes.timeInterval))
+        try await storage.storeExternalInsulinEvent(amount: 2.0, timestamp: Date().addingTimeInterval(-10.minutes.timeInterval))
 
         let tidepool = try await storage.getPumpHistoryNotYetUploadedToTidepool()
         let health = try await storage.getPumpHistoryNotYetUploadedToHealth()
@@ -546,7 +546,7 @@ import Testing
     }
 
     @Test("External insulin is born finalized with a sync identifier") func testExternalInsulinBornFinal() async throws {
-        await storage.storeExternalInsulinEvent(amount: 1.5, timestamp: Date().addingTimeInterval(-5.minutes.timeInterval))
+        try await storage.storeExternalInsulinEvent(amount: 1.5, timestamp: Date().addingTimeInterval(-5.minutes.timeInterval))
 
         let events = try await fetchAllEvents()
         #expect(events.count == 1)
@@ -1002,5 +1002,38 @@ extension PumpEventFinalizationTests {
             row.isSimulated = false
             try LegacyPumpHistory.checkPhysicalHistory(on: testContext, cutoff: now, now: now)
         }
+    }
+}
+
+private enum ExternalInsulinTestError: Error { case failed }
+private final class RejectingExternalInsulinContext: NSManagedObjectContext {
+    override func save() throws { throw ExternalInsulinTestError.failed }
+}
+
+extension PumpEventFinalizationTests {
+    @Test("An unsuccessful recalculation leaves exactly one recorded external dose at the entered amount")
+    func recordsExternalDoseEvenWhenRefreshFails() async throws {
+        let amount = Decimal(string: "13.275")!
+        let refreshed = try await storage.recordExternalInsulin(amount: amount, timestamp: Date()) {
+            throw ExternalInsulinTestError.failed
+        }
+        #expect(!refreshed)
+        let events = try await fetchAllEvents()
+        #expect(events.count == 1)
+        #expect(events.first?.bolus?.amount?.decimalValue == amount)
+    }
+
+    @Test("An external dose whose save fails never reports success or starts a recalculation")
+    func propagatesExternalInsulinSaveFailure() async throws {
+        let failing = RejectingExternalInsulinContext(concurrencyType: .privateQueueConcurrencyType)
+        failing.persistentStoreCoordinator = coreDataStack.persistentContainer.persistentStoreCoordinator
+        let writer = BasePumpHistoryStorage(resolver: resolver, contextProvider: { failing })
+        await #expect(throws: ExternalInsulinTestError.failed) {
+            _ = try await writer.recordExternalInsulin(amount: 2, timestamp: Date()) {
+                Issue.record("Recalculation started after a failed write")
+            }
+        }
+        let events = try await fetchAllEvents()
+        #expect(events.isEmpty)
     }
 }

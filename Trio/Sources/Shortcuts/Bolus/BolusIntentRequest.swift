@@ -41,14 +41,11 @@ final class BolusIntentRequest: BaseIntentsRequest {
                 "The external bolus cannot be larger than 3 x the pump setting max bolus (\(settingsManager.pumpSettings.maxBolus.description))."
             )
         } else {
-            await pumpHistoryStorage.storeExternalInsulinEvent(amount: bolusQuantity, timestamp: Date())
-            // perform determine basal sync
-            try await apsManager.determineBasalSync()
-
-            return String(
-                localized:
-                "An external bolus of \(bolusQuantity.formatted()) U of insulin was recorded."
-            )
+            let refreshed = try await pumpHistoryStorage.recordExternalInsulin(amount: bolusQuantity, timestamp: Date()) {
+                try await self.apsManager.determineBasalSync()
+            }
+            let receipt = String(localized: "An external bolus of \(bolusQuantity.formatted()) U of insulin was recorded.")
+            return refreshed ? receipt : receipt + " " + String(localized: "The insulin calculation could not be refreshed.")
         }
     }
 }

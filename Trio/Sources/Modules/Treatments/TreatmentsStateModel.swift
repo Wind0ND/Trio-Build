@@ -660,24 +660,37 @@ extension Treatments {
             }
 
             do {
-                let authenticated = try await unlockmanager.unlock()
-                if authenticated {
-                    // show loading animation
-                    await MainActor.run {
-                        self.isAwaitingDeterminationResult = true
-                    }
-                    // store external dose to pump history
-                    await pumpHistoryStorage.storeExternalInsulinEvent(amount: amount, timestamp: date)
-                    info(.bolus, "External insulin of \(amount) U logged")
-                    // perform determine basal sync
-                    try await apsManager.determineBasalSync()
-                }
+                guard try await unlockmanager.unlock() else { return }
             } catch {
-                warning(.bolus, "Authentication for external insulin failed", error: error)
                 await MainActor.run {
-                    self.isAwaitingDeterminationResult = false
                     self.showDeterminationFailureAlert = true
                     self.determinationFailureMessage = parseAuthenticationError(from: error)
+                }
+                return
+            }
+            await MainActor.run { self.isAwaitingDeterminationResult = true }
+            do {
+                let refreshed = try await pumpHistoryStorage.recordExternalInsulin(amount: amount, timestamp: date) {
+                    try await self.apsManager.determineBasalSync()
+                }
+                await MainActor.run {
+                    self.isAwaitingDeterminationResult = false
+                    self.amount = 0
+                    guard self.isActive else { return }
+                    if !refreshed {
+                        self.determinationFailureMessage = String(localized: "External insulin was recorded.") + " " +
+                            String(localized: "The insulin calculation could not be refreshed.")
+                        self.showDeterminationFailureAlert = true
+                    } else if self.addButtonPressed {
+                        self.hideModal()
+                    }
+                }
+            } catch {
+                warning(.storage, "Saving external insulin failed", error: error)
+                await MainActor.run {
+                    self.isAwaitingDeterminationResult = false
+                    self.determinationFailureMessage = String(localized: "The external insulin entry could not be saved.")
+                    self.showDeterminationFailureAlert = true
                 }
             }
         }

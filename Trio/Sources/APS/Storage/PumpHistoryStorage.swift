@@ -15,13 +15,25 @@ protocol PumpHistoryStorage {
     /// Returns the ids of purged events that were already uploaded to NS,
     /// so the caller can delete the now-withdrawn treatments remotely.
     @discardableResult func storePumpEvents(_ events: [NewPumpEvent], replacePendingEvents: Bool, simulated: Bool) async throws -> [String]
-    func storeExternalInsulinEvent(amount: Decimal, timestamp: Date) async
+    func storeExternalInsulinEvent(amount: Decimal, timestamp: Date) async throws
     func getPumpHistoryNotYetUploadedToNightscout() async throws -> [NightscoutTreatment]
     func getPumpHistoryNotYetUploadedToHealth() async throws -> [PumpHistoryEvent]
     func getPumpHistoryNotYetUploadedToTidepool() async throws -> [PumpHistoryEvent]
 }
 
 extension PumpHistoryStorage {
+    /// A failed save throws. Once the dose is saved, refresh failure cannot turn it into an unrecorded treatment.
+    func recordExternalInsulin(amount: Decimal, timestamp: Date, refresh: () async throws -> Void) async throws -> Bool {
+        try await storeExternalInsulinEvent(amount: amount, timestamp: timestamp)
+        do {
+            try await refresh()
+            return true
+        } catch {
+            warning(.loop, "Insulin saved; refreshing the determination failed", error: error)
+            return false
+        }
+    }
+
     func getPumpHistory() async throws -> [PumpHistoryEvent] { try await getPumpHistory(simulated: false) }
     @discardableResult func storePumpEvents(_ events: [NewPumpEvent], replacePendingEvents: Bool) async throws -> [String] {
         try await storePumpEvents(events, replacePendingEvents: replacePendingEvents, simulated: false)
@@ -345,11 +357,11 @@ final class BasePumpHistoryStorage: PumpHistoryStorage, Injectable {
         }
     }
 
-    func storeExternalInsulinEvent(amount: Decimal, timestamp: Date) async {
+    func storeExternalInsulinEvent(amount: Decimal, timestamp: Date) async throws {
         let context = makeContext()
         context.name = "storeExternalInsulinEvent"
         context.mergePolicy = NSMergeByPropertyStoreTrumpMergePolicy
-        await context.perform {
+        try await context.perform {
             // create pump event
             let newPumpEvent = PumpEventStored(context: context)
             newPumpEvent.isSimulated = false
@@ -374,13 +386,13 @@ final class BasePumpHistoryStorage: PumpHistoryStorage, Injectable {
             newBolusEntry.isSMB = false // the dose is manually administered
 
             do {
-                guard context.hasChanges else { return }
                 try context.save()
-                debug(.storage, "Saved external insulin \(amount) U")
-                self.updateSubject.send(())
             } catch {
-                warning(.storage, "Saving external insulin failed", error: error)
+                context.rollback()
+                throw error
             }
+            debug(.storage, "Saved external insulin \(amount) U")
+            self.updateSubject.send(())
         }
     }
 

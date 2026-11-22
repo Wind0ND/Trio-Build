@@ -1,6 +1,10 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "External insulin was recorded." : { "localizations" : { "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已记录外部胰岛素。" } } } },
+    "The insulin calculation could not be refreshed." : { "localizations" : { "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "胰岛素计算未能更新。" } } } },
+    "The external insulin entry could not be saved." : { "localizations" : { "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "外部胰岛素记录保存失败。" } } } },
+    "Recent insulin history from a previous simulator session has no pump identifier." : { "localizations" : { "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "近期的旧模拟泵记录缺少泵来源信息，暂时无法计算胰岛素。" } } } },
     "logs.zip — 3 days of detailed logs" : {
       "localizations" : {
         "zh-Hans" : {
