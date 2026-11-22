@@ -867,7 +867,7 @@ final class BaseAPSManager: APSManager, Injectable {
         }
     }
 
-    /// Returns false when the determination is skipped because the pump is suspended.
+    /// Genuine pump unavailability throws; a valid no-change determination completes successfully.
     private func enactDetermination(_ determinationID: NSManagedObjectID, inputs: AutomaticDeliveryContext) async throws -> Bool {
         guard let pump = pumpManager, ObjectIdentifier(pump) == inputs.pumpID else {
             throw APSError.apsError(message: "Pump changed during determination")

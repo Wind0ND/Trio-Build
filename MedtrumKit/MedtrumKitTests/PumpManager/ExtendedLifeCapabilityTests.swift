@@ -28,6 +28,20 @@ final class ExtendedLifeCapabilityTests: XCTestCase {
         XCTAssertTrue(old.isExtendedBasalOnly(at: now))
     }
 
+    func testCapabilityPersistenceDoesNotHoldTheDeliveryLockAcrossTheHostQueue() {
+        let current = state(age: 60)
+        let manager = MedtrumPumpManager(state: current, bluetooth: nil)
+        let persisted = expectation(description: "host can read raw state on its queue")
+        manager.persistPendingDelivery = {
+            let read = DispatchSemaphore(value: 0)
+            DispatchQueue.global().async { _ = manager.rawState; read.signal() }
+            XCTAssertEqual(read.wait(timeout: .now() + 2), .success)
+            persisted.fulfill()
+        }
+        _ = manager.automaticBolusContext(at: now)
+        wait(for: [persisted], timeout: 5)
+    }
+
     func testUnsupportedModelDoesNotAcquireAnExtendedRestriction() {
         let other = state()
         other.pumpSN = Data()

@@ -8,7 +8,7 @@ enum AutomationLevel {
     case hypoSuspendOnly
     /// Reductions only. Trio may lower or zero basal but never deliver above the scheduled rate.
     case reductionsOnly
-    /// Unrestricted: reductions, corrections and SMBs.
+    /// Basal reductions and corrections; automatic SMB still follows the mode and device capability.
     case full
 }
 
@@ -21,7 +21,7 @@ enum DosingMode: String, JSON, CaseIterable, Identifiable, Codable, Hashable {
     case lowGlucoseSuspend
     case basalTesting
 
-    /// Only `closed` is automated insulin delivery in the full sense; the constrained modes
+    /// Both closed-loop modes allow basal corrections; the constrained modes
     /// can take insulin away but never add it, because Max IOB is clamped to 0.
     var automation: AutomationLevel {
         switch self {

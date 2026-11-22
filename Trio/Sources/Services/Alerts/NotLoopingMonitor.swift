@@ -63,7 +63,9 @@ final class NotLoopingMonitor: Injectable {
 
     init(resolver: Resolver) {
         injectServices(resolver)
-        lastLoopDate = apsManager.lastLoopDate
+        // No successful loop yet: start only this reminder's local window now. Never change
+        // APS's real success time or turn a brand-new setup into an immediate two-hour alert.
+        lastLoopDate = apsManager.lastLoopDate == .distantPast ? Date() : apsManager.lastLoopDate
         lastDosingMode = settingsManager.settings.dosingMode
         hasLoopAnchor = true
         subscribe(to: apsManager.lastLoopDateSubject.eraseToAnyPublisher())

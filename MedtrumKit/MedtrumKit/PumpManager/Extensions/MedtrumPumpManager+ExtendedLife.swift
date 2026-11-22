@@ -37,7 +37,11 @@ extension MedtrumPumpManager {
                 sessionID: state.patchId, activatedAt: state.patchActivatedAt, now: now
             )
             if previousPolicy != state.extendedLifePolicy {
-                try? persistPendingDelivery?()
+                // The host persists on its own queue and reads rawState there. Never wait for
+                // that queue while a delivery lock (including a caller's recursive lock) is held.
+                DispatchQueue.global(qos: .utility).async { [weak self] in
+                    try? self?.persistPendingDelivery?()
+                }
                 notifyStateDidChange()
             }
             return MedtrumAutomaticBolusContext(

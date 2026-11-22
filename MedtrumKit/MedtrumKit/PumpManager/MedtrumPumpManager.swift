@@ -485,10 +485,8 @@ public extension MedtrumPumpManager {
                     self.state.bolusDose = nil
                     self.notifyStateDidChange()
                     self.emitPumpEvents([])
-                    do { try self.checkpointDelivery() } catch {
-                        finish(.configuration(MedtrumWriteError.persistenceFailed))
-                        return
-                    }
+                    // This branch still holds deliveryLock; persistence must run after it is released.
+                    DispatchQueue.global(qos: .utility).async { try? self.checkpointDelivery() }
                     finish(.communication(error))
                 }
             }
@@ -691,7 +689,8 @@ public extension MedtrumPumpManager {
 
     private func handleBasalWriteError(_ error: MedtrumWriteError, requested: UnfinalizedDose?,
                                       expectedSession: MedtrumAutomaticBolusContext) -> PumpManagerError {
-        deliveryLock.withLock {
+        var shouldCheckpoint = false
+        let result: PumpManagerError = deliveryLock.withLock {
             guard state.patchId == expectedSession.sessionID, state.patchActivatedAt == expectedSession.sessionStartedAt else {
                 return .communication(error)
             }
@@ -699,7 +698,7 @@ public extension MedtrumPumpManager {
             guard error.deliveryMayHaveStarted else {
                 state.pendingTempBasal = nil
                 notifyStateDidChange()
-                do { try checkpointDelivery() } catch { return .configuration(MedtrumWriteError.persistenceFailed) }
+                shouldCheckpoint = true
                 return .communication(error)
             }
             state.basalDeliveryUncertain = true
@@ -708,6 +707,10 @@ public extension MedtrumPumpManager {
             pumpDelegate.notify { $0?.pumpManager(self, didError: .uncertainDelivery) }
             return .uncertainDelivery
         }
+        if shouldCheckpoint {
+            do { try checkpointDelivery() } catch { return .configuration(MedtrumWriteError.persistenceFailed) }
+        }
+        return result
     }
 
     private func reportScheduledBasal() {
