@@ -5,28 +5,6 @@ import SwiftUI
 import WidgetKit
 import UIKit
 
-/// The lock-screen card can request a refresh independently of the Dynamic Island.
-struct PrivateActivityControls: View {
-    let privacy: PrivacyActivityState
-    let stale: Bool
-    let coverSize: CGFloat
-
-    var body: some View {
-        Button(intent: HiroPrivateRecoveryIntent()) {
-            HStack {
-                PrivacyCoverView(data: privacy.cover, size: coverSize)
-                Spacer(minLength: 12)
-                PrivacyWaveformView(state: privacy, stale: stale, coverHeight: coverSize)
-            }
-            .padding(.vertical, 4)
-            .frame(maxWidth: .infinity, minHeight: 32)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text("Refresh activity"))
-    }
-}
-
 struct LiveActivityView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.isWatchOS) var isWatchOS
@@ -44,7 +22,14 @@ struct LiveActivityView: View {
     var body: some View {
         if let privacy = context.state.privacy {
             let style = context.state.simpleViewStyle
-            PrivateActivityControls(privacy: privacy, stale: context.isStale || privacy.isStale(at: Date()), coverSize: isWatchOS ? 20 : 24)
+            HStack {
+                PrivacyCoverView(data: privacy.cover, size: isWatchOS ? 20 : 24)
+                Spacer(minLength: 12)
+                PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()),
+                                    coverHeight: isWatchOS ? 20 : 24)
+            }
+            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity, minHeight: 32)
             // Match the existing simple layout's line height and padding, keeping the meter small.
             .frame(minHeight: max(32, UIFontMetrics(forTextStyle: style.fontSize.uiTextStyle).scaledValue(for: style.fontSize.basePointSize) * 1.2))
             .addLiveActivityModifiers(isWatchOS: isWatchOS, verticalPadding: style.fontSize.verticalPadding)

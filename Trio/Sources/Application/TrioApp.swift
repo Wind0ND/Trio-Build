@@ -199,7 +199,6 @@ extension Notification.Name {
                     await HiroAlertJournal.shared.importDeliveredWatchdog()
                     let source = resolver.resolve(FetchGlucoseManager.self)
                     let activity = resolver.resolve(LiveActivityManager.self)
-                    HiroPrivateRecovery.configure(manager: source, activity: activity)
                     if let settingsManager = resolver.resolve(SettingsManager.self) {
                         BackgroundKeepAlive.shared.configure(
                             initialSample: nil,

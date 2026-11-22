@@ -1,10 +1,10 @@
 {
   "en-US": {
     "description": "hiro is a personal test build with customizable on-screen presentation, viewing protection and device connectivity.",
-    "whats_new": "Improves connection recovery, background reminders and device status. Please check the Dynamic Island and the optional symbol test under Privacy."
+    "whats_new": "Removes tap-to-refresh interactions from Live Activities. Please check whether the Dynamic Island appears after returning to the Home Screen."
   },
   "zh-Hans": {
     "description": "hiro 是用于个人测试的应用版本，提供可自定义的界面展示、查看保护和设备连接功能。",
-    "whats_new": "改进设备状态、重连、后台提醒和诊断导出。请检查灵动岛显示；如仍然空白，可在「隐私保护」打开「灵动岛显示排查」对照锁屏效果。"
+    "whats_new": "移除实时活动的点按刷新交互。请检查返回主屏幕后灵动岛能否正常显示。"
   }
 }
