@@ -4,7 +4,6 @@ import SwiftUI
 import WidgetKit
 
 struct LiveActivity: Widget {
-    private let compactCoverSize: CGFloat = 20
     var body: some WidgetConfiguration {
         let configuration = ActivityConfiguration(for: LiveActivityAttributes.self) { context in
             LiveActivityView(context: context)
@@ -13,57 +12,76 @@ struct LiveActivity: Widget {
             let hasStaticColorScheme = context.state.glucoseColorScheme == "staticColor"
             let glucoseColor = context.state.privacy?.color.swiftUIColor ?? context.state.glucoseColor
 
-            let privacy = context.state.privacy
-            let stale = context.isStale || privacy?.isStale(at: Date()) == true
             let island = DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    if let privacy {
-                        islandCover(privacy, size: 24)
+                    if let privacy = context.state.privacy {
+                            PrivacyCoverView(data: privacy.cover, size: 24)
+                            .frame(width: 28, height: 28)
                     } else {
-                        LiveActivityExpandedLeadingView(context: context, glucoseColor: glucoseColor)
+                    LiveActivityExpandedLeadingView(
+                        context: context,
+                        glucoseColor: glucoseColor
+                    )
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    if let privacy {
-                        islandMeter(privacy, stale: stale, presentation: .standard, coverHeight: 24)
+                    if let privacy = context.state.privacy {
+                            PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()))
+                            .frame(width: 28, height: 28)
                     } else {
-                        LiveActivityExpandedTrailingView(context: context, glucoseColor: hasStaticColorScheme ? .primary : glucoseColor)
+                    LiveActivityExpandedTrailingView(
+                        context: context,
+                        glucoseColor: hasStaticColorScheme ? .primary : glucoseColor
+                    )
                     }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    if privacy == nil { LiveActivityExpandedBottomView(context: context) }
+                    if context.state.privacy == nil {
+                    LiveActivityExpandedBottomView(context: context)
+                    }
                 }
                 DynamicIslandExpandedRegion(.center) {
-                    if privacy == nil { LiveActivityExpandedCenterView(context: context) }
+                    if context.state.privacy == nil {
+                    LiveActivityExpandedCenterView(context: context)
+                    }
                 }
             } compactLeading: {
-                if let privacy {
-                    islandCover(privacy, size: compactCoverSize)
+                if let privacy = context.state.privacy {
+                    PrivacyCoverView(data: privacy.cover, size: 20)
                         .frame(width: 22, height: 22)
                 } else {
-                    LiveActivityCompactLeadingView(context: context, glucoseColor: glucoseColor)
+                LiveActivityCompactLeadingView(
+                    context: context,
+                    glucoseColor: glucoseColor
+                )
                 }
             } compactTrailing: {
-                if let privacy {
-                    islandMeter(privacy, stale: stale, presentation: .compact, coverHeight: compactCoverSize)
+                if let privacy = context.state.privacy {
+                    PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()), presentation: .compact)
                         .frame(width: 22, height: 22)
                 } else {
-                    LiveActivityCompactTrailingView(context: context, glucoseColor: hasStaticColorScheme ? .primary : glucoseColor)
+                LiveActivityCompactTrailingView(
+                    context: context,
+                    glucoseColor: hasStaticColorScheme ? .primary : glucoseColor
+                )
                 }
             } minimal: {
-                if let privacy {
-                    islandMeter(privacy, stale: stale, presentation: .minimal, coverHeight: nil)
+                if let privacy = context.state.privacy {
+                    PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()), presentation: .minimal)
                 } else {
-                    LiveActivityMinimalView(context: context, glucoseColor: glucoseColor)
+                LiveActivityMinimalView(
+                    context: context,
+                    glucoseColor: glucoseColor
+                )
                 }
             }
+            .widgetURL(URL(string: "Trio://"))
             .keylineTint(glucoseColor)
 
             if context.state.privacy != nil {
                 return island
             } else {
                 return island
-                    .widgetURL(URL(string: "Trio://"))
                     .contentMargins(.horizontal, 0, for: .minimal)
                     .contentMargins(.leading, 0, for: .compactTrailing)
             }
@@ -75,24 +93,6 @@ struct LiveActivity: Widget {
             return configuration
         }
     }
-
-    @ViewBuilder private func islandCover(_ state: PrivacyActivityState, size: CGFloat) -> some View {
-        if state.islandSymbolTest == true {
-            Image(systemName: "diamond.fill").font(.caption).foregroundStyle(.white)
-        } else {
-            PrivacyCoverView(data: state.cover, size: size)
-        }
-    }
-
-    @ViewBuilder private func islandMeter(_ state: PrivacyActivityState, stale: Bool,
-                                           presentation: PrivacyMeterPresentation, coverHeight: CGFloat?) -> some View {
-        if state.islandSymbolTest == true {
-            Image(systemName: "diamond").font(.caption).foregroundStyle(.white)
-        } else {
-            PrivacyWaveformView(state: state, stale: stale, presentation: presentation, coverHeight: coverHeight)
-        }
-    }
-
 }
 
 // Mock structure to replace GlucoseData

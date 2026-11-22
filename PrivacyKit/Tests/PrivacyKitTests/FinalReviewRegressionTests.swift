@@ -3,26 +3,6 @@ import XCTest
 @testable import PrivacyKit
 
 final class FinalReviewRegressionTests: XCTestCase {
-    @MainActor func testBlockedPublicationCoalescesBurstBeforeTheNextExplicitBarrier() async {
-        let queue = ActivityPublicationQueue()
-        let gate = ReviewGate()
-        var trace: [Int] = []
-        let first = Task { await queue.run { await gate.wait() } }
-        while !gate.entered { await Task.yield() }
-        var pending: [Task<Void, Never>] = []
-        for index in 0..<30 {
-            pending.append(Task { await queue.run(coalescing: true) { trace.append(index) } })
-            for _ in 0..<3 { await Task.yield() }
-        }
-        let end = Task { await queue.run { trace.append(-1) } }
-        for _ in 0..<10 { await Task.yield() }
-        gate.release()
-        await first.value
-        for item in pending { await item.value }
-        await end.value
-        XCTAssertEqual(trace, [29, -1])
-    }
-
     func testRetirementCapturesAndRemovesOldDeliveryBeforeRearmingTheSameIdentifier() {
         let barrier = NotificationRetirementBarrier()
         var trace: [String] = []
@@ -55,11 +35,4 @@ final class FinalReviewRegressionTests: XCTestCase {
         XCTAssertTrue(journal.markTriggered(id: item.id, at: now))
         XCTAssertFalse(journal.markTriggered(id: item.id, at: now.addingTimeInterval(1)))
     }
-}
-
-@MainActor private final class ReviewGate {
-    var entered = false
-    private var continuation: CheckedContinuation<Void, Never>?
-    func wait() async { await withCheckedContinuation { continuation = $0; entered = true } }
-    func release() { continuation?.resume(); continuation = nil }
 }

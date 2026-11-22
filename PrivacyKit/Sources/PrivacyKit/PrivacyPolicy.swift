@@ -1,12 +1,6 @@
 import Foundation
 
 public enum PrivacyPreference {
-    public static let islandSymbolTestKey = "hiro.activity.islandSymbolTest"
-    public static var islandSymbolTestEnabled: Bool { UserDefaults.standard.bool(forKey: islandSymbolTestKey) }
-    public static let scheduledHandoffKey = "hiro.activity.scheduledHandoff"
-    public static var scheduledHandoffEnabled: Bool {
-        UserDefaults.standard.object(forKey: scheduledHandoffKey) as? Bool ?? true
-    }
     public static let changed = Notification.Name("com.trio.privacy.changed")
     public static let displayKey = "privacy.waveform.enabled"
     public static let alertsKey = "privacy.alerts.enabled"
@@ -123,18 +117,10 @@ public struct PrivacyActivityState: Codable, Hashable, Sendable {
     public private(set) var cover: Data?
     // Optional string keeps old snapshots decodable and unknown future styles harmless.
     public private(set) var meterStyle: String?
-    public var islandSymbolTest: Bool?
     private let recentHeights: [Double]?
-    public private(set) var curveReadings: [Double?]?
-    public private(set) var curveReferences: PrivacyCurveReferences?
 
-    public var effectiveCurveReadings: [Double?] {
-        curveReadings ?? Array(repeating: nil, count: 6)
-    }
-
-    public init(readings: [PrivacyReading], now: Date, palette: PrivacyPalette = .init(), cover: Data? = nil, recoveredAt: Date? = nil, meterStyle: PrivacyMeterStyle = .history, curveReferences: PrivacyCurveReferences = .stored()) {
+    public init(readings: [PrivacyReading], now: Date, palette: PrivacyPalette = .init(), cover: Data? = nil, recoveredAt: Date? = nil, meterStyle: PrivacyMeterStyle = .history) {
         self.meterStyle = meterStyle == .history ? nil : meterStyle.rawValue
-        self.curveReferences = meterStyle.isCurve ? curveReferences : nil
         // A future or invalid reading cannot become the color/freshness anchor.
         let valid = readings.filter { $0.mgDL.isFinite && $0.mgDL > 0 && $0.mgDL <= 1000 && $0.date <= now }
             .sorted { $0.date > $1.date }
@@ -154,18 +140,15 @@ public struct PrivacyActivityState: Codable, Hashable, Sendable {
         self.cover = cover.flatMap { $0.count <= 1200 ? $0 : nil }
         guard let latest = valid.first else {
             heights = Array(repeating: nil, count: 6)
-            curveReadings = Array(repeating: nil, count: 6)
             return
         }
         // Keep five-minute gaps visible rather than packing old readings together.
-        let slots: [PrivacyReading?] = (0 ..< 6).reversed().map { slot in
+        heights = (0 ..< 6).reversed().map { slot in
             let target = latest.date.addingTimeInterval(-Double(slot) * 300)
             let sample = valid.min { abs($0.date.timeIntervalSince(target)) < abs($1.date.timeIntervalSince(target)) }
             guard let sample, abs(sample.date.timeIntervalSince(target)) < 150 else { return nil }
-            return sample
+            return min(1, max(0.12, sample.mgDL / (12 * 18)))
         }
-        heights = slots.map { $0.map { min(1, max(0.12, $0.mgDL / (12 * 18))) } }
-        curveReadings = slots.map { $0.map { $0.mgDL / 18 } }
     }
 
     // Five-minute readings get one minute of presentation grace; this never refreshes measurement age.
@@ -188,12 +171,6 @@ public struct PrivacyActivityState: Codable, Hashable, Sendable {
     public func replacingMeterStyle(_ style: PrivacyMeterStyle) -> Self {
         var copy = self
         copy.meterStyle = style == .history ? nil : style.rawValue
-        return copy
-    }
-
-    public func replacingCurveReferences(_ references: PrivacyCurveReferences) -> Self {
-        var copy = self
-        copy.curveReferences = PrivacyMeterStyle(rawValue: meterStyle ?? "")?.isCurve == true ? references : nil
         return copy
     }
 }

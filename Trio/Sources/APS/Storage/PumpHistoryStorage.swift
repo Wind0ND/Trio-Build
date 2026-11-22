@@ -40,35 +40,6 @@ extension PumpHistoryStorage {
     }
 }
 
-enum LegacyPumpHistory {
-    private static let migrationKey = "PumpHistoryProvenanceMigrationChecked"
-    private static let cutoffKey = "UnattributedMockPumpHistoryThrough"
-
-    static var cutoff: Date? { UserDefaults.standard.object(forKey: cutoffKey) as? Date }
-
-    static func noteRestoredConfiguration(_ identifier: String?) {
-        let defaults = UserDefaults.standard
-        guard !defaults.bool(forKey: migrationKey) else { return }
-        if identifier == "MockPumpManager" { defaults.set(Date(), forKey: cutoffKey) }
-        defaults.set(true, forKey: migrationKey)
-    }
-
-    static func checkPhysicalHistory(on context: NSManagedObjectContext, cutoff: Date? = LegacyPumpHistory.cutoff, now: Date = Date()) throws {
-        // The algorithm reads 48 hours to reconcile orphaned resumes. Earlier rows cannot affect that query.
-        let start = now.addingTimeInterval(-48 * 3600)
-        guard let cutoff, cutoff >= start else { return }
-        let request = PumpEventStored.fetchRequest()
-        request.fetchLimit = 1
-        request.predicate = NSPredicate(
-            format: "isSimulated == nil AND timestamp >= %@ AND timestamp <= %@ AND (bolus == nil OR bolus.isExternal == NO)",
-            start as NSDate, cutoff as NSDate
-        )
-        if try context.count(for: request) > 0 {
-            throw APSError.apsError(message: String(localized: "Recent insulin history from a previous simulator session has no pump identifier."))
-        }
-    }
-}
-
 final class BasePumpHistoryStorage: PumpHistoryStorage, Injectable {
     private let processQueue = DispatchQueue(label: "BasePumpHistoryStorage.processQueue")
     @Injected() var storage: FileStorage!
@@ -399,7 +370,6 @@ final class BasePumpHistoryStorage: PumpHistoryStorage, Injectable {
     func getPumpHistory(simulated: Bool) async throws -> [PumpHistoryEvent] {
         let context = makeContext()
         context.name = "getPumpHistory"
-        if !simulated { try await context.perform { try LegacyPumpHistory.checkPhysicalHistory(on: context) } }
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: PumpEventStored.self,
             onContext: context,
@@ -769,10 +739,7 @@ extension PumpEventType {
 
 extension NSPredicate {
     static func forTDD(_ predicate: NSPredicate, simulated: Bool) -> NSPredicate {
-        guard !simulated, let cutoff = LegacyPumpHistory.cutoff else { return forPump(predicate, simulated: simulated) }
-        return NSCompoundPredicate(andPredicateWithSubpredicates: [
-            predicate, NSPredicate(format: "isSimulated == NO OR (isSimulated == nil AND date > %@)", cutoff as NSDate)
-        ])
+        forPump(predicate, simulated: simulated)
     }
 
     /// Pre-migration rows carry no device tag. Keep them available in the real history;

@@ -109,8 +109,7 @@ extension Home.StateModel {
         // Don't suggest an amount the user's current Max Bolus setting won't let them deliver in full.
         let maxBolusUnits = pumpInitialSettings.maxBolusUnits
         let source = glucoseStorage.mockPumpConnected == true ? NSPredicate(format: "pumpEvent.isSimulated == YES") :
-            NSPredicate(format: "pumpEvent.isSimulated == NO OR (pumpEvent.isSimulated == nil AND pumpEvent.timestamp > %@)",
-                        (LegacyPumpHistory.cutoff ?? .distantPast) as NSDate)
+            NSPredicate(format: "pumpEvent.isSimulated == NO OR pumpEvent.isSimulated == nil")
         return await fetchQuickPickSuggestions(
             ofType: BolusStored.self,
             predicate: { cutoff in

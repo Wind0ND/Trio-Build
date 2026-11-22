@@ -986,23 +986,7 @@ extension PumpEventFinalizationTests {
         #expect(remaining.map(\.amount) == [2])
     }
 
-    @Test("Recently restored legacy mock history halts physical calculations while preserving the data")
-    func unresolvedLegacyMockHistory() async throws {
-        let now = Date()
-        try await testContext.perform {
-            let row = PumpEventStored(context: testContext)
-            row.id = UUID().uuidString
-            row.type = PumpEvent.bolus.rawValue
-            row.timestamp = now.addingTimeInterval(-600)
-            try testContext.save()
-            #expect(throws: APSError.self) {
-                try LegacyPumpHistory.checkPhysicalHistory(on: testContext, cutoff: now, now: now)
-            }
-            #expect(!row.isDeleted && row.isSimulated == nil)
-            row.isSimulated = false
-            try LegacyPumpHistory.checkPhysicalHistory(on: testContext, cutoff: now, now: now)
-        }
-    }
+
 }
 
 private enum ExternalInsulinTestError: Error { case failed }

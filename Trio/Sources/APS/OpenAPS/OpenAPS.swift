@@ -91,7 +91,6 @@ final class OpenAPS {
     }
 
     private func fetchPumpHistoryObjectIDs(on context: NSManagedObjectContext, simulatedPump: Bool) async throws -> [NSManagedObjectID]? {
-        if !simulatedPump { try await context.perform { try LegacyPumpHistory.checkPhysicalHistory(on: context) } }
         let results = try await CoreDataStack.shared.fetchEntitiesAsync(
             ofType: PumpEventStored.self,
             onContext: context,

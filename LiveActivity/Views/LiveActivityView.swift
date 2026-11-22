@@ -23,15 +23,12 @@ struct LiveActivityView: View {
         if let privacy = context.state.privacy {
             let style = context.state.simpleViewStyle
             HStack {
-                PrivacyCoverView(data: privacy.cover, size: isWatchOS ? 20 : 24)
-                Spacer(minLength: 12)
-                PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()),
-                                    coverHeight: isWatchOS ? 20 : 24)
+                    PrivacyCoverView(data: privacy.cover, size: isWatchOS ? 20 : 24)
+                Spacer()
+                    PrivacyWaveformView(state: privacy, stale: context.isStale || privacy.isStale(at: Date()))
             }
-            .padding(.vertical, 4)
-            .frame(maxWidth: .infinity, minHeight: 32)
             // Match the existing simple layout's line height and padding, keeping the meter small.
-            .frame(minHeight: max(32, UIFontMetrics(forTextStyle: style.fontSize.uiTextStyle).scaledValue(for: style.fontSize.basePointSize) * 1.2))
+            .frame(height: UIFontMetrics(forTextStyle: style.fontSize.uiTextStyle).scaledValue(for: style.fontSize.basePointSize) * 1.2)
             .addLiveActivityModifiers(isWatchOS: isWatchOS, verticalPadding: style.fontSize.verticalPadding)
         } else if isWatchOS, context.state.useDetailedViewWatchOS {
             VStack {

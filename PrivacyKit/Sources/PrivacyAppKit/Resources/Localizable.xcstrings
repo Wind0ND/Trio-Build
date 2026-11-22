@@ -1,26 +1,6 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "The island shows a fixed diamond for this test. The Lock Screen keeps your usual display.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "排查时，灵动岛显示固定菱形，不表示读数。锁屏卡片仍使用你选择的样式。"
-          }
-        }
-      }
-    },
-    "Test Dynamic Island with a symbol": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "灵动岛显示排查"
-          }
-        }
-      }
-    },
     "4-digit PIN": {
       "localizations": {
         "zh-Hans": {
@@ -249,7 +229,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "最近五次读数＋标桩"
+            "value": "基准波浪"
           }
         }
       }
@@ -452,7 +432,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "最近六次读数"
+            "value": "普通波浪"
           }
         }
       }
@@ -524,7 +504,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "标桩样式显示最近五次读数，最右侧为固定 5 mmol/L 的标桩，高度为满格的 41.7%。整组声浪及标桩均使用最新读数对应的颜色。"
+            "value": "前五根显示最近五次读数，最右侧固定柱作为 5 mmol/L 的对照基准，高度为满格的 41.7%。整组使用最新读数对应的颜色。"
           }
         }
       }
@@ -767,74 +747,6 @@
         }
       }
     },
-    "Curve with two references": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Curve with two references"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "双线曲线"
-          }
-        }
-      }
-    },
-    "Curve with one reference": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Curve with one reference"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "单线曲线"
-          }
-        }
-      }
-    },
-    "Lower reference line": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lower reference line"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "下参考线"
-          }
-        }
-      }
-    },
-    "Upper reference line": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Upper reference line"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "上参考线"
-          }
-        }
-      }
-    },
     "Reference line": {
       "extractionState": "manual",
       "localizations": {
@@ -852,40 +764,6 @@
         }
       }
     },
-    "Save curve references": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save curve references"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存曲线参照"
-          }
-        }
-      }
-    },
-    "Curve references saved.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Curve references saved."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "曲线参照值已保存。"
-          }
-        }
-      }
-    },
     "Enter references from 1 to 30, with the lower line below the upper line.": {
       "extractionState": "manual",
       "localizations": {
@@ -899,36 +777,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "请输入 1 至 30 之间的参照值，下参考线须低于上参考线。"
-          }
-        }
-      }
-    },
-    "Schedule the next Live Activity": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "预排下一场实时活动"
-          }
-        }
-      }
-    },
-    "The two guides align with the cover edges. The single guide aligns with its center. Changing a reference moves the curve. Missing readings leave a gap.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "双参考线与封面上下沿对齐，单参考线与封面中心对齐。修改参照值会调整曲线位置。缺少读数时，曲线会断开。"
-          }
-        }
-      }
-    },
-    "While hiro is open, prepare one more eight-hour session. iOS announces its start as hiro.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打开 hiro 时会预排下一场八小时的实时活动。接班时系统提示 hiro。"
           }
         }
       }

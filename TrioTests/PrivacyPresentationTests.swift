@@ -8,20 +8,6 @@ import UIKit
 @testable import Trio
 
 @Suite("Private Live Activity payload") struct PrivacyPresentationTests {
-    @Test("The island-only diagnostic survives a recovery snapshot and has no effect on freshness")
-    func islandDiagnostic() throws {
-        let reading = GlucoseData(glucose: 100, date: Date(), direction: nil)
-        let state = LiveActivityAttributes.ContentState(new: reading, prev: nil, units: .mmolL, chart: [reading],
-            settings: TrioSettings(), determination: nil, iob: nil, override: nil, tempTarget: nil,
-            widgetItems: [], privateDisplay: true, islandSymbolTest: true)
-        let original = try #require(state.privacy)
-        #expect(original.islandSymbolTest == true)
-        let normal = LiveActivityAttributes.ContentState.privateFallback(previous: state, settings: TrioSettings(), islandSymbolTest: false)
-        #expect(normal.privacy?.islandSymbolTest == nil)
-        #expect(normal.privacy?.staleDate == original.staleDate)
-        #expect(normal.privacy?.heights == original.heights)
-    }
-
     @Test("A manual entry cannot revive private CGM bars") func manualDoesNotRevive() {
         let now = Date()
         let sensor = GlucoseData(glucose: 100, date: now.addingTimeInterval(-600), direction: nil)
@@ -169,23 +155,6 @@ import UIKit
         #expect(state.privacy?.measuredAt == now)
         #expect(state.privacy?.staleDate == now.addingTimeInterval(360))
         #expect(try JSONEncoder().encode(state).count < 4096)
-    }
-
-    @Test("Full host curve payload with six real slots and maximum cover fits ActivityKit") func curvePayloadBudget() throws {
-        let now = Date()
-        let chart = (0..<6).map { GlucoseData(glucose: 123 + $0 * 17, date: now.addingTimeInterval(-Double($0) * 300), direction: nil) }
-        var state = LiveActivityAttributes.ContentState(
-            new: chart[0], prev: chart[1], units: .mmolL, chart: chart,
-            settings: TrioSettings(), determination: nil, iob: nil,
-            override: nil, tempTarget: nil, widgetItems: [], privateDisplay: true
-        )
-        for style in [PrivacyMeterStyle.rangeCurve, .singleCurve] {
-            state.privacy = PrivacyActivityState(readings: chart.map { .init(mgDL: Double($0.glucose), date: $0.date) },
-                now: now, cover: Data(repeating: 1, count: 1200), meterStyle: style,
-                curveReferences: .init(lower: 3.9, upper: 20.1, single: 5.7))
-            #expect(state.privacy?.effectiveCurveReadings.compactMap { $0 }.count == 6)
-            #expect(try JSONEncoder().encode(state).count < 4096)
-        }
     }
 
     @Test("Fallback removes the cover while retaining stale geometry and measurement time") func fallbackCoverRemoval() {

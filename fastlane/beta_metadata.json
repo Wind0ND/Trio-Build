@@ -1,10 +1,10 @@
 {
   "en-US": {
     "description": "hiro is a personal test build with customizable on-screen presentation, viewing protection and device connectivity.",
-    "whats_new": "Removes tap-to-refresh interactions from Live Activities. Please check whether the Dynamic Island appears after returning to the Home Screen."
+    "whats_new": "Restores the earlier Live Activity presentation and simplifies the available styles. Please check the Dynamic Island after opening hiro and returning to the Home Screen."
   },
   "zh-Hans": {
     "description": "hiro 是用于个人测试的应用版本，提供可自定义的界面展示、查看保护和设备连接功能。",
-    "whats_new": "移除实时活动的点按刷新交互。请检查返回主屏幕后灵动岛能否正常显示。"
+    "whats_new": "恢复早期实时活动展示，简化样式选择。请打开 hiro 后回到主屏幕，检查灵动岛显示。"
   }
 }

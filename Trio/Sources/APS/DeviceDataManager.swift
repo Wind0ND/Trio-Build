@@ -262,7 +262,6 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
 
     func setupPumpManager() {
         let saved = rawPumpManager ?? UserDefaults.standard.legacyPumpManagerRawValue
-        LegacyPumpHistory.noteRestoredConfiguration(saved?["managerIdentifier"] as? String)
         if let pumpManagerRawValue = saved {
             guard let restored = Self.pumpManagerFromRawValue(pumpManagerRawValue) else {
                 warning(.pump, "Cannot restore the saved pump configuration; preserving it for recovery")

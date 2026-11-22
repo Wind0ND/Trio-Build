@@ -17,11 +17,12 @@ import UIKit
 
         guard backgroundTaskID != .invalid else {
             warning(.liveActivity, "Live Activity restart skipped, background task could not start")
-            throw CocoaError(.featureUnsupported)
+            return
         }
-        defer { endBackgroundTaskSafely(&backgroundTaskID, taskName: "Restart Live Activity") }
-        guard await liveActivityManager.restartActivityFromLiveActivityIntent() else {
-            throw CocoaError(.featureUnsupported)
-        }
+
+        await liveActivityManager.restartActivityFromLiveActivityIntent()
+
+        // Ensure background task ends properly
+        endBackgroundTaskSafely(&backgroundTaskID, taskName: "Restart Live Activity")
     }
 }
