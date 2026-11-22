@@ -139,12 +139,12 @@ extension BaseResetDetectionTests {
         }
     }
 
-    func testAReconnectWithoutProgressPreservesLastKnownUnitsAcrossRestart() throws {
+    func testAReconnectWithoutProgressPreservesLastKnownUnitsAcrossRestart() {
         let state = makeState(pumpState: .active)
         let dose = UnfinalizedDose(decisionId: nil, units: 3, duration: 120, activationType: .automatic, insulinType: nil)
         dose.deliveredUnits = 0.5
         state.bolusDose = dose
-        let manager = try XCTUnwrap(MedtrumPumpManager(rawState: state.rawValue))
+        let manager = MedtrumPumpManager(state: MedtrumPumpState(rawValue: state.rawValue), bluetooth: nil)
         manager.checkBolusDone()
         let restored = MedtrumPumpState(rawValue: manager.state.rawValue)
         XCTAssertEqual(restored.bolusDose?.deliveredUnits, 0.5)
@@ -156,7 +156,7 @@ extension BaseResetDetectionTests {
 
 extension BaseResetDetectionTests {
     func testCheckpointPrecedesBasalCommandAndSurvivesRelaunch() {
-        let manager = MedtrumPumpManager(state: makeState(pumpState: .active))
+        let manager = MedtrumPumpManager(state: makeState(pumpState: .active), bluetooth: nil)
         let dose = UnfinalizedDose(decisionId: UUID(), tempRate: 1.5, duration: 1800, insulinType: nil, automatic: true)
         for request in [dose, nil] as [UnfinalizedDose?] {
             var saved: MedtrumPumpState?

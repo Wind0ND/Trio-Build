@@ -52,11 +52,16 @@ public class MedtrumPumpManager: DeviceManager {
     }
 
     var bluetooth: BluetoothManager!
-    init(state: MedtrumPumpState) {
+    convenience init(state: MedtrumPumpState) {
+        self.init(state: state, bluetooth: BluetoothManager(knownPeripheralIdentifier: state.peripheralIdentifier))
+    }
+
+    init(state: MedtrumPumpState, bluetooth: BluetoothManager?) {
         self.state = state
         oldState = MedtrumPumpState(rawValue: state.rawValue)
-        bluetooth = BluetoothManager(knownPeripheralIdentifier: state.peripheralIdentifier)
+        self.bluetooth = bluetooth
         refreshLogDeviceIdentifier()
+        guard let bluetooth else { return }
 
         NotificationCenter.default.addObserver(
             self,
