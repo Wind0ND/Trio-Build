@@ -7,8 +7,10 @@ final class PrivacyDisplayOptionsTests: XCTestCase {
         let now = Date()
         let readings = (0 ..< 5).map { PrivacyReading(mgDL: Double(9 - $0) * 18, date: now - Double($0) * 180) }
         let state = PrivacyActivityState(readings: readings, now: now, meterStyle: .referenceFive)
-        XCTAssertEqual(state.waveformHeights.prefix(5).compactMap { $0 }.count, 5)
-        XCTAssertEqual(Array(state.waveformHeights.prefix(5)).compactMap { $0 }, [5.0/12, 6.0/12, 7.0/12, 8.0/12, 9.0/12])
+        let actual: [Double] = state.waveformHeights.prefix(5).compactMap { $0 }
+        let expected: [Double] = [5.0 / 12.0, 6.0 / 12.0, 7.0 / 12.0, 8.0 / 12.0, 9.0 / 12.0]
+        XCTAssertEqual(actual.count, 5)
+        XCTAssertEqual(actual, expected)
     }
     func testSixDistinctPalettesShareAllSixRangesAndContinuousBoundaries() {
         XCTAssertEqual(PrivacyPalettePreset.allCases.count, 6)
