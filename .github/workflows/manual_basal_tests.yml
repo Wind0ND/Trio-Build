@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
 jobs:
   driver-tests:
-    runs-on: macos-26
+    runs-on: macos-15
     steps:
       - run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
       - uses: actions/checkout@v5

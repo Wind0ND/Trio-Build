@@ -176,6 +176,123 @@ final class ShortTempBasalTests: XCTestCase {
         XCTAssertFalse(manager.manualTempBasalMatchesObservedSegment(startDate: start, rate: 6))
     }
 
+    func testEditorUsesLivePumpModelRangeAndRejectsStaleUnsupportedSelection() {
+        let state = makeState()
+        state.shortTempBasal = nil
+        state.manualBasalMaximum = 30
+        state.pumpSN = Data([178, 52, 224, 60]) // synthetic MD8201
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        let model = ManualTempBasalViewModel(pumpManager: manager, goBack: {})
+        XCTAssertEqual(state.model, "MD8201")
+        XCTAssertEqual(model.allowedRates.last, 25)
+        for rate in [10.0, 12, 25] {
+            XCTAssertTrue(model.allowedRates.contains(rate))
+            model.selectedRate = rate
+            XCTAssertTrue(model.selectionWithinLimit)
+        }
+        model.selectedRate = 25.05
+        XCTAssertFalse(model.selectionWithinLimit)
+        state.pumpSN = Data([18, 187, 192, 52]) // synthetic MD8301
+        XCTAssertEqual(state.model, "MD8301")
+        XCTAssertEqual(model.allowedRates.last, 30)
+        model.selectedRate = 30
+        XCTAssertTrue(model.selectionWithinLimit)
+        state.pumpSN = Data([178, 52, 224, 60])
+        XCTAssertEqual(model.allowedRates.last, 25)
+        XCTAssertFalse(model.selectionWithinLimit, "An old selection must not outlive the model capability")
+    }
+
+    func testManualRateValidationUsesModelAndConfiguredMaximumWithoutRaisingEither() {
+        let state = makeState()
+        state.shortTempBasal = nil
+        state.pumpSN = Data([18, 187, 192, 52])
+        state.manualBasalMaximum = 30
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        for rate in [10.0, 25, 30] { XCTAssertTrue(manager.manualTempBasalRateAllowed(rate)) }
+        state.pumpSN = Data([178, 52, 224, 60])
+        XCTAssertTrue(manager.manualTempBasalRateAllowed(25))
+        XCTAssertFalse(manager.manualTempBasalRateAllowed(25.05))
+        state.manualBasalMaximum = 12
+        XCTAssertTrue(manager.manualTempBasalRateAllowed(12))
+        XCTAssertFalse(manager.manualTempBasalRateAllowed(12.05))
+        let model = ManualTempBasalViewModel(pumpManager: manager, goBack: {})
+        model.selectedRate = 12
+        model.selectedDuration = 3600
+        XCTAssertTrue(model.selectionWithinLimit)
+        XCTAssertEqual(model.estimatedUnits, "12.00 U")
+        state.manualBasalMaximum = 6
+        model.refreshStatus()
+        XCTAssertFalse(model.selectionWithinLimit)
+        XCTAssertFalse(manager.manualTempBasalRateAllowed(12))
+        for rate in [0.0, -1, 5.03, Double.nan, Double.infinity] {
+            model.selectedRate = rate
+            XCTAssertFalse(model.selectionWithinLimit)
+            XCTAssertFalse(manager.manualTempBasalRateAllowed(rate))
+        }
+        state.manualBasalMaximum = nil
+        model.refreshStatus()
+        model.selectedRate = 6
+        XCTAssertFalse(model.selectionWithinLimit)
+        XCTAssertFalse(manager.manualTempBasalRateAllowed(6))
+        XCTAssertNil(state.manualBasalMaximum)
+    }
+
+    func testHighRateShortCommandReachesTransportRatherThanObsoleteTenUnitCap() {
+        for rate in [10.0, 30] {
+            let state = makeState()
+            state.shortTempBasal = nil
+            state.pumpSN = Data([18, 187, 192, 52])
+            state.manualBasalMaximum = 30
+            let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+            let completed = expectation(description: "Supported high rate passes configuration and reaches missing transport")
+            manager.enactTempBasal(decisionId: nil, unitsPerHour: rate, duration: 300, automatic: false) { error in
+                if let error, case .communication = error {} else {
+                    XCTFail("Expected missing-transport failure, got \(String(describing: error))")
+                }
+                XCTAssertNil(state.shortTempBasal)
+                XCTAssertNil(state.pendingTempBasal)
+                completed.fulfill()
+            }
+            wait(for: [completed], timeout: 3)
+        }
+    }
+
+    func testUnsupportedOrOverLimitShortRateIsRejectedBeforeConnecting() {
+        for rate in [0.0, 12.05, 25.05, 30.05, 5.03, Double.nan, Double.infinity] {
+            let state = makeState()
+            state.shortTempBasal = nil
+            state.pumpSN = Data([178, 52, 224, 60])
+            state.manualBasalMaximum = 12
+            let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+            let completed = expectation(description: "Invalid rate rejected before transport")
+            manager.enactTempBasal(decisionId: nil, unitsPerHour: rate, duration: 300, automatic: false) { error in
+                if let error, case .configuration = error {} else {
+                    XCTFail("Expected configuration rejection, got \(String(describing: error))")
+                }
+                completed.fulfill()
+            }
+            wait(for: [completed], timeout: 3)
+        }
+    }
+
+    func testFiveMinuteChoicesThroughOneHourPreserveNativeMinutesAndLongerOptions() {
+        let model = ManualTempBasalViewModel(pumpManager: nil, goBack: {})
+        XCTAssertEqual(Array(model.allowedDurations.prefix(13)),
+                       [300, 600, 900, 1200, 1500, 1800, 2100, 2400, 2700, 3000, 3300, 3600, 5400])
+        XCTAssertEqual(model.allowedDurations.last, 43200)
+        XCTAssertEqual(model.allowedDurations.count, 34)
+        for minutes in [35, 40, 45, 50, 55] {
+            let duration = Double(minutes) * 60
+            XCTAssertTrue(model.allowedDurations.contains(duration))
+            let nativeDuration = MedtrumPumpManager.pumpTempBasalDuration(requested: duration, automatic: false)
+            XCTAssertEqual(nativeDuration, duration)
+            XCTAssertEqual(SetTempBasalPacket(rate: 6, duration: nativeDuration).getRequestBytes(),
+                           Data([6, 120, 0, UInt8(minutes), 0]))
+        }
+        model.selectedDuration = 2100
+        XCTAssertEqual(model.estimatedUnits, "3.50 U")
+    }
+
     func testIntentAndPendingDoseAreCheckpointedTogether() throws {
         let state = makeState()
         let intent = state.shortTempBasal
