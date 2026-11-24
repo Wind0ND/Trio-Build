@@ -9,7 +9,7 @@ struct ManualTempBasalView: View {
         VStack {
             List {
                 if let active = viewModel.activeShortTemp {
-                    Section("Manual temporary basal running") {
+                    Section("Manual Temp Basal") {
                         if active.accountingUnresolved {
                             Text("Delivery history is uncertain. Automatic delivery is blocked until the records can be verified.")
                                 .foregroundStyle(.orange)
@@ -43,7 +43,8 @@ struct ManualTempBasalView: View {
                             .disabled(viewModel.enacting || viewModel.enactingBolus)
                     }
                 }
-                Section {
+                if !viewModel.hasManualTemp {
+                  Section {
                     HStack {
                         Text("Rate", comment: "Label text for basal rate summary")
                         Spacer()
@@ -107,6 +108,7 @@ struct ManualTempBasalView: View {
                             appName
                         )
                     )
+                  }
                 }
             }
 
@@ -115,7 +117,8 @@ struct ManualTempBasalView: View {
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.red)
             }
-            Button(action: viewModel.enact) {
+            if !viewModel.hasManualTemp {
+              Button(action: viewModel.enact) {
                 HStack(alignment: .center, spacing: 10) {
                     if viewModel.enactingBolus {
                         ActivityIndicator()
@@ -130,6 +133,7 @@ struct ManualTempBasalView: View {
             .buttonStyle(ActionButtonStyle(.primary))
             .disabled(viewModel.enacting || viewModel.enactingBolus || viewModel.hasManualTemp || !viewModel.selectionWithinLimit)
             .padding()
+            }
         }
     }
 }

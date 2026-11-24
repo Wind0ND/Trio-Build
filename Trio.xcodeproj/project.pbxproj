@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA2411240000000000000001 /* PumpEventAcceptance.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2411240000000000000002 /* PumpEventAcceptance.swift */; };
+		AA2411240000000000000003 /* PumpEventAcceptanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2411240000000000000004 /* PumpEventAcceptanceTests.swift */; };
 		AA2311230000000000000021 /* BasalOnlyDosingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2311230000000000000022 /* BasalOnlyDosingMode.swift */; };
 		AA2311230000000000000011 /* LoopTimeoutReminderPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2311230000000000000012 /* LoopTimeoutReminderPreferences.swift */; };
 		AA9300000000000000000011 /* ExtensionsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9300000000000000000001 /* ExtensionsSettingsView.swift */; };
@@ -1292,6 +1294,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AA2411240000000000000002 /* PumpEventAcceptance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PumpEventAcceptance.swift; sourceTree = "<group>"; };
+		AA2411240000000000000004 /* PumpEventAcceptanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PumpEventAcceptanceTests.swift; sourceTree = "<group>"; };
 		AA2311230000000000000022 /* BasalOnlyDosingMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasalOnlyDosingMode.swift; sourceTree = "<group>"; };
 		AA2311230000000000000012 /* LoopTimeoutReminderPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopTimeoutReminderPreferences.swift; sourceTree = "<group>"; };
 		AA9300000000000000000001 /* ExtensionsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionsSettingsView.swift; sourceTree = "<group>"; };
@@ -3527,6 +3531,7 @@
 				5864E8582C42CFAE00294306 /* DeterminationStorage.swift */,
 				BD4D73A12D15A4220052227B /* TDDStorage.swift */,
 				7A11AC0DE00000000000000B /* ScheduledBasalInference.swift */,
+				AA2411240000000000000002 /* PumpEventAcceptance.swift */,
 			);
 			path = Storage;
 			sourceTree = "<group>";
@@ -4452,6 +4457,7 @@
 				5C7EA1FA38A1728182C949F4 /* PumpStatusStorageTests.swift */,
 				BD8FC0562D66188700B95AED /* PumpHistoryStorageTests.swift */,
 				7A11AC0DE00000000000000C /* ScheduledBasalInferenceTests.swift */,
+				AA2411240000000000000004 /* PumpEventAcceptanceTests.swift */,
 				7A11AC0DE000000000000009 /* PumpEventFinalizationTests.swift */,
 				7A11AC0DE00000000000001D /* PumpEventPredicateTests.swift */,
 				7A11AC0DE000000000000015 /* MultiUsePanelStateTests.swift */,
@@ -6624,6 +6630,7 @@
 				3B1C5C302D68E220004E9273 /* ComputedPumpHistoryEvent.swift in Sources */,
 				BD4D73A22D15A42A0052227B /* TDDStorage.swift in Sources */,
 				7A11AC0DE00000000000010B /* ScheduledBasalInference.swift in Sources */,
+				AA2411240000000000000001 /* PumpEventAcceptance.swift in Sources */,
 				49C782A72F73D9870062B0DD /* AlertEntry.swift in Sources */,
 				DDE1796C2C910127003CDDB7 /* OverrideRunStored+CoreDataClass.swift in Sources */,
 				DDE1796D2C910127003CDDB7 /* OverrideRunStored+CoreDataProperties.swift in Sources */,
@@ -6709,6 +6716,7 @@
 				3BEF6AB12D9731660076089D /* MealHistoryTests.swift in Sources */,
 				BD8FC0572D66188700B95AED /* PumpHistoryStorageTests.swift in Sources */,
 				7A11AC0DE00000000000010C /* ScheduledBasalInferenceTests.swift in Sources */,
+				AA2411240000000000000003 /* PumpEventAcceptanceTests.swift in Sources */,
 				7A11AC0DE000000000000109 /* PumpEventFinalizationTests.swift in Sources */,
 				7A11AC0DE00000000000011D /* PumpEventPredicateTests.swift in Sources */,
 				7A11AC0DE000000000000115 /* MultiUsePanelStateTests.swift in Sources */,

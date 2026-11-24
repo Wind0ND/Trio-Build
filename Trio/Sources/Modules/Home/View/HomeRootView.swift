@@ -116,6 +116,9 @@ extension Home {
                         Text(basal.label)
                             .font(.system(size: 14, weight: .semibold))
                             .fontDesign(.rounded)
+                        if let short = (state.apsManager?.pumpManager as? MedtrumPumpManager)?.shortTempBasalStatus {
+                            HomeManualTempBasalCountdown(status: short)
+                        }
                         if state.apsManager?.pumpManager is MedtrumPumpManager {
                             Image(systemName: "chevron.right").font(.caption2)
                         }
@@ -626,6 +629,22 @@ extension Home {
                 ))
             }
         }
+    }
+}
+
+private struct HomeManualTempBasalCountdown: View {
+    let status: ShortTempBasalStatus
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            if status.awaitingConfirmation || status.cancellationFailed || status.endDate <= context.date {
+                Image(systemName: "exclamationmark.circle")
+                    .accessibilityLabel(Text("Waiting for pump confirmation"))
+            } else {
+                Text(status.endDate, style: .timer).monospacedDigit()
+            }
+        }
+        .font(.caption2)
     }
 }
 
