@@ -79,16 +79,29 @@ enum APSError: LocalizedError {
 // MARK: - Thread-safe loop serialization
 
 /// Ensures only one loop runs at a time via actor isolation
-private actor LoopGuard {
+actor LoopGuard {
     private var isRunning = false
     private var isDeterminingStandalone = false
     private var loopWaiters: [CheckedContinuation<Void, Never>] = []
+    private(set) var pendingRetryDate: Date?
+    private let retrySleep: @Sendable (TimeInterval) async throws -> Void
+
+    init(retrySleep: @escaping @Sendable (TimeInterval) async throws -> Void = { interval in
+        try await Task.sleep(nanoseconds: UInt64(max(0, interval) * 1_000_000_000))
+    }) { self.retrySleep = retrySleep }
+
+    func requestStart(minInterval: TimeInterval, lastLoopDate: Date, lastLoopStartDate: Date,
+                      now: Date = Date(), retry: @escaping @Sendable () -> Void) -> Bool {
+        tryStart(minInterval: minInterval, lastLoopDate: lastLoopDate, lastLoopStartDate: lastLoopStartDate, now: now)
+    }
+
+    func cancelPendingRetry() {}
 
     /// Atomically checks whether a new loop can start and marks it as running if so.
-    func tryStart(minInterval: TimeInterval, lastLoopDate: Date, lastLoopStartDate: Date) -> Bool {
+    func tryStart(minInterval: TimeInterval, lastLoopDate: Date, lastLoopStartDate: Date, now: Date = Date()) -> Bool {
         // If the last loop completed after it started, enforce minimum interval
         if lastLoopDate > lastLoopStartDate {
-            guard lastLoopStartDate.addingTimeInterval(minInterval) < Date() else { return false }
+            guard lastLoopStartDate.addingTimeInterval(minInterval) < now else { return false }
         }
         guard !isRunning else { return false }
         isRunning = true

@@ -20,7 +20,7 @@ final class MedtrumShortTempBasalTests: XCTestCase {
 
     func testUnsupportedShortMinutesAndInvalidRatesAreRejected() {
         for minutes in [5, 10, 15, 20, 25] { XCTAssertEqual(plan(minutes: minutes).minutes, minutes) }
-        for minutes in [-5, 0, 6, 7, 26, 30] {
+        for minutes in [-5, 0, 11, 26, 30] {
             XCTAssertNil(MedtrumShortTempBasal(sessionID: session, sessionStartedAt: start,
                                              commandID: command, rate: 6, minutes: minutes, requestedAt: start))
         }
@@ -31,7 +31,7 @@ final class MedtrumShortTempBasalTests: XCTestCase {
     }
 
     func testOneThroughFourMinuteSessionsKeepExactDeadlinesAndPersistIdentity() throws {
-        for (minutes, total) in [(1, 0.1), (2, 0.2), (3, 0.3), (4, 0.4)] {
+        for (minutes, total) in [(1, 0.1), (2, 0.2), (3, 0.3), (4, 0.4), (6, 0.6), (7, 0.7), (8, 0.8), (9, 0.9)] {
             let intent = try XCTUnwrap(MedtrumShortTempBasal(
                 sessionID: session, sessionStartedAt: start.addingTimeInterval(-3600),
                 commandID: command, rate: 6, minutes: minutes, requestedAt: start))

@@ -2,6 +2,14 @@ import Combine
 import Foundation
 import LoopKit
 
+/// Separate reminder bookkeeping; never changes APS's actual successful-loop date.
+final class HiroLoopReminderWindow {
+    private(set) var manualActive = false
+    init(defaults: UserDefaults? = nil) {}
+    @discardableResult func setManualTempBasal(_ active: Bool, at date: Date) -> Bool { false }
+    func anchor(lastSuccess: Date) -> Date { lastSuccess }
+}
+
 /// Independent preference for the loop watchdog; other alarms keep their existing settings.
 final class HiroLoopReminderPreferences: ObservableObject {
     static let shared = HiroLoopReminderPreferences()

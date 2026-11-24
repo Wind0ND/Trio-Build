@@ -144,8 +144,9 @@ final class ShortTempBasalTests: XCTestCase {
     }
 
     func testConfiguredMaximumBelowEqualAndAboveDefaultControlsBothEditorAndDriver() {
-        for maximum in [2.0, 6, 10] {
+        for maximum in [2.0, 6, 10, 30] {
             let state = makeState()
+            state.pumpSN = Data([18, 187, 192, 52])
             state.shortTempBasal = nil
             state.basalDose = UnfinalizedDose(basalRate: 1, insulinType: nil, startDate: start)
             let manager = MedtrumPumpManager(state: state, bluetooth: nil)
@@ -155,8 +156,9 @@ final class ShortTempBasalTests: XCTestCase {
                 if case .failure = result { XCTFail("Local manual limit must be recorded") }
             }
             let model = ManualTempBasalViewModel(pumpManager: manager, goBack: {})
-            XCTAssertEqual(model.selectedRate, 6, "Keep the user's requested default visible")
-            XCTAssertEqual(model.selectionWithinLimit, maximum >= 6)
+            XCTAssertEqual(model.selectedRate, 30, "Keep the user's requested default visible")
+            XCTAssertEqual(model.selectedDuration, 60)
+            XCTAssertEqual(model.selectionWithinLimit, maximum >= 30)
             XCTAssertEqual(manager.manualTempBasalRateAllowed(6), maximum >= 6)
             XCTAssertEqual(MedtrumPumpState(rawValue: manager.rawState).manualBasalMaximum, maximum)
         }
@@ -277,10 +279,10 @@ final class ShortTempBasalTests: XCTestCase {
 
     func testFiveMinuteChoicesThroughOneHourPreserveNativeMinutesAndLongerOptions() {
         let model = ManualTempBasalViewModel(pumpManager: nil, goBack: {})
-        XCTAssertEqual(Array(model.allowedDurations.prefix(17)),
-                       [60, 120, 180, 240, 300, 600, 900, 1200, 1500, 1800, 2100, 2400, 2700, 3000, 3300, 3600, 5400])
+        XCTAssertEqual(Array(model.allowedDurations.prefix(21)),
+                       [60, 120, 180, 240, 300, 360, 420, 480, 540, 600, 900, 1200, 1500, 1800, 2100, 2400, 2700, 3000, 3300, 3600, 5400])
         XCTAssertEqual(model.allowedDurations.last, 43200)
-        XCTAssertEqual(model.allowedDurations.count, 38)
+        XCTAssertEqual(model.allowedDurations.count, 42)
         for minutes in [35, 40, 45, 50, 55] {
             let duration = Double(minutes) * 60
             XCTAssertTrue(model.allowedDurations.contains(duration))
@@ -290,11 +292,12 @@ final class ShortTempBasalTests: XCTestCase {
                            Data([6, 120, 0, UInt8(minutes), 0]))
         }
         model.selectedDuration = 2100
+        model.selectedRate = 6
         XCTAssertEqual(model.estimatedUnits, "3.50 U")
     }
 
     func testOneThroughFourMinuteCommandsStillUseNativeThirtyMinuteDelivery() {
-        for minutes in [1, 2, 3, 4] {
+        for minutes in [1, 2, 3, 4, 6, 7, 8, 9] {
             let duration = Double(minutes) * 60
             let state = makeState()
             state.shortTempBasal = nil

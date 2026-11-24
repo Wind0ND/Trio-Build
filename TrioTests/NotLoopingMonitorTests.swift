@@ -50,6 +50,66 @@ final class SpyAlertManager: TrioAlertManager {
 }
 
 @Suite("Trio Alerts: NotLoopingMonitor") struct NotLoopingMonitorTests {
+    @Test("Starting manual basal withdraws plans and ending gives a fresh recovery window")
+    func manualBasalWithdrawsAndRecovers() {
+        let dates = PassthroughSubject<Date, Never>()
+        let manual = PassthroughSubject<Bool, Never>()
+        let spy = SpyAlertManager()
+        let clock = Date()
+        let monitor = NotLoopingMonitor(loopDates: dates.eraseToAnyPublisher(), trioAlertManager: spy,
+                                       manualTempBasal: manual.eraseToAnyPublisher(), now: { clock })
+        dates.send(clock.addingTimeInterval(-10 * 60))
+        let before = spy.retractedIdentifiers.count
+        manual.send(true)
+        #expect(spy.retractedIdentifiers.count == before + 6)
+        let issued = spy.issuedAlerts.count
+        dates.send(clock)
+        #expect(spy.issuedAlerts.count == issued)
+        manual.send(false)
+        #expect(spy.issuedAlerts.count == issued + 6)
+        if let warning = spy.issuedAlerts.last(where: { $0.identifier == warningID(1) }) {
+            expectDelay(warning.trigger, 20)
+        }
+        let after = spy.callLog.count
+        manual.send(false)
+        #expect(spy.callLog.count == after)
+        _ = monitor
+    }
+
+    @Test("Recovery anchor persists and duplicate inactive status cannot reset it")
+    func recoveryWindowSurvivesRestart() throws {
+        let name = "LoopRecoveryTests." + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let success = start.addingTimeInterval(-600)
+        let window = HiroLoopReminderWindow(defaults: defaults)
+        #expect(window.setManualTempBasal(true, at: start))
+        #expect(window.manualActive)
+        #expect(HiroLoopReminderWindow(defaults: defaults).manualActive)
+        let end = start.addingTimeInterval(1200)
+        #expect(window.setManualTempBasal(false, at: end))
+        #expect(window.anchor(lastSuccess: success) == end)
+        let restored = HiroLoopReminderWindow(defaults: defaults)
+        #expect(!restored.setManualTempBasal(false, at: end.addingTimeInterval(600)))
+        #expect(restored.anchor(lastSuccess: success) == end)
+        #expect(restored.anchor(lastSuccess: end.addingTimeInterval(30)) == end.addingTimeInterval(30))
+    }
+
+    @Test("Manual state cannot re-arm a disabled reminder")
+    func disabledManualRecoveryDoesNotArm() {
+        let dates = PassthroughSubject<Date, Never>()
+        let manual = PassthroughSubject<Bool, Never>()
+        let spy = SpyAlertManager()
+        let monitor = NotLoopingMonitor(loopDates: dates.eraseToAnyPublisher(), trioAlertManager: spy,
+                                       remindersEnabled: Just(false).eraseToAnyPublisher(),
+                                       manualTempBasal: manual.eraseToAnyPublisher())
+        dates.send(Date())
+        manual.send(true)
+        manual.send(false)
+        #expect(spy.issuedAlerts.isEmpty)
+        _ = monitor
+    }
     /// Reconstructed locally from the private statics in the source.
     private let criticalID = Alert.Identifier(
         managerIdentifier: "trio.aps",
@@ -227,5 +287,60 @@ final class SpyAlertManager: TrioAlertManager {
         for alert in armLadder().issuedAlerts {
             #expect(alert.trigger != .immediate)
         }
+    }
+}
+
+private actor RetryCounter {
+    var count = 0
+    func increment() { count += 1 }
+}
+
+@Suite("Loop guard deferred recovery") struct LoopGuardRecoveryTests {
+    @Test("An early request is retained until the unchanged three-minute boundary")
+    func earlyRequestRetained() async {
+        let guardState = LoopGuard()
+        let start = Date()
+        let accepted = await guardState.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2),
+                                                    lastLoopStartDate: start, now: start.addingTimeInterval(159), retry: {})
+        #expect(!accepted)
+        #expect(await guardState.pendingRetryDate == start.addingTimeInterval(180))
+        await guardState.cancelPendingRetry()
+        #expect(await guardState.pendingRetryDate == nil)
+    }
+
+    @Test("Repeated early requests coalesce into a single retry")
+    func repeatedRequestsCoalesce() async throws {
+        let counter = RetryCounter()
+        let guardState = LoopGuard(retrySleep: { _ in try await Task.sleep(nanoseconds: 20_000_000) })
+        let start = Date()
+        for _ in 0 ..< 5 {
+            let accepted = await guardState.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2),
+                                                        lastLoopStartDate: start, now: start.addingTimeInterval(170),
+                                                        retry: { Task { await counter.increment() } })
+            #expect(!accepted)
+        }
+        try await Task.sleep(nanoseconds: 200_000_000)
+        #expect(await counter.count == 1)
+        #expect(await guardState.pendingRetryDate == nil)
+    }
+
+    @Test("A normal start cancels an obsolete retry and concurrent requests cannot start")
+    func normalStartCancelsRetry() async throws {
+        let counter = RetryCounter()
+        let guardState = LoopGuard(retrySleep: { _ in try await Task.sleep(nanoseconds: 40_000_000) })
+        let start = Date()
+        _ = await guardState.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2),
+                                          lastLoopStartDate: start, now: start.addingTimeInterval(170),
+                                          retry: { Task { await counter.increment() } })
+        let accepted = await guardState.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2),
+                                                    lastLoopStartDate: start, now: start.addingTimeInterval(181), retry: {})
+        #expect(accepted)
+        #expect(await guardState.pendingRetryDate == nil)
+        let duplicate = await guardState.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2),
+                                                     lastLoopStartDate: start, now: start.addingTimeInterval(182), retry: {})
+        #expect(!duplicate)
+        try await Task.sleep(nanoseconds: 150_000_000)
+        #expect(await counter.count == 0)
+        await guardState.finish()
     }
 }

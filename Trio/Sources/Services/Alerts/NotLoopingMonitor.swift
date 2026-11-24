@@ -79,7 +79,9 @@ final class NotLoopingMonitor: Injectable {
     /// subscribes to a supplied loop-date publisher, avoiding the need to stub
     /// the full `APSManager` protocol.
     init(loopDates: AnyPublisher<Date, Never>, trioAlertManager: TrioAlertManager,
-         remindersEnabled: AnyPublisher<Bool, Never> = Just(true).eraseToAnyPublisher()) {
+         remindersEnabled: AnyPublisher<Bool, Never> = Just(true).eraseToAnyPublisher(),
+         manualTempBasal: AnyPublisher<Bool, Never> = Empty().eraseToAnyPublisher(),
+         window: HiroLoopReminderWindow = HiroLoopReminderWindow(), now: @escaping () -> Date = Date.init) {
         self.trioAlertManager = trioAlertManager
         subscribe(to: loopDates)
         subscribe(to: remindersEnabled)
