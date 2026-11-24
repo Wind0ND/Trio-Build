@@ -37,7 +37,7 @@ extension MedtrumPumpManager {
     func manualTempBasalRateAllowed(_ rate: Double) -> Bool {
         deliveryLock.withLock {
             guard let maximum = state.manualBasalMaximum else { return false }
-            return rate.isFinite && rate > 0 && rate <= maximum + 0.000001 && rate < 10 &&
+            return rate.isFinite && rate > 0 && rate <= maximum + 0.000001 &&
                 supportedBasalRates.contains { abs($0 - rate) < 0.000001 }
         }
     }

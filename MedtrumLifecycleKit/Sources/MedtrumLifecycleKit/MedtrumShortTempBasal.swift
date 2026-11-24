@@ -2,6 +2,7 @@ import Foundation
 
 /// A phone-side deadline. The actual pump dose always retains its native duration.
 public struct MedtrumShortTempBasal: Codable, Equatable {
+    public static let supportedMinutes = [1, 2, 3, 4, 5, 10, 15, 20, 25]
     public let sessionID: Data
     public let sessionStartedAt: Date
     public let commandID: UUID
@@ -27,7 +28,7 @@ public struct MedtrumShortTempBasal: Codable, Equatable {
 
     public var isValid: Bool {
         !sessionID.isEmpty && rate.isFinite && rate > 0 && rate <= 30 &&
-            [5, 10, 15, 20, 25].contains(minutes) &&
+            Self.supportedMinutes.contains(minutes) &&
             requestedAt.timeIntervalSince1970.isFinite && sessionStartedAt.timeIntervalSince1970.isFinite &&
             (pumpStart.map { $0.timeIntervalSince1970.isFinite } ?? true) &&
             (segmentSequence.map { $0.isFinite && (0 ... 65535).contains($0) } ?? true) &&

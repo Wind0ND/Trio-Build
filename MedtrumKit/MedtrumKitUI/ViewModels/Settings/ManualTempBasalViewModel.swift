@@ -1,4 +1,5 @@
 import LoopKit
+import MedtrumLifecycleKit
 
 class ManualTempBasalViewModel: ObservableObject {
     @Published var selectedRate = 6.0
@@ -11,14 +12,18 @@ class ManualTempBasalViewModel: ObservableObject {
     @Published var maximumRate: Double?
     @Published var historyNeedsReview = false
 
-    public let allowedRates: [Double] = MedtrumPumpManager.onboardingSupportedBasalRates.filter { $0 > 0 && $0 < 10 }
-    public let allowedDurations: [Double] = [5, 10, 15, 20, 25].map { TimeInterval.minutes(Double($0)) } +
-        (1 ... 24).map { Double($0) * TimeInterval.minutes(30) }
+    public var allowedRates: [Double] {
+        (pumpManager?.supportedBasalRates ?? MedtrumPumpManager.onboardingSupportedBasalRates).filter { $0 > 0 }
+    }
+    public let allowedDurations: [Double] = MedtrumShortTempBasal.supportedMinutes.map { TimeInterval.minutes(Double($0)) } +
+        (6 ... 12).map { Double($0) * TimeInterval.minutes(5) } +
+        (3 ... 24).map { Double($0) * TimeInterval.minutes(30) }
 
     var estimatedUnits: String { String(format: "%.2f U", selectedRate * selectedDuration / 3600) }
     var selectionWithinLimit: Bool {
         guard let maximumRate else { return false }
-        return selectedRate <= maximumRate + 0.000001 && !historyNeedsReview
+        return selectedRate.isFinite && selectedRate > 0 && selectedRate <= maximumRate + 0.000001 &&
+            allowedRates.contains(selectedRate) && !historyNeedsReview
     }
 
     func refreshStatus() {

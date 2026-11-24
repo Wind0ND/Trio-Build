@@ -626,9 +626,8 @@ public extension MedtrumPumpManager {
         }
         let shortMinutes = Int(duration / 60)
         let isShort = !automatic && duration > 0 && duration < .minutes(30)
-        guard !isShort || ([5, 10, 15, 20, 25].contains(shortMinutes) && duration == Double(shortMinutes) * 60 &&
-            unitsPerHour.isFinite && unitsPerHour > 0 && unitsPerHour < 10 &&
-            supportedBasalRates.contains(where: { abs($0 - unitsPerHour) < 0.00001 })) else {
+        guard !isShort || (MedtrumShortTempBasal.supportedMinutes.contains(shortMinutes) &&
+            duration == Double(shortMinutes) * 60 && manualTempBasalRateAllowed(unitsPerHour)) else {
             completion(.configuration(MedtrumWriteError.contextChanged)); return
         }
         let originalSession = automaticBolusContext()
