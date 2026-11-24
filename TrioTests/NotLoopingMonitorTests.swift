@@ -110,6 +110,32 @@ final class SpyAlertManager: TrioAlertManager {
         #expect(spy.issuedAlerts.isEmpty)
         _ = monitor
     }
+
+    @Test("Ending manual basal during suspension re-arms once when the pump resumes")
+    func manualEndDuringSuspensionRecovers() {
+        let dates = PassthroughSubject<Date, Never>()
+        let manual = PassthroughSubject<Bool, Never>()
+        let suspended = PassthroughSubject<Bool, Never>()
+        let spy = SpyAlertManager()
+        var clock = Date()
+        let monitor = NotLoopingMonitor(loopDates: dates.eraseToAnyPublisher(), trioAlertManager: spy,
+                                       manualTempBasal: manual.eraseToAnyPublisher(), suspended: suspended.eraseToAnyPublisher(),
+                                       now: { clock })
+        dates.send(clock.addingTimeInterval(-130 * 60))
+        manual.send(true)
+        suspended.send(true)
+        manual.send(false)
+        #expect(spy.issuedAlerts.isEmpty)
+        clock = clock.addingTimeInterval(300)
+        suspended.send(false)
+        #expect(spy.issuedAlerts.count == 6)
+        if let warning = spy.issuedAlerts.first { expectDelay(warning.trigger, 20) }
+        let count = spy.callLog.count
+        suspended.send(false)
+        manual.send(false)
+        #expect(spy.callLog.count == count)
+        _ = monitor
+    }
     /// Reconstructed locally from the private statics in the source.
     private let criticalID = Alert.Identifier(
         managerIdentifier: "trio.aps",
@@ -296,12 +322,12 @@ private actor RetryCounter {
 }
 
 @Suite("Loop guard deferred recovery") struct LoopGuardRecoveryTests {
-    @Test("An early request is retained until the unchanged three-minute boundary")
-    func earlyRequestRetained() async {
+    @Test("An early request is retained until the unchanged three-minute boundary", arguments: [159.0, 174.0])
+    func earlyRequestRetained(offset: Double) async {
         let guardState = LoopGuard()
         let start = Date()
         let accepted = await guardState.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2),
-                                                    lastLoopStartDate: start, now: start.addingTimeInterval(159), retry: {})
+                                                    lastLoopStartDate: start, now: start.addingTimeInterval(offset), retry: {})
         #expect(!accepted)
         #expect(await guardState.pendingRetryDate == start.addingTimeInterval(180))
         await guardState.cancelPendingRetry()
@@ -341,6 +367,27 @@ private actor RetryCounter {
         #expect(!duplicate)
         try await Task.sleep(nanoseconds: 150_000_000)
         #expect(await counter.count == 0)
+        await guardState.finish()
+    }
+
+    @Test("A disabled automatic recovery cancels pending work without changing the minimum interval")
+    func disabledRecoveryClearsPendingWork() async throws {
+        let counter = RetryCounter()
+        let guardState = LoopGuard(retrySleep: { _ in try await Task.sleep(nanoseconds: 40_000_000) })
+        let start = Date()
+        _ = await guardState.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2),
+                                          lastLoopStartDate: start, now: start.addingTimeInterval(159),
+                                          retry: { Task { await counter.increment() } })
+        let accepted = await guardState.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2),
+                                                    lastLoopStartDate: start, now: start.addingTimeInterval(160), retry: {},
+                                                    allowsRetry: false)
+        #expect(!accepted)
+        #expect(await guardState.pendingRetryDate == nil)
+        try await Task.sleep(nanoseconds: 150_000_000)
+        #expect(await counter.count == 0)
+        let atBoundary = await guardState.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2),
+                                                      lastLoopStartDate: start, now: start.addingTimeInterval(180), retry: {})
+        #expect(atBoundary)
         await guardState.finish()
     }
 }

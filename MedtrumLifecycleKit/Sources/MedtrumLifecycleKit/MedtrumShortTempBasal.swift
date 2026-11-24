@@ -2,7 +2,7 @@ import Foundation
 
 /// A phone-side deadline. The actual pump dose always retains its native duration.
 public struct MedtrumShortTempBasal: Codable, Equatable {
-    public static let supportedMinutes = [1, 2, 3, 4, 5, 10, 15, 20, 25]
+    public static let supportedMinutes = Array(1 ... 10) + [15, 20, 25]
     public let sessionID: Data
     public let sessionStartedAt: Date
     public let commandID: UUID

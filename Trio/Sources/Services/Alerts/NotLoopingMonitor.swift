@@ -26,6 +26,7 @@ final class NotLoopingMonitor: Injectable {
     @Injected() private var trioAlertManager: TrioAlertManager!
     @Injected() private var settingsManager: SettingsManager!
     @Injected() private var broadcaster: Broadcaster!
+    @Injected() private var deviceDataManager: DeviceDataManager!
 
     private var lastLoopDate = Date()
     private var hasLoopAnchor = false
@@ -33,6 +34,9 @@ final class NotLoopingMonitor: Injectable {
     private var hasReceivedPreference = false
     private var lastDosingMode: DosingMode?
     private let alarmLock = NSRecursiveLock()
+    private var window = HiroLoopReminderWindow()
+    private var now: () -> Date = Date.init
+    private var suspended = false
 
     /// Minutes of staleness for each Time-Sensitive warning step.
     private static let warningMinutes: [Int] = [20, 40, 60, 80, 100]
@@ -63,16 +67,22 @@ final class NotLoopingMonitor: Injectable {
 
     init(resolver: Resolver) {
         injectServices(resolver)
+        window = HiroLoopReminderWindow(defaults: .standard)
+        let manualChanged = window.setManualTempBasal(apsManager.isManualTempBasal, at: now())
+        suspended = apsManager.isSuspended
         // No successful loop yet: start only this reminder's local window now. Never change
         // APS's real success time or turn a brand-new setup into an immediate two-hour alert.
-        lastLoopDate = apsManager.lastLoopDate == .distantPast ? Date() : apsManager.lastLoopDate
+        lastLoopDate = window.anchor(lastSuccess: apsManager.lastLoopDate) == .distantPast ? now() : apsManager.lastLoopDate
         lastDosingMode = settingsManager.settings.dosingMode
         hasLoopAnchor = true
         subscribe(to: apsManager.lastLoopDateSubject.eraseToAnyPublisher())
         subscribe(to: HiroLoopReminderPreferences.shared.$enabled.eraseToAnyPublisher())
+        subscribe(toManualBasal: deviceDataManager.manualTempBasal.receive(on: DispatchQueue.main).eraseToAnyPublisher())
+        subscribe(toSuspended: deviceDataManager.suspended.receive(on: DispatchQueue.main).eraseToAnyPublisher())
         broadcaster.register(SnoozeObserver.self, observer: self)
         broadcaster.register(SettingsObserver.self, observer: self)
-        if settingsManager.settings.dosingMode.automation == .off { retractAll() }
+        if !expectsAutomaticDosing { retractAll() }
+        else if manualChanged { rescheduleAlarm() }
     }
 
     /// Publisher-only seam for tests: assigns the alert manager directly and
@@ -81,10 +91,15 @@ final class NotLoopingMonitor: Injectable {
     init(loopDates: AnyPublisher<Date, Never>, trioAlertManager: TrioAlertManager,
          remindersEnabled: AnyPublisher<Bool, Never> = Just(true).eraseToAnyPublisher(),
          manualTempBasal: AnyPublisher<Bool, Never> = Empty().eraseToAnyPublisher(),
+         suspended: AnyPublisher<Bool, Never> = Empty().eraseToAnyPublisher(),
          window: HiroLoopReminderWindow = HiroLoopReminderWindow(), now: @escaping () -> Date = Date.init) {
         self.trioAlertManager = trioAlertManager
+        self.window = window
+        self.now = now
         subscribe(to: loopDates)
         subscribe(to: remindersEnabled)
+        subscribe(toManualBasal: manualTempBasal)
+        subscribe(toSuspended: suspended)
     }
 
     private func subscribe(to loopDates: AnyPublisher<Date, Never>) {
@@ -117,7 +132,34 @@ final class NotLoopingMonitor: Injectable {
 
     private var expectsAutomaticDosing: Bool {
         let mode = settingsManager?.settings.dosingMode ?? lastDosingMode
-        return mode?.automation != AutomationLevel.off && apsManager?.isManualTempBasal != true && apsManager?.isSuspended != true
+        return mode?.automation != AutomationLevel.off && !window.manualActive && !suspended
+    }
+
+    private func subscribe(toManualBasal publisher: AnyPublisher<Bool, Never>) {
+        publisher.sink { [weak self] active in
+            guard let self else { return }
+            self.alarmLock.withLock {
+                guard self.window.setManualTempBasal(active, at: self.now()) else { return }
+                if active { self.retractAll() }
+                else { self.rescheduleAlarm() }
+                DiagnosticEventStore.shared.record(feature: "loop", stage: "reminder", outcome: active ? "paused" : "resumed")
+            }
+        }.store(in: &subscriptions)
+    }
+
+    private func subscribe(toSuspended publisher: AnyPublisher<Bool, Never>) {
+        publisher.sink { [weak self] value in
+            guard let self else { return }
+            self.alarmLock.withLock {
+                guard value != self.suspended else { return }
+                self.suspended = value
+                if value { self.retractAll() }
+                else if !self.window.manualActive {
+                    self.window.beginRecovery(at: self.now())
+                    self.rescheduleAlarm()
+                }
+            }
+        }.store(in: &subscriptions)
     }
 
     private func retractAll() {
@@ -139,13 +181,13 @@ final class NotLoopingMonitor: Injectable {
         // retract/reschedule plumbing.
         guard hasLoopAnchor, remindersEnabled, expectsAutomaticDosing else { return }
 
-        let now = Date()
+        let now = self.now()
         for (index, minutes) in Self.warningMinutes.enumerated() {
             issue(identifier: Self.warningID(index + 1), after: minutes, level: .timeSensitive, now: now)
         }
         issue(identifier: Self.alertID, after: Self.criticalMinutes, level: .critical, now: now)
         if includeOverdue {
-            let elapsedMinutes = now.timeIntervalSince(lastLoopDate) / 60
+            let elapsedMinutes = now.timeIntervalSince(window.anchor(lastSuccess: lastLoopDate)) / 60
             if elapsedMinutes >= Double(Self.criticalMinutes) {
                 issue(identifier: Self.alertID, after: Self.criticalMinutes, level: .critical, now: now, allowOverdue: true)
             } else if let index = Self.warningMinutes.lastIndex(where: { Double($0) <= elapsedMinutes }) {
@@ -163,7 +205,7 @@ final class NotLoopingMonitor: Injectable {
     /// already passed is skipped rather than fired late.
     private func issue(identifier: Alert.Identifier, after minutes: Int, level: Alert.InterruptionLevel, now: Date,
                        allowOverdue: Bool = false) {
-        let fireDate = lastLoopDate.addingTimeInterval(TimeInterval(minutes * 60))
+        let fireDate = window.anchor(lastSuccess: lastLoopDate).addingTimeInterval(TimeInterval(minutes * 60))
         let remaining = fireDate.timeIntervalSince(now)
         guard remaining > 0 || allowOverdue else { return }
         let content = Alert.Content(
@@ -195,7 +237,7 @@ extension NotLoopingMonitor: SnoozeObserver {
         alarmLock.withLock {
             guard remindersEnabled, hasLoopAnchor, expectsAutomaticDosing else { return }
             // Snooze clears warning notifications; preserve critical alarms and their history.
-            let now = Date()
+            let now = self.now()
             for (index, minutes) in Self.warningMinutes.enumerated() {
                 issue(identifier: Self.warningID(index + 1), after: minutes, level: .timeSensitive, now: now)
             }

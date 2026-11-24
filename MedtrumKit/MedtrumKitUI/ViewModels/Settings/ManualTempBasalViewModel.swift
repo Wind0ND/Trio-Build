@@ -2,8 +2,8 @@ import LoopKit
 import MedtrumLifecycleKit
 
 class ManualTempBasalViewModel: ObservableObject {
-    @Published var selectedRate = 6.0
-    @Published var selectedDuration = TimeInterval.minutes(5)
+    @Published var selectedRate = 30.0
+    @Published var selectedDuration = TimeInterval.minutes(1)
     @Published var enacting: Bool = false
     @Published var enactingBolus: Bool = false
     @Published var error: String? = nil

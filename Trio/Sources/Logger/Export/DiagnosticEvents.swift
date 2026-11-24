@@ -95,6 +95,8 @@ enum DiagnosticEventContract {
             outcomes: ["active", "stale", "ended", "dismissed", "unknown", "created", "updated", "deferred", "failed", "scheduled"]),
         "alerts": Feature(stages: ["plan", "trigger", "delivery", "cancel", "alarm"],
             outcomes: ["scheduled", "fired", "delivered", "cancelled", "stopped", "failed"]),
+        "loop": Feature(stages: ["request", "reminder"],
+            outcomes: ["deferred", "retried", "cancelled", "paused", "resumed"]),
         "branding": Feature(stages: ["bundle"], outcomes: ["consistent", "mismatch"]),
         "app": Feature(stages: ["launch"], outcomes: ["started"])
     ]

@@ -1,10 +1,10 @@
 {
   "en-US": {
     "description": "hiro is a personal test build with customizable on-screen presentation, viewing protection and device connectivity.",
-    "whats_new": "Updates the editor's available range and adds finer duration choices for short sessions and sessions up to one hour. Please check value selection, estimated totals and progress display."
+    "whats_new": "Refines session defaults and minute-by-minute choices. Improves reminder scheduling and recovery after manual sessions. Please check value selection, progress and reminders."
   },
   "zh-Hans": {
     "description": "hiro 是用于个人测试的应用版本，提供可自定义的界面展示、查看保护和设备连接功能。",
-    "whats_new": "调整编辑页可选范围，细化短时操作及一小时内的时间选项。请检查数值选择、预计总量和运行进度显示。"
+    "whats_new": "调整默认选项，细化逐分钟时间选择，改进手动操作后的提醒排程与运行恢复。请检查数值选择、运行进度和提醒表现。"
   }
 }
