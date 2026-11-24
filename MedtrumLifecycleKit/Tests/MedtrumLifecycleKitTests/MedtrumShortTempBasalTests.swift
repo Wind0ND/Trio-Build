@@ -18,15 +18,32 @@ final class MedtrumShortTempBasalTests: XCTestCase {
         XCTAssertEqual(plan(minutes: 10, rate: 1.2).estimatedUnits, 0.20, accuracy: 0.000001)
     }
 
-    func testOnlyFiveMinuteStepsFromFiveThroughTwentyFiveAreAccepted() {
+    func testUnsupportedShortMinutesAndInvalidRatesAreRejected() {
         for minutes in [5, 10, 15, 20, 25] { XCTAssertEqual(plan(minutes: minutes).minutes, minutes) }
-        for minutes in [-5, 0, 1, 6, 26, 30] {
+        for minutes in [-5, 0, 6, 7, 26, 30] {
             XCTAssertNil(MedtrumShortTempBasal(sessionID: session, sessionStartedAt: start,
                                              commandID: command, rate: 6, minutes: minutes, requestedAt: start))
         }
         for rate in [Double.nan, .infinity, -1, 0] {
             XCTAssertNil(MedtrumShortTempBasal(sessionID: session, sessionStartedAt: start,
                                              commandID: command, rate: rate, minutes: 5, requestedAt: start))
+        }
+    }
+
+    func testOneThroughFourMinuteSessionsKeepExactDeadlinesAndPersistIdentity() throws {
+        for (minutes, total) in [(1, 0.1), (2, 0.2), (3, 0.3), (4, 0.4)] {
+            let intent = try XCTUnwrap(MedtrumShortTempBasal(
+                sessionID: session, sessionStartedAt: start.addingTimeInterval(-3600),
+                commandID: command, rate: 6, minutes: minutes, requestedAt: start))
+            let confirmed = try XCTUnwrap(intent.confirmed(startedAt: start, observedAt: start))
+            let end = start.addingTimeInterval(Double(minutes) * 60)
+            XCTAssertEqual(confirmed.targetEnd, end)
+            XCTAssertEqual(confirmed.estimatedUnits, total, accuracy: 0.000001)
+            XCTAssertFalse(canCancel(confirmed, at: end.addingTimeInterval(-1)))
+            XCTAssertTrue(canCancel(confirmed, at: end))
+            let restored = try JSONDecoder().decode(MedtrumShortTempBasal.self, from: JSONEncoder().encode(confirmed))
+            XCTAssertEqual(restored.commandID, command)
+            XCTAssertEqual(restored.targetEnd, end)
         }
     }
 

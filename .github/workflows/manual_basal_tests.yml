@@ -19,6 +19,7 @@ jobs:
       - name: Test policy
         run: swift test --package-path MedtrumLifecycleKit
       - name: Test actual driver recovery paths
+        if: success() || failure()
         run: |
           set -o pipefail
           xcodebuild test -workspace Trio.xcworkspace -scheme MedtrumKitTests \

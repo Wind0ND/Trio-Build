@@ -277,10 +277,10 @@ final class ShortTempBasalTests: XCTestCase {
 
     func testFiveMinuteChoicesThroughOneHourPreserveNativeMinutesAndLongerOptions() {
         let model = ManualTempBasalViewModel(pumpManager: nil, goBack: {})
-        XCTAssertEqual(Array(model.allowedDurations.prefix(13)),
-                       [300, 600, 900, 1200, 1500, 1800, 2100, 2400, 2700, 3000, 3300, 3600, 5400])
+        XCTAssertEqual(Array(model.allowedDurations.prefix(17)),
+                       [60, 120, 180, 240, 300, 600, 900, 1200, 1500, 1800, 2100, 2400, 2700, 3000, 3300, 3600, 5400])
         XCTAssertEqual(model.allowedDurations.last, 43200)
-        XCTAssertEqual(model.allowedDurations.count, 34)
+        XCTAssertEqual(model.allowedDurations.count, 38)
         for minutes in [35, 40, 45, 50, 55] {
             let duration = Double(minutes) * 60
             XCTAssertTrue(model.allowedDurations.contains(duration))
@@ -291,6 +291,26 @@ final class ShortTempBasalTests: XCTestCase {
         }
         model.selectedDuration = 2100
         XCTAssertEqual(model.estimatedUnits, "3.50 U")
+    }
+
+    func testOneThroughFourMinuteCommandsStillUseNativeThirtyMinuteDelivery() {
+        for minutes in [1, 2, 3, 4] {
+            let duration = Double(minutes) * 60
+            let state = makeState()
+            state.shortTempBasal = nil
+            let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+            let completed = expectation(description: "Short duration reaches missing transport")
+            manager.enactTempBasal(decisionId: nil, unitsPerHour: 6, duration: duration, automatic: false) { error in
+                if let error, case .communication = error {} else {
+                    XCTFail("Expected missing-transport failure, got \(String(describing: error))")
+                }
+                completed.fulfill()
+            }
+            wait(for: [completed], timeout: 3)
+            let native = MedtrumPumpManager.pumpTempBasalDuration(requested: duration, automatic: false)
+            XCTAssertEqual(native, 1800)
+            XCTAssertEqual(SetTempBasalPacket(rate: 6, duration: native).getRequestBytes(), Data([6, 120, 0, 30, 0]))
+        }
     }
 
     func testIntentAndPendingDoseAreCheckpointedTogether() throws {
