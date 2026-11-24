@@ -22,7 +22,7 @@ class ManualTempBasalViewModel: ObservableObject {
     var estimatedUnits: String { String(format: "%.2f U", selectedRate * selectedDuration / 3600) }
     var selectionWithinLimit: Bool {
         guard let maximumRate else { return false }
-        return selectedRate.isFinite && selectedRate > 0 && selectedRate <= maximumRate + 0.000001 &&
+        return selectedRate.isFinite && selectedRate > 0 && selectedRate <= maximumRate &&
             allowedRates.contains(selectedRate) && !historyNeedsReview
     }
 

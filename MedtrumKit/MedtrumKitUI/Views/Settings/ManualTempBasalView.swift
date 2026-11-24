@@ -81,7 +81,7 @@ struct ManualTempBasalView: View {
                     }
                     if let maximum = viewModel.maximumRate {
                         LabeledContent("Configured maximum", value: viewModel.rateFormatter(for: maximum))
-                        if viewModel.selectedRate > maximum + 0.000001 {
+                        if viewModel.selectedRate > maximum {
                             Text("The selected rate exceeds the configured maximum. Change the rate before applying.")
                                 .foregroundStyle(.orange)
                         }
