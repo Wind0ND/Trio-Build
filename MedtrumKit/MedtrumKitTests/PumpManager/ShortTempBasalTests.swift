@@ -75,4 +75,66 @@ final class ShortTempBasalTests: XCTestCase {
         XCTAssertEqual(state.basalDose.type, .tempBasal)
         XCTAssertEqual(state.basalDose.estimatedEndDate, start.addingTimeInterval(1800))
     }
+
+    func testRejectedCommandCompletionCanReadStateFromTheHostQueue() {
+        let state = makeState()
+        state.basalDeliveryUncertain = true
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        manager.enactTempBasal(decisionId: nil, unitsPerHour: 6, duration: 300, automatic: false) { error in
+            XCTAssertNotNil(error)
+            let read = DispatchSemaphore(value: 0)
+            DispatchQueue.global().async { _ = manager.rawState; read.signal() }
+            XCTAssertEqual(read.wait(timeout: .now() + 1), .success, "Rejection completion must not hold deliveryLock")
+        }
+    }
+
+    func testCachedScheduledStatusCannotEndAnAcknowledgedManualTemp() {
+        let state = makeState()
+        state.shortTempBasal = state.shortTempBasal?.confirmed(startedAt: start, observedAt: start)
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        var response = SynchronizePacketResponse(state: .active, activeAlarms: [])
+        response.basal = basal(.STANDARD, at: start.addingTimeInterval(-100))
+        StateSyncer.sync(syncResponse: response, state: state, pumpManager: manager, duringReconnect: false, fullSync: false)
+        XCTAssertEqual(state.basalDose.type, .tempBasal)
+        XCTAssertEqual(state.basalDose.decisionId, command)
+        XCTAssertTrue(manager.hasManualTempBasal)
+        response.basal = basal()
+        StateSyncer.sync(syncResponse: response, state: state, pumpManager: manager, duringReconnect: true, fullSync: true)
+        XCTAssertEqual(state.basalDose.type, .tempBasal)
+        XCTAssertEqual(state.basalDose.decisionId, command)
+    }
+
+    func testLostSetReplyFollowedByLaterScheduledStatusRetainsUnknownAccounting() {
+        let state = makeState()
+        state.pendingTempBasal = state.basalDose
+        state.basalDose = UnfinalizedDose(basalRate: 1, insulinType: nil, startDate: start.addingTimeInterval(-100))
+        state.basalDeliveryUncertain = true
+        StateSyncer.reconcileShortTempBasal(state: state, basal: basal(.STANDARD, at: start.addingTimeInterval(1800)),
+                                           observedAt: start.addingTimeInterval(2400), fullSync: true)
+        XCTAssertNotNil(state.pendingTempBasal, "Current scheduled status does not prove that the earlier command never ran")
+        XCTAssertTrue(state.basalDeliveryUncertain)
+        XCTAssertNotNil(state.shortTempBasal)
+    }
+
+    func testLostCancelReplyUsesPumpTransitionRatherThanReconnectTime() {
+        let state = makeState()
+        state.shortTempBasal = state.shortTempBasal?.confirmed(startedAt: start, observedAt: start)
+        state.basalDeliveryUncertain = true
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        var response = SynchronizePacketResponse(state: .active, activeAlarms: [])
+        response.basal = basal(.STANDARD, at: start.addingTimeInterval(300))
+        StateSyncer.sync(syncResponse: response, state: state, pumpManager: manager, duringReconnect: true, fullSync: true)
+        XCTAssertEqual(state.basalDose.type, .basal)
+        XCTAssertEqual(state.basalDose.startDate.timeIntervalSince1970, start.addingTimeInterval(300).timeIntervalSince1970, accuracy: 1)
+    }
+
+    func testEditorDefaultsAndEstimatedTotalStayEditable() {
+        let model = ManualTempBasalViewModel(pumpManager: nil, goBack: {})
+        XCTAssertEqual(model.selectedRate, 6)
+        XCTAssertEqual(model.selectedDuration, 300)
+        XCTAssertEqual(model.estimatedUnits, "0.50 U")
+        model.selectedDuration = 1500
+        XCTAssertEqual(model.estimatedUnits, "2.50 U")
+        XCTAssertFalse(model.enacting)
+    }
 }
