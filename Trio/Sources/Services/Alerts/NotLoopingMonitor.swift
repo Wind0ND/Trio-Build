@@ -196,7 +196,15 @@ final class NotLoopingMonitor: Injectable {
             let journal = HiroAlertJournal.shared.recent()
             var pending: [String: Date] = [:]
             for request in requests {
-                if let date = request.trigger?.nextTriggerDate() { pending[request.identifier] = date }
+                let nextDate: Date?
+                if let interval = request.trigger as? UNTimeIntervalNotificationTrigger {
+                    nextDate = interval.nextTriggerDate()
+                } else if let calendar = request.trigger as? UNCalendarNotificationTrigger {
+                    nextDate = calendar.nextTriggerDate()
+                } else {
+                    nextDate = nil
+                }
+                if let date = nextDate { pending[request.identifier] = date }
                 else if let raw = request.content.userInfo[HiroAlertJournal.occurrenceKey] as? String,
                         let occurrence = UUID(uuidString: raw),
                         let entry = journal.first(where: { $0.id == occurrence }) {
