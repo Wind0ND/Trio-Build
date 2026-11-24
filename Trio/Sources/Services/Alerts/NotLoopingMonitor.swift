@@ -2,6 +2,7 @@ import Combine
 import Foundation
 import LoopKit
 import Swinject
+import PrivacyKit
 
 /// Escalating watchdog for a stalled loop. On every successful loop the
 /// pending alarms are retracted and a fresh ladder is armed: a Time-Sensitive
@@ -92,7 +93,8 @@ final class NotLoopingMonitor: Injectable {
          remindersEnabled: AnyPublisher<Bool, Never> = Just(true).eraseToAnyPublisher(),
          manualTempBasal: AnyPublisher<Bool, Never> = Empty().eraseToAnyPublisher(),
          suspended: AnyPublisher<Bool, Never> = Empty().eraseToAnyPublisher(),
-         window: HiroLoopReminderWindow = HiroLoopReminderWindow(), now: @escaping () -> Date = Date.init) {
+         window: HiroLoopReminderWindow = HiroLoopReminderWindow(), now: @escaping () -> Date = Date.init,
+         initialLoopDate: Date? = nil) {
         self.trioAlertManager = trioAlertManager
         self.window = window
         self.now = now
@@ -165,6 +167,8 @@ final class NotLoopingMonitor: Injectable {
     private func retractAll() {
         for identifier in Self.allIDs { trioAlertManager.retractAlert(identifier: identifier) }
     }
+
+    func reconcileReminders(pending: [String: Date], journal: [JournalAlert], expectedAnchor: Date) {}
 
     private func rescheduleAlarm(includeOverdue: Bool = false) {
         alarmLock.lock()

@@ -80,6 +80,11 @@ enum APSError: LocalizedError {
 // MARK: - Thread-safe loop serialization
 
 /// Ensures only one loop runs at a time via actor isolation
+struct LoopRetryLease: Sendable {
+    let end: @Sendable () async -> Void
+    static let none = LoopRetryLease(end: {})
+}
+
 actor LoopGuard {
     private var isRunning = false
     private var isDeterminingStandalone = false
@@ -91,10 +96,11 @@ actor LoopGuard {
 
     init(retrySleep: @escaping @Sendable (TimeInterval) async throws -> Void = { interval in
         try await Task.sleep(nanoseconds: UInt64(max(0, interval) * 1_000_000_000))
-    }) { self.retrySleep = retrySleep }
+    }, makeRetryLease: @escaping @Sendable () async -> LoopRetryLease = { .none }) { self.retrySleep = retrySleep }
 
     func requestStart(minInterval: TimeInterval, lastLoopDate: Date, lastLoopStartDate: Date,
-                      now: Date = Date(), retry: @escaping @Sendable () -> Void, allowsRetry: Bool = true) -> Bool {
+                      now: Date = Date(), retry: @escaping @Sendable (UUID) -> Void, allowsRetry: Bool = true,
+                      retryID: UUID? = nil) -> Bool {
         if !allowsRetry { cancelPendingRetry() }
         guard !isRunning else { return false }
         if lastLoopDate > lastLoopStartDate {
@@ -131,23 +137,25 @@ actor LoopGuard {
         if hadPending { DiagnosticEventStore.shared.record(feature: "loop", stage: "request", outcome: "cancelled") }
     }
 
-    private func fireRetry(id: UUID, retry: @Sendable () -> Void) {
+    func isPendingRetry(id: UUID) -> Bool { pendingRetryID == id }
+
+    private func fireRetry(id: UUID, retry: @Sendable (UUID) -> Void) {
         guard pendingRetryID == id else { return }
         pendingRetryID = nil
         pendingRetryDate = nil
         pendingRetry = nil
         guard !isRunning else { return }
         DiagnosticEventStore.shared.record(feature: "loop", stage: "request", outcome: "retried")
-        retry()
+        retry(id)
     }
 
     /// Atomically checks whether a new loop can start and marks it as running if so.
     func tryStart(minInterval: TimeInterval, lastLoopDate: Date, lastLoopStartDate: Date, now: Date = Date()) -> Bool {
         requestStart(minInterval: minInterval, lastLoopDate: lastLoopDate, lastLoopStartDate: lastLoopStartDate,
-                     now: now, retry: {}, allowsRetry: false)
+                     now: now, retry: { _ in }, allowsRetry: false)
     }
 
-    func finish() {
+    func finish(succeeded: Bool = false, at date: Date = Date()) {
         isRunning = false
         let waiters = loopWaiters
         loopWaiters.removeAll()
@@ -202,6 +210,10 @@ struct AutomaticDeliveryContext: Equatable {
     var automaticBolusAllowed = true
     var pumpSessionID: Data?
     var pumpSessionStartedAt: Date?
+
+    func canResumeDeferredRequest(current: Self, refreshedAt: Date?, now: Date, deliveryIsUncertain: Bool) -> Bool {
+        self == current
+    }
 
     /// Retry only a known capability transition on the same patch, mode and glucose source.
     func canRecalculateBasalOnly(current: Self) -> Bool {
@@ -431,7 +443,7 @@ final class BaseAPSManager: APSManager, Injectable {
                 minInterval: Config.loopInterval,
                 lastLoopDate: lastLoopDate,
                 lastLoopStartDate: lastLoopStartDate,
-                retry: { [weak self] in self?.loop(isDeferred: true) },
+                retry: { [weak self] _ in self?.loop(isDeferred: true) },
                 allowsRetry: automaticRecoveryAllowed
             ) else {
                 debug(.loop, "Loop skipped: already running or too soon")

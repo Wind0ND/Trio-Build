@@ -639,6 +639,10 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
 
     // MARK: - Persistence bridge
 
+    static func reminderDeadline(for alert: Alert, issuedAt: Date) -> Date? {
+        alert.trigger.storedInterval.map { issuedAt.addingTimeInterval($0.doubleValue) }
+    }
+
     private func recordIssued(_ alert: Alert) {
         var entry = AlertEntry(
             alertIdentifier: alert.identifier.alertIdentifier,

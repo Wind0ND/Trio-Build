@@ -39,6 +39,17 @@ protocol DeviceDataManager: AnyObject {
 
 private let accessLock = NSRecursiveLock(label: "BaseDeviceDataManager.accessLock")
 
+struct ConfirmedPumpDeliveryObservation: Equatable {
+    let manual: Bool
+    let suspended: Bool
+
+    static func confirmed(basal: PumpManagerStatus.BasalDeliveryState?, uncertain: Bool, isCurrentPump: Bool) -> Self? {
+        Self(manual: basal?.isManualTempBasal ?? false, suspended: basal?.isSuspended ?? false)
+    }
+
+    func permitsAutomaticDelivery(manualFlag: Bool) -> Bool { !manualFlag && !suspended }
+}
+
 final class BaseDeviceDataManager: DeviceDataManager, Injectable {
     private let processQueue = DispatchQueue.markedQueue(label: "BaseDeviceDataManager.processQueue", qos: .userInitiated)
     private static let legacyReservoirFile = "monitor/reservoir.json"

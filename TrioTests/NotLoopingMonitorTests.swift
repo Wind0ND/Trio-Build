@@ -3,6 +3,7 @@ import Foundation
 import LoopKit
 import Testing
 import UserNotifications
+import PrivacyKit
 
 @testable import Trio
 
@@ -322,12 +323,73 @@ private actor RetryCounter {
 }
 
 @Suite("Loop guard deferred recovery") struct LoopGuardRecoveryTests {
+    @Test("A dispatched retry cannot survive a competing successful or failed loop", arguments: [true, false])
+    func dispatchedRetryIsInvalidated(succeeded: Bool) async throws {
+        let (tokens, continuation) = AsyncStream<UUID>.makeStream()
+        defer { continuation.finish() }
+        let gate = LoopGuard(retrySleep: { _ in })
+        let start = Date()
+        _ = await gate.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2), lastLoopStartDate: start,
+                                    now: start.addingTimeInterval(170), retry: { continuation.yield($0) })
+        var iterator = tokens.makeAsyncIterator()
+        let token = try #require(await iterator.next())
+        #expect(await gate.isPendingRetry(id: token))
+        let normal = await gate.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2), lastLoopStartDate: start,
+                                            now: start.addingTimeInterval(181), retry: { _ in })
+        #expect(normal)
+        await gate.finish(succeeded: succeeded, at: start.addingTimeInterval(182))
+        let stale = await gate.requestStart(minInterval: 180,
+                                           lastLoopDate: start.addingTimeInterval(succeeded ? 182 : 2),
+                                           lastLoopStartDate: start.addingTimeInterval(181), now: start.addingTimeInterval(183),
+                                           retry: { _ in }, retryID: token)
+        #expect(!stale)
+        #expect(await gate.pendingRetryDate == nil)
+        await gate.cancelPendingRetry()
+    }
+
+    @Test("Completion timing remains atomic even while caller timestamps are stale")
+    func completionOwnsSuccessTiming() async {
+        let gate = LoopGuard()
+        let start = Date()
+        let first = await gate.requestStart(minInterval: 180, lastLoopDate: .distantPast, lastLoopStartDate: .distantPast,
+                                           now: start, retry: { _ in })
+        #expect(first)
+        await gate.finish(succeeded: true, at: start.addingTimeInterval(2))
+        let premature = await gate.requestStart(minInterval: 180, lastLoopDate: .distantPast, lastLoopStartDate: .distantPast,
+                                               now: start.addingTimeInterval(3), retry: { _ in })
+        #expect(!premature)
+        await gate.cancelPendingRetry()
+    }
+
+    @Test("A waiting execution grant survives callback dispatch until actor admission")
+    func waitingLeaseSurvivesDispatch() async throws {
+        let created = RetryCounter(), ended = RetryCounter()
+        let (tokens, continuation) = AsyncStream<UUID>.makeStream()
+        defer { continuation.finish() }
+        let gate = LoopGuard(retrySleep: { _ in }, makeRetryLease: {
+            await created.increment()
+            return LoopRetryLease(end: { await ended.increment() })
+        })
+        let start = Date()
+        _ = await gate.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2), lastLoopStartDate: start,
+                                    now: start.addingTimeInterval(170), retry: { continuation.yield($0) })
+        var iterator = tokens.makeAsyncIterator()
+        let token = try #require(await iterator.next())
+        #expect(await created.count == 1)
+        #expect(await ended.count == 0)
+        let admitted = await gate.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2), lastLoopStartDate: start,
+                                              now: start.addingTimeInterval(181), retry: { _ in }, retryID: token)
+        #expect(admitted)
+        try await Task.sleep(nanoseconds: 150_000_000)
+        #expect(await ended.count == 1)
+        await gate.finish()
+    }
     @Test("An early request is retained until the unchanged three-minute boundary", arguments: [159.0, 174.0])
     func earlyRequestRetained(offset: Double) async {
         let guardState = LoopGuard()
         let start = Date()
         let accepted = await guardState.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2),
-                                                    lastLoopStartDate: start, now: start.addingTimeInterval(offset), retry: {})
+                                                    lastLoopStartDate: start, now: start.addingTimeInterval(offset), retry: { _ in })
         #expect(!accepted)
         #expect(await guardState.pendingRetryDate == start.addingTimeInterval(180))
         await guardState.cancelPendingRetry()
@@ -342,11 +404,13 @@ private actor RetryCounter {
         for _ in 0 ..< 5 {
             let accepted = await guardState.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2),
                                                         lastLoopStartDate: start, now: start.addingTimeInterval(170),
-                                                        retry: { Task { await counter.increment() } })
+                                                        retry: { _ in Task { await counter.increment() } })
             #expect(!accepted)
         }
         try await Task.sleep(nanoseconds: 200_000_000)
         #expect(await counter.count == 1)
+        #expect(await guardState.pendingRetryDate == start.addingTimeInterval(180))
+        await guardState.cancelPendingRetry()
         #expect(await guardState.pendingRetryDate == nil)
     }
 
@@ -357,13 +421,13 @@ private actor RetryCounter {
         let start = Date()
         _ = await guardState.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2),
                                           lastLoopStartDate: start, now: start.addingTimeInterval(170),
-                                          retry: { Task { await counter.increment() } })
+                                          retry: { _ in Task { await counter.increment() } })
         let accepted = await guardState.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2),
-                                                    lastLoopStartDate: start, now: start.addingTimeInterval(181), retry: {})
+                                                    lastLoopStartDate: start, now: start.addingTimeInterval(181), retry: { _ in })
         #expect(accepted)
         #expect(await guardState.pendingRetryDate == nil)
         let duplicate = await guardState.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2),
-                                                     lastLoopStartDate: start, now: start.addingTimeInterval(182), retry: {})
+                                                     lastLoopStartDate: start, now: start.addingTimeInterval(182), retry: { _ in })
         #expect(!duplicate)
         try await Task.sleep(nanoseconds: 150_000_000)
         #expect(await counter.count == 0)
@@ -377,17 +441,105 @@ private actor RetryCounter {
         let start = Date()
         _ = await guardState.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2),
                                           lastLoopStartDate: start, now: start.addingTimeInterval(159),
-                                          retry: { Task { await counter.increment() } })
+                                          retry: { _ in Task { await counter.increment() } })
         let accepted = await guardState.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2),
-                                                    lastLoopStartDate: start, now: start.addingTimeInterval(160), retry: {},
+                                                    lastLoopStartDate: start, now: start.addingTimeInterval(160), retry: { _ in },
                                                     allowsRetry: false)
         #expect(!accepted)
         #expect(await guardState.pendingRetryDate == nil)
         try await Task.sleep(nanoseconds: 150_000_000)
         #expect(await counter.count == 0)
         let atBoundary = await guardState.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2),
-                                                      lastLoopStartDate: start, now: start.addingTimeInterval(180), retry: {})
+                                                      lastLoopStartDate: start, now: start.addingTimeInterval(180), retry: { _ in })
         #expect(atBoundary)
         await guardState.finish()
+    }
+}
+
+@Suite("Loop recovery integration boundaries") struct LoopRecoveryIntegrationTests {
+    private func window(at anchor: Date) -> HiroLoopReminderWindow {
+        let window = HiroLoopReminderWindow()
+        window.setManualTempBasal(true, at: anchor.addingTimeInterval(-60))
+        window.setManualTempBasal(false, at: anchor)
+        return window
+    }
+    private func id(_ step: Int) -> String { step == 6 ? "trio.aps.loop.notActive" : "trio.aps.loop.notActive.w\(step)" }
+
+    @Test("Relaunch installs empty or partial reminder plans at persisted absolute deadlines", arguments: [0, 2])
+    func partialInstallationRecovers(installed: Int) {
+        let anchor = Date()
+        let spy = SpyAlertManager()
+        let monitor = NotLoopingMonitor(loopDates: Empty().eraseToAnyPublisher(), trioAlertManager: spy,
+                                       window: window(at: anchor), now: { anchor.addingTimeInterval(60) },
+                                       initialLoopDate: anchor.addingTimeInterval(-3600))
+        let pending = Dictionary(uniqueKeysWithValues: (1 ... 6).prefix(installed).map {
+            (id($0), anchor.addingTimeInterval(Double($0 * 20 * 60)))
+        })
+        monitor.reconcileReminders(pending: pending, journal: [], expectedAnchor: anchor)
+        #expect(spy.issuedAlerts.count == 6 - installed)
+        for alert in spy.issuedAlerts {
+            guard case let .delayed(delay) = alert.trigger else { Issue.record("future plan became immediate"); continue }
+            #expect(delay >= 19 * 60)
+        }
+        #expect(spy.retractedIdentifiers.isEmpty)
+    }
+
+    @Test("Relaunch preserves an acknowledged warning without granting a new grace period")
+    func acknowledgedWarningIsNotReplayed() {
+        let anchor = Date()
+        let spy = SpyAlertManager()
+        let monitor = NotLoopingMonitor(loopDates: Empty().eraseToAnyPublisher(), trioAlertManager: spy,
+                                       window: window(at: anchor), now: { anchor.addingTimeInterval(25 * 60) },
+                                       initialLoopDate: anchor.addingTimeInterval(-3600))
+        var observed = JournalAlert(source: "trio.aps", kind: "loop.notActive.w1", title: "", body: "", issuedAt: anchor,
+                                    scheduledFor: anchor.addingTimeInterval(20 * 60))
+        observed.acknowledgedAt = anchor.addingTimeInterval(20 * 60 + 1)
+        monitor.reconcileReminders(pending: [:], journal: [observed], expectedAnchor: anchor)
+        #expect(spy.issuedAlerts.count == 5)
+        #expect(!spy.issuedAlerts.contains { $0.identifier.alertIdentifier == "loop.notActive.w1" })
+    }
+
+    @Test("Immediate overdue reminder retains its original absolute deadline in the journal")
+    func overdueDeadlineIsPreserved() {
+        let issued = Date()
+        let deadline = Date(timeIntervalSince1970: issued.timeIntervalSince1970.rounded() - 300)
+        let content = Alert.Content(title: "", body: "", acknowledgeActionButtonLabel: "OK")
+        let alert = Alert(identifier: .init(managerIdentifier: "trio.aps", alertIdentifier: "loop.notActive.w1"),
+                          foregroundContent: content, backgroundContent: content, trigger: .immediate,
+                          interruptionLevel: .timeSensitive,
+                          metadata: ["hiroLoopReminderDeadline": .init(deadline.timeIntervalSince1970)])
+        #expect(BaseTrioAlertManager.reminderDeadline(for: alert, issuedAt: issued) == deadline)
+    }
+
+    @Test("Unknown, unavailable or detached pump status cannot announce manual completion")
+    func uncertainStatusPreservesState() {
+        #expect(ConfirmedPumpDeliveryObservation.confirmed(basal: nil, uncertain: false, isCurrentPump: true) == nil)
+        #expect(ConfirmedPumpDeliveryObservation.confirmed(basal: .active(.distantPast), uncertain: false, isCurrentPump: true) == nil)
+        #expect(ConfirmedPumpDeliveryObservation.confirmed(basal: .pumpInoperable, uncertain: false, isCurrentPump: true) == nil)
+        #expect(ConfirmedPumpDeliveryObservation.confirmed(basal: .active(Date()), uncertain: true, isCurrentPump: true) == nil)
+        #expect(ConfirmedPumpDeliveryObservation.confirmed(basal: .active(Date()), uncertain: false, isCurrentPump: false) == nil)
+    }
+
+    @Test("A live manual dose blocks automatic delivery before its async flag arrives")
+    func liveManualDoseBlocksDelivery() throws {
+        let entry = DoseEntry(type: .tempBasal, startDate: Date(), endDate: Date().addingTimeInterval(300),
+                              value: 1, unit: .unitsPerHour, decisionId: nil, automatic: false)
+        let observation = try #require(ConfirmedPumpDeliveryObservation.confirmed(basal: .tempBasal(entry), uncertain: false, isCurrentPump: true))
+        #expect(observation.manual)
+        #expect(!observation.permitsAutomaticDelivery(manualFlag: false))
+    }
+
+    @Test("Deferred recovery requires fresh certain history from the captured current device and source")
+    func delayedRecoveryRefreshIsRequired() {
+        let pump = NSObject(), now = Date(), revision = UUID()
+        let context = AutomaticDeliveryContext(mode: .closed, modeRevision: revision, sourceRevision: revision,
+                                               pumpID: ObjectIdentifier(pump), simulatorSource: false, mockPump: false)
+        #expect(!context.canResumeDeferredRequest(current: context, refreshedAt: nil, now: now, deliveryIsUncertain: false))
+        #expect(!context.canResumeDeferredRequest(current: context, refreshedAt: now.addingTimeInterval(-600), now: now, deliveryIsUncertain: false))
+        #expect(!context.canResumeDeferredRequest(current: context, refreshedAt: now, now: now, deliveryIsUncertain: true))
+        #expect(context.canResumeDeferredRequest(current: context, refreshedAt: now, now: now, deliveryIsUncertain: false))
+        let changed = AutomaticDeliveryContext(mode: .closed, modeRevision: revision, sourceRevision: UUID(),
+                                               pumpID: ObjectIdentifier(pump), simulatorSource: false, mockPump: false)
+        #expect(!context.canResumeDeferredRequest(current: changed, refreshedAt: now, now: now, deliveryIsUncertain: false))
     }
 }

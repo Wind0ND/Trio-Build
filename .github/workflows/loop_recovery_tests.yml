@@ -1,6 +1,11 @@
 name: Manual loop recovery regression tests
 on:
   workflow_dispatch:
+    inputs:
+      focus:
+        type: choice
+        default: all
+        options: [all, recovery]
 jobs:
   regressions:
     runs-on: macos-15
@@ -17,6 +22,7 @@ jobs:
             macOS-dd-
       - run: python3 scripts/apply_zh_hans.py
       - name: Test duration policy
+        if: inputs.focus != 'recovery'
         run: swift test --package-path MedtrumLifecycleKit
       - name: Test reminder and loop request recovery
         if: success() || failure()
@@ -25,11 +31,12 @@ jobs:
           xcodebuild test -workspace Trio.xcworkspace -scheme 'Trio Tests' \
             -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.2' \
             -only-testing:TrioTests/NotLoopingMonitorTests -only-testing:TrioTests/LoopGuardRecoveryTests \
+            -only-testing:TrioTests/LoopRecoveryIntegrationTests \
             -parallel-testing-enabled NO -skipPackagePluginValidation -skipMacroValidation \
             CODE_SIGN_IDENTITY='-' CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM='' \
             PROVISIONING_PROFILE_SPECIFIER='' 2>&1 | tee loop-recovery-tests.log
       - name: Test manual driver and defaults
-        if: success() || failure()
+        if: (success() || failure()) && inputs.focus != 'recovery'
         run: |
           set -o pipefail
           xcodebuild test -workspace Trio.xcworkspace -scheme MedtrumKitTests \
@@ -45,3 +52,9 @@ jobs:
           path: |
             loop-recovery-tests.log
             manual-default-tests.log
+      - name: Save regression build products
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-dd-loop-recovery-${{ github.sha }}
