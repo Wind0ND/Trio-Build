@@ -73,6 +73,14 @@ final class MedtrumShortTempBasalTests: XCTestCase {
         XCTAssertEqual(rounded.confirmedStart, start.addingTimeInterval(0.5), "Do not place the local start in the future due to pump timestamp rounding")
     }
 
+    func testConfirmedEndToleratesClockQuantizationWithoutInventingFutureDelivery() throws {
+        let confirmed = try XCTUnwrap(plan().confirmed(startedAt: start, observedAt: start))
+        XCTAssertEqual(confirmed.confirmedEnd(pumpEnd: start.addingTimeInterval(300), observedAt: start.addingTimeInterval(300.4), clockOffset: -0.8), start.addingTimeInterval(300.4))
+        XCTAssertNil(confirmed.confirmedEnd(pumpEnd: start.addingTimeInterval(300), observedAt: start.addingTimeInterval(300.4), clockOffset: -60))
+        XCTAssertNil(confirmed.confirmedEnd(pumpEnd: start.addingTimeInterval(-60), observedAt: start.addingTimeInterval(1), clockOffset: 0))
+        XCTAssertEqual(confirmed.confirmedEnd(pumpEnd: start.addingTimeInterval(1800.8), observedAt: start.addingTimeInterval(1801), clockOffset: 0), start.addingTimeInterval(1800))
+    }
+
     private func canCancel(_ plan: MedtrumShortTempBasal, at now: Date) -> Bool {
         plan.canCancel(sessionID: session, sessionStartedAt: start.addingTimeInterval(-3600), commandID: command,
                        startDate: plan.confirmedStart ?? start, rate: 6, automatic: false, now: now)
