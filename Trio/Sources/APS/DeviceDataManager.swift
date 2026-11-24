@@ -605,7 +605,11 @@ extension BaseDeviceDataManager: PumpManagerDelegate {
                 let events = events.filter {
                     // type is optional...
                     guard let type = $0.type, type == .tempBasal else { return true }
-                    return $0.dose?.unitsPerHour ?? 0 <= Double(settingsManager.pumpSettings.maxBasal)
+                    return PumpEventAcceptance.acceptsTemporaryBasal(
+                        rate: $0.dose?.unitsPerHour ?? 0,
+                        configuredMaximum: Double(settingsManager.pumpSettings.maxBasal),
+                        isMedtrum: reportingPump is MedtrumPumpManager
+                    )
                 }
                 debug(.pump, "Storing \(events.count) new pump events")
                 let purgedUploadedIds = try await pumpHistoryStorage.storePumpEvents(

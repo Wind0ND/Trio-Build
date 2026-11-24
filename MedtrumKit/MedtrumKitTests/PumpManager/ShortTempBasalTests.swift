@@ -13,6 +13,9 @@ final class ShortTempBasalTests: XCTestCase {
         state.patchSessionEnded = false
         state.pumpState = .active
         state.basalState = .tempBasal
+        state.pumpTime = start
+        state.pumpTimeSyncedAt = start
+        state.manualBasalMaximum = 10
         state.basalDose = UnfinalizedDose(decisionId: command, tempRate: 6, duration: 1800,
                                          insulinType: nil, automatic: false, startDate: start)
         state.shortTempBasal = .init(sessionID: state.patchId, sessionStartedAt: state.patchActivatedAt!,
@@ -51,12 +54,14 @@ final class ShortTempBasalTests: XCTestCase {
 
     func testFreshStatusClearsIntentAfterNaturalEndOrCancellation() {
         let state = makeState()
-        StateSyncer.reconcileShortTempBasal(state: state, basal: basal(.STANDARD), observedAt: start.addingTimeInterval(400), fullSync: true)
+        state.shortTempBasal = state.shortTempBasal?.confirmed(startedAt: start, observedAt: start)
+        StateSyncer.reconcileShortTempBasal(state: state, basal: basal(.STANDARD, at: start.addingTimeInterval(300)), observedAt: start.addingTimeInterval(400), fullSync: true)
         XCTAssertNil(state.shortTempBasal)
     }
 
     func testLaterManualTempAndNewPatchDoNotInheritOldDeadline() {
         let state = makeState()
+        state.shortTempBasal = state.shortTempBasal?.confirmed(startedAt: start, observedAt: start)
         StateSyncer.reconcileShortTempBasal(state: state, basal: basal(at: start.addingTimeInterval(60)), observedAt: start.addingTimeInterval(61), fullSync: true)
         XCTAssertNil(state.shortTempBasal)
         let other = makeState()
@@ -136,5 +141,73 @@ final class ShortTempBasalTests: XCTestCase {
         model.selectedDuration = 1500
         XCTAssertEqual(model.estimatedUnits, "2.50 U")
         XCTAssertFalse(model.enacting)
+    }
+
+    func testConfiguredMaximumBelowEqualAndAboveDefaultControlsBothEditorAndDriver() {
+        for maximum in [2.0, 6, 10] {
+            let state = makeState()
+            state.shortTempBasal = nil
+            state.basalDose = UnfinalizedDose(basalRate: 1, insulinType: nil, startDate: start)
+            let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+            manager.syncDeliveryLimits(limits: DeliveryLimits(
+                maximumBasalRate: LoopQuantity(unit: .internationalUnitsPerHour, doubleValue: maximum),
+                maximumBolus: nil)) { result in
+                if case .failure = result { XCTFail("Local manual limit must be recorded") }
+            }
+            let model = ManualTempBasalViewModel(pumpManager: manager, goBack: {})
+            XCTAssertEqual(model.selectedRate, 6, "Keep the user's requested default visible")
+            XCTAssertEqual(model.selectionWithinLimit, maximum >= 6)
+            XCTAssertEqual(manager.manualTempBasalRateAllowed(6), maximum >= 6)
+            XCTAssertEqual(MedtrumPumpState(rawValue: manager.rawState).manualBasalMaximum, maximum)
+        }
+    }
+
+    func testImmediateCancelRequiresFreshPhysicalSegmentIdentity() {
+        let state = makeState()
+        state.shortTempBasal = state.shortTempBasal?.confirmed(startedAt: start, observedAt: start, sequence: 5)
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        manager.shortTempBasalObservedSegment = basal()
+        XCTAssertTrue(manager.manualTempBasalMatchesObservedSegment(startDate: start, rate: 6))
+        manager.shortTempBasalObservedSegment = basal(at: start.addingTimeInterval(60))
+        XCTAssertFalse(manager.manualTempBasalMatchesObservedSegment(startDate: start, rate: 6))
+        manager.shortTempBasalObservedSegment = BasalData(type: .ABSOLUTE_TEMP, sequence: 6, patchId: 256, startTime: start, rate: 6, delivery: 0)
+        XCTAssertFalse(manager.manualTempBasalMatchesObservedSegment(startDate: start, rate: 6))
+        manager.shortTempBasalObservedSegment = basal(rate: 1)
+        XCTAssertFalse(manager.manualTempBasalMatchesObservedSegment(startDate: start, rate: 6))
+    }
+
+    func testIntentAndPendingDoseAreCheckpointedTogether() throws {
+        let state = makeState()
+        let intent = state.shortTempBasal
+        let requested = state.basalDose
+        state.shortTempBasal = nil
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        manager.persistPendingDelivery = {
+            let raw = manager.rawState
+            let saved = MedtrumPumpState(rawValue: raw)
+            XCTAssertEqual(saved.shortTempBasal?.commandID, self.command)
+            XCTAssertEqual(saved.pendingTempBasal?.decisionId, self.command)
+            XCTAssertTrue(raw["awaitingBasalReply"] as? Bool == true)
+            XCTAssertEqual(saved.pendingTempBasal?.estimatedEndDate, self.start.addingTimeInterval(1800))
+        }
+        try manager.checkpointBasal(requested: requested, shortIntent: intent)
+    }
+
+    func testRetiringUnacknowledgedSessionPreservesAccountingButStopsOldTimer() {
+        let state = makeState()
+        state.pendingTempBasal = state.basalDose
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        manager.retireShortTempBasalIntent()
+        XCTAssertNil(manager.shortTempBasalStatus)
+        XCTAssertTrue(manager.hasUnresolvedShortTempBasalHistory)
+        XCTAssertTrue(manager.status.deliveryIsUncertain)
+        XCTAssertEqual(MedtrumPumpState(rawValue: manager.rawState).unresolvedShortTempBasals.count, 1)
+    }
+
+    func testManualFiveMinuteChoiceStillProducesNativeThirtyMinuteWireCommand() {
+        let duration = MedtrumPumpManager.pumpTempBasalDuration(requested: 300, automatic: false)
+        XCTAssertEqual(SetTempBasalPacket(rate: 6, duration: duration).getRequestBytes(), Data([6, 120, 0, 30, 0]))
+        let automatic = MedtrumPumpManager.pumpTempBasalDuration(requested: 300, automatic: true)
+        XCTAssertEqual(SetTempBasalPacket(rate: 6, duration: automatic).getRequestBytes(), Data([6, 120, 0, 5, 0]))
     }
 }

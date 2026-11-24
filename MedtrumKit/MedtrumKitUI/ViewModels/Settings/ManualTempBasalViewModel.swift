@@ -8,17 +8,25 @@ class ManualTempBasalViewModel: ObservableObject {
     @Published var error: String? = nil
     @Published var activeShortTemp: ShortTempBasalStatus?
     @Published var hasManualTemp = false
+    @Published var maximumRate: Double?
+    @Published var historyNeedsReview = false
 
     public let allowedRates: [Double] = MedtrumPumpManager.onboardingSupportedBasalRates.filter { $0 > 0 && $0 < 10 }
     public let allowedDurations: [Double] = [5, 10, 15, 20, 25].map { TimeInterval.minutes(Double($0)) } +
         (1 ... 24).map { Double($0) * TimeInterval.minutes(30) }
 
     var estimatedUnits: String { String(format: "%.2f U", selectedRate * selectedDuration / 3600) }
+    var selectionWithinLimit: Bool {
+        guard let maximumRate else { return false }
+        return selectedRate <= maximumRate + 0.000001 && !historyNeedsReview
+    }
 
     func refreshStatus() {
         activeShortTemp = pumpManager?.shortTempBasalStatus
         hasManualTemp = pumpManager?.hasManualTempBasal ?? false
         enactingBolus = pumpManager?.state.bolusDose != nil
+        maximumRate = pumpManager?.manualTempBasalMaximum
+        historyNeedsReview = pumpManager?.hasUnresolvedShortTempBasalHistory ?? false
     }
 
     func rateFormatter(for basal: Double) -> String {
@@ -61,7 +69,7 @@ class ManualTempBasalViewModel: ObservableObject {
     }
 
     func enact() {
-        guard let pumpManager, !enacting, !pumpManager.hasManualTempBasal,
+        guard let pumpManager, !enacting, selectionWithinLimit, !pumpManager.hasManualTempBasal,
               allowedRates.contains(selectedRate), allowedDurations.contains(selectedDuration) else {
             return
         }

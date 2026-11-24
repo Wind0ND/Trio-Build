@@ -71,11 +71,18 @@ enum StateSyncer {
         }
 
         var events: [NewPumpEvent] = []
+        var allowBasalUpdate = state.shortTempBasal == nil
+        let pendingShortCommand = state.pendingTempBasal?.decisionId
         if !syncResponse.invalidPayload, !syncResponse.truncated, let basal = syncResponse.basal {
+            pumpManager.shortTempBasalObservedSegment = basal
             if fullSync { pumpManager.shortTempBasalLastVerifiedSync = syncDate }
-            reconcileShortTempBasal(state: state, basal: basal, observedAt: syncDate, fullSync: fullSync)
+            allowBasalUpdate = reconcileShortTempBasal(state: state, basal: basal, observedAt: syncDate, fullSync: fullSync)
+            if let pendingShortCommand, state.pendingTempBasal == nil,
+               state.shortTempBasal?.commandID == pendingShortCommand, state.basalDose.type == .tempBasal {
+                events.append(NewPumpEvent.tempBasal(dose: state.basalDose.toDoseEntry(isMutable: true)))
+            }
         }
-        if fullSync, !syncResponse.invalidPayload, !syncResponse.truncated,
+        if allowBasalUpdate, fullSync, !syncResponse.invalidPayload, !syncResponse.truncated,
            state.basalDeliveryUncertain, let basal = syncResponse.basal {
             if let requested = state.pendingTempBasal {
                 if let confirmed = confirmedTempBasal(requested, basal: basal, observedAt: syncDate) {
@@ -91,13 +98,13 @@ enum StateSyncer {
                 state.basalDeliveryUncertain = false
             }
         }
-        if syncResponse.state.isDeliveryHalted {
+        if allowBasalUpdate, syncResponse.state.isDeliveryHalted {
             // a halted state is authoritative even when the notification carries a cached basal.
             events.append(contentsOf: recordSuspendIfDelivering(
                 state: state, basal: syncResponse.basal, receivedAt: syncDate
             ))
             state.basalState = .suspended
-        } else if let basal = syncResponse.basal {
+        } else if allowBasalUpdate, let basal = syncResponse.basal {
             switch basal.type {
             case .ABSOLUTE_TEMP,
                  .RELATIVE_TEMP:
@@ -126,7 +133,7 @@ enum StateSyncer {
 
             default:
                 // The patch is delivering on its schedule again
-                let eventTime = syncDate
+                let eventTime = state.shortTempBasalTransitionTime ?? syncDate
 
                 switch state.basalDose.type {
                 case .tempBasal:
@@ -134,7 +141,8 @@ enum StateSyncer {
                     let finishedTempBasal = state.basalDose.toDoseEntry(isMutable: false, endDate: eventTime)
                     state.basalDose = UnfinalizedDose(
                         basalRate: state.currentBaseBasalRate,
-                        insulinType: state.insulinType
+                        insulinType: state.insulinType,
+                        startDate: eventTime
                     )
 
                     events.append(NewPumpEvent.basal(dose: state.basalDose.toDoseEntry()))
@@ -204,6 +212,11 @@ enum StateSyncer {
         }
 
         pumpManager.notifyStateDidChange()
+        if !syncResponse.invalidPayload, !syncResponse.truncated, state.shortTempBasal != nil {
+            DispatchQueue.global(qos: .utility).async { [weak pumpManager] in
+                pumpManager?.serviceShortTempBasalDeadline()
+            }
+        }
     }
 
     /// Recover the requested duration only when a fresh patch segment matches its start and rate.
@@ -230,7 +243,9 @@ enum StateSyncer {
         var events: [NewPumpEvent] = []
         // accurate time would require pump-history reconciliation
         let eventTime: Date
-        if let basal = basal,
+        if let transition = state.shortTempBasalTransitionTime {
+            eventTime = transition
+        } else if let basal = basal,
            basal.type.isSuspendedByPump(),
            basal.startTime >= state.basalDose.startDate,
            basal.startTime <= receivedAt

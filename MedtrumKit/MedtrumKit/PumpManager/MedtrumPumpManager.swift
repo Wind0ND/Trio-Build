@@ -43,6 +43,8 @@ public class MedtrumPumpManager: DeviceManager {
     var shortTempBasalCheckInFlight = false
     var shortTempBasalNextAttempt = Date.distantPast
     var shortTempBasalLastVerifiedSync = Date.distantPast
+    var shortTempBasalObservedSegment: BasalData?
+    var shortTempBasalMonitoringEnabled = true
     private let logDeviceIdentifierLock = NSLock()
     private var logDeviceIdentifierStorage = ""
 
@@ -93,8 +95,13 @@ public class MedtrumPumpManager: DeviceManager {
     }
 
     public func forgetBluetoothManager() {
+        retireShortTempBasalIntent()
+        shortTempBasalTimer?.cancel()
+        deliveryLock.withLock { shortTempBasalMonitoringEnabled = false }
         bluetooth?.pumpManager = nil
-        bluetooth = nil
+        bluetooth?.disconnect(force: true)
+        // In-flight completions may still refer to this transport. Detach it now;
+        // release it with the manager rather than invalidating an IUO under those callbacks.
     }
 
     /// background sync, doesn't lock loops
@@ -283,7 +290,7 @@ public extension MedtrumPumpManager {
             basalDeliveryState: state.basalDeliveryUncertain ? nil : state.basalDeliveryState,
             bolusState: state.bolusDeliveryState,
             insulinType: state.insulinType,
-            deliveryIsUncertain: state.bolusDeliveryUncertain || state.basalDeliveryUncertain
+            deliveryIsUncertain: state.bolusDeliveryUncertain || state.basalDeliveryUncertain || !state.unresolvedShortTempBasals.isEmpty
         )
     }
 
@@ -505,13 +512,16 @@ public extension MedtrumPumpManager {
         _ completion: @escaping (PumpManagerError?) -> Void
     ) -> ((PumpManagerError?) -> Void)? {
         deliveryLock.lock()
-        defer { deliveryLock.unlock() }
-        guard !status.deliveryIsUncertain else { completion(.uncertainDelivery); return nil }
+        guard !status.deliveryIsUncertain else {
+            deliveryLock.unlock(); completion(.uncertainDelivery); return nil
+        }
         guard !submittingDelivery, state.bolusState == .noBolus else {
+            deliveryLock.unlock()
             completion(.deviceState(MedtrumConnectError.isBolussing))
             return nil
         }
         submittingDelivery = true
+        deliveryLock.unlock()
         return { error in
             self.deliveryLock.withLock { self.submittingDelivery = false }
             completion(error)
@@ -618,9 +628,10 @@ public extension MedtrumPumpManager {
         let originalSession = automaticBolusContext()
         let writeValidation: () -> Bool = { [weak self] in
             guard let self, validation?() ?? true else { return false }
-            return !isShort || self.deliveryLock.withLock {
-                !self.state.patchSessionEnded && self.state.patchId == originalSession.sessionID &&
-                    self.state.patchActivatedAt == originalSession.sessionStartedAt
+            return self.deliveryLock.withLock {
+                guard automatic || duration == 0 || self.manualTempBasalRateAllowed(unitsPerHour) else { return false }
+                return !isShort || (self.shortTempBasalMonitoringEnabled && !self.state.patchSessionEnded &&
+                    self.state.patchId == originalSession.sessionID && self.state.patchActivatedAt == originalSession.sessionStartedAt)
             }
         }
         log.info("Setting temp basal at \(unitsPerHour)U/hr for \(duration)s")
@@ -652,12 +663,29 @@ public extension MedtrumPumpManager {
                     finish(self.handleBasalWriteError(error, requested: nil, expectedSession: originalSession))
                     return
                 }
-                self.deliveryLock.withLock {
+                var cancelledAt = Date()
+                if self.state.shortTempBasal != nil {
+                    guard case let .success(data) = result, let response = data as? CancelTempBasalPacketResponse,
+                          response.basalType == .STANDARD,
+                          response.basalPatchId == Double(self.state.patchId.toUInt64()) else {
+                        finish(self.handleBasalWriteError(.invalidData, requested: nil, expectedSession: originalSession)); return
+                    }
+                    cancelledAt = self.state.localDate(forPumpDate: response.basalStartTime)
+                    guard cancelledAt >= self.state.basalDose.startDate, cancelledAt <= Date() else {
+                        finish(self.handleBasalWriteError(.invalidData, requested: nil, expectedSession: originalSession)); return
+                    }
+                }
+                let applied = self.deliveryLock.withLock {
+                    guard self.state.patchId == originalSession.sessionID,
+                          self.state.patchActivatedAt == originalSession.sessionStartedAt,
+                          !self.state.patchSessionEnded else { return false }
                     self.state.awaitingBasalReply = false
                     self.state.basalState = .active
                     self.state.shortTempBasal = nil
-                    self.reportScheduledBasal()
+                    self.reportScheduledBasal(at: cancelledAt)
+                    return true
                 }
+                guard applied else { finish(.configuration(MedtrumWriteError.contextChanged)); return }
             }
 
             guard duration >= .ulpOfOne else {
@@ -665,12 +693,13 @@ public extension MedtrumPumpManager {
                 return
             }
 
-            let actualDuration: TimeInterval = isShort ? .minutes(30) : duration
+            let actualDuration = Self.pumpTempBasalDuration(requested: duration, automatic: automatic)
             let commandID = isShort ? UUID() : decisionId
             var tempBasalDose = UnfinalizedDose(
                 decisionId: commandID, tempRate: unitsPerHour, duration: actualDuration,
                 insulinType: self.state.insulinType, automatic: automatic
             )
+            var shortIntent: MedtrumShortTempBasal?
             if isShort {
                 guard let sessionStart = self.state.patchActivatedAt, !self.state.patchSessionEnded,
                       self.state.patchId == originalSession.sessionID,
@@ -680,34 +709,62 @@ public extension MedtrumPumpManager {
                           commandID: commandID, rate: unitsPerHour, minutes: shortMinutes, requestedAt: tempBasalDose.startDate) else {
                     finish(.configuration(MedtrumWriteError.contextChanged)); return
                 }
-                self.deliveryLock.withLock { self.state.shortTempBasal = intent }
+                shortIntent = intent
             }
             do {
-                try self.checkpointBasal(requested: tempBasalDose)
+                try self.checkpointBasal(requested: tempBasalDose, shortIntent: shortIntent)
             } catch {
                 self.log.error("Cannot checkpoint delivery: \(error.localizedDescription)")
-                if isShort { self.deliveryLock.withLock { self.state.shortTempBasal = nil } }
+                if isShort { self.deliveryLock.withLock {
+                    if self.state.shortTempBasal?.commandID == commandID { self.state.shortTempBasal = nil }
+                } }
                 finish(.configuration(MedtrumWriteError.persistenceFailed))
                 return
             }
-            let result = self.bluetooth.write(SetTempBasalPacket(rate: unitsPerHour, duration: actualDuration), validation: writeValidation)
+            let result = self.bluetooth.write(SetTempBasalPacket(rate: unitsPerHour, duration: actualDuration), validation: {
+                writeValidation() && (!isShort || self.deliveryLock.withLock {
+                    self.state.shortTempBasal?.commandID == commandID && self.state.pendingTempBasal?.decisionId == commandID
+                })
+            })
             if case let .failure(error) = result {
                 if isShort, !error.deliveryMayHaveStarted {
-                    self.deliveryLock.withLock { self.state.shortTempBasal = nil }
+                    self.deliveryLock.withLock {
+                        if self.state.shortTempBasal?.commandID == commandID { self.state.shortTempBasal = nil }
+                    }
                 }
                 finish(self.handleBasalWriteError(error, requested: tempBasalDose, expectedSession: originalSession))
                 return
             }
 
-            if isShort, case let .success(data) = result, let response = data as? SetTempBasalResponse,
-               let intent = self.state.shortTempBasal?.confirmed(startedAt: response.basalStartTime, observedAt: Date()) {
+            if isShort {
+                guard self.deliveryLock.withLock({
+                    self.state.patchId == originalSession.sessionID && self.state.patchActivatedAt == originalSession.sessionStartedAt &&
+                        self.state.shortTempBasal?.commandID == commandID
+                }) else { finish(.configuration(MedtrumWriteError.contextChanged)); return }
+                guard case let .success(data) = result, let response = data as? SetTempBasalResponse,
+                      response.basalType == .ABSOLUTE_TEMP, abs(response.basalValue - unitsPerHour) < 0.001,
+                      response.basalPatchId == Double(self.state.patchId.toUInt64()),
+                      let intent = self.state.shortTempBasal?.confirmed(startedAt: response.basalStartTime, observedAt: Date(),
+                        clockOffset: self.state.pumpTime.timeIntervalSince(self.state.pumpTimeSyncedAt),
+                        sequence: response.basalSequence, acknowledged: true), let localStart = intent.confirmedStart else {
+                    self.deliveryLock.withLock {
+                        self.state.basalDeliveryUncertain = true
+                        self.state.awaitingBasalReply = false
+                        self.state.shortTempBasal?.accountingUnresolved = true
+                        self.notifyStateDidChange()
+                    }
+                    finish(.uncertainDelivery); return
+                }
                 self.deliveryLock.withLock { self.state.shortTempBasal = intent }
                 tempBasalDose = UnfinalizedDose(decisionId: commandID, tempRate: unitsPerHour, duration: actualDuration,
-                    insulinType: self.state.insulinType, automatic: false, startDate: response.basalStartTime)
+                    insulinType: self.state.insulinType, automatic: false, startDate: localStart)
             }
 
             self.deliveryLock.lock()
             defer { self.deliveryLock.unlock() }
+            guard self.state.patchId == originalSession.sessionID,
+                  self.state.patchActivatedAt == originalSession.sessionStartedAt,
+                  !self.state.patchSessionEnded else { finish(.configuration(MedtrumWriteError.contextChanged)); return }
             self.state.awaitingBasalReply = false
             self.state.pendingTempBasal = nil
             var events = self.finalizedTempBasal(endedAt: Date.now)
@@ -724,8 +781,9 @@ public extension MedtrumPumpManager {
         }
     }
 
-    func checkpointBasal(requested: UnfinalizedDose?) throws {
+    func checkpointBasal(requested: UnfinalizedDose?, shortIntent: MedtrumShortTempBasal? = nil) throws {
         deliveryLock.withLock {
+            if let shortIntent { state.shortTempBasal = shortIntent }
             state.pendingTempBasal = requested
             state.awaitingBasalReply = true
         }
@@ -767,8 +825,7 @@ public extension MedtrumPumpManager {
         return result
     }
 
-    private func reportScheduledBasal() {
-        let now = Date.now
+    private func reportScheduledBasal(at now: Date = Date.now) {
         var events = finalizedTempBasal(endedAt: now)
 
         let basalDose = UnfinalizedDose(
@@ -904,7 +961,12 @@ public extension MedtrumPumpManager {
         limits: LoopKit.DeliveryLimits,
         completion: @escaping (Result<LoopKit.DeliveryLimits, any Error>) -> Void
     ) {
-        log.warning("Skipping sync delivery limits (not supported by Medtrum)")
+        // The patch has no matching hardware setting, so keep the trusted host ceiling locally.
+        let maximum = limits.maximumBasalRate?.doubleValue(for: .internationalUnitsPerHour)
+        deliveryLock.withLock {
+            state.manualBasalMaximum = maximum.flatMap { $0.isFinite && (0 ... 30).contains($0) ? $0 : nil }
+            notifyStateDidChange()
+        }
         completion(.success(limits))
     }
 
@@ -1116,6 +1178,9 @@ public extension MedtrumPumpManager {
     /// The new patch delivers on its schedule from `start` - unless it is not delivering: then the suspend reported stays
     /// outstanding, for the first status that shows it delivering to resume. Its expiry counts from `activatedAt`.
     private func startPatchSession(patchId: Data, at start: Date, activatedAt: Date, isDelivering: Bool) {
+        deliveryLock.lock()
+        defer { deliveryLock.unlock() }
+        retireShortTempBasalIntent()
         if state.expiryMode == .default {
             // Issued now, due a set time after the activation
             emitAlert(alertType: .patchReminder(activatedAt: activatedAt, afterActivation: state.notificationAfterActivation, now: start))
@@ -1178,6 +1243,9 @@ public extension MedtrumPumpManager {
 
     /// The patch session is over: delivery stopped at `stoppedAt`, unless it is known to have stopped already
     private func endPatchSession(at deliveryStoppedAt: Date, statusIsCurrent: Bool) {
+        deliveryLock.lock()
+        defer { deliveryLock.unlock() }
+        retireShortTempBasalIntent()
         // Delivery cannot have stopped before the running dose began
         let stoppedAt = max(deliveryStoppedAt, state.basalDose.startDate)
 
@@ -1451,7 +1519,10 @@ public extension MedtrumPumpManager {
                 return
             }
 
-            self.bluetooth.ensureConnected(completion)
+            guard let bluetooth = self.bluetooth, self.shortTempBasalMonitoringEnabled else {
+                completion(.failedToFindDevice); return
+            }
+            bluetooth.ensureConnected(completion)
         }
     }
 

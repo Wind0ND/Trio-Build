@@ -1,6 +1,10 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Configured maximum" : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "当前配置上限"}}}},
+    "The selected rate exceeds the configured maximum. Change the rate before applying." : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "所选基础率超过当前配置上限，请先调整基础率。"}}}},
+    "Waiting for the configured delivery limit. Applying is unavailable." : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "正在等待读取输注上限，暂时无法应用。"}}}},
+    "Delivery history is uncertain. Automatic delivery is blocked until the records can be verified." : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "历史输注记录尚待核实，自动给药已暂时阻止，请导出诊断核查。"}}}},
     "Estimated total" : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "预计输注量"}}}},
     "Estimated total = rate × minutes ÷ 60. Actual delivery depends on the pump history." : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "预计输注量＝基础率 × 分钟 ÷ 60。实际输注量以泵记录为准。"}}}},
     "The pump is set for 30 minutes. hiro sends a cancellation at your selected time. Disconnection or background restrictions may delay cancellation, so delivery may continue for up to 30 minutes." : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "泵实际设置为 30 分钟，hiro 会在所选时间发送取消指令。断连或后台限制可能使取消延迟，临时基础率可能持续至 30 分钟。"}}}},

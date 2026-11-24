@@ -132,6 +132,11 @@ public class MedtrumPumpState: RawRepresentable {
            let intent = try? JSONDecoder().decode(MedtrumShortTempBasal.self, from: data), intent.isValid {
             shortTempBasal = intent
         }
+        manualBasalMaximum = (rawValue["manualBasalMaximum"] as? Double).flatMap { $0.isFinite && (0 ... 30).contains($0) ? $0 : nil }
+        if let data = rawValue["unresolvedShortTempBasals"] as? Data {
+            unresolvedShortTempBasals = ((try? JSONDecoder().decode([MedtrumShortTempBasal].self, from: data)) ?? [])
+                .filter(\.isValid).suffix(20).map { $0 }
+        }
 
         if let rawDoseEntry = rawValue["bolusDose"] as? UnfinalizedDose.RawValue {
             bolusDose = UnfinalizedDose(rawValue: rawDoseEntry)
@@ -218,6 +223,8 @@ public class MedtrumPumpState: RawRepresentable {
         value["awaitingBasalReply"] = awaitingBasalReply
         value["pendingTempBasal"] = pendingTempBasal?.rawValue
         value["shortTempBasal"] = shortTempBasal.flatMap { try? JSONEncoder().encode($0) }
+        value["manualBasalMaximum"] = manualBasalMaximum
+        value["unresolvedShortTempBasals"] = try? JSONEncoder().encode(unresolvedShortTempBasals)
         value["basalDose"] = basalDose.rawValue
         value["reservoir"] = reservoir
         value["battery"] = battery
@@ -326,6 +333,13 @@ public class MedtrumPumpState: RawRepresentable {
     /// Present for an unacknowledged set command. A cancellation targets the existing basal dose.
     var pendingTempBasal: UnfinalizedDose?
     var shortTempBasal: MedtrumShortTempBasal?
+    var unresolvedShortTempBasals: [MedtrumShortTempBasal] = []
+    var manualBasalMaximum: Double?
+    var shortTempBasalTransitionTime: Date?
+
+    func localDate(forPumpDate date: Date) -> Date {
+        date.addingTimeInterval(pumpTimeSyncedAt.timeIntervalSince(pumpTime))
+    }
 
     private var isCancelingBolus: Bool {
         guard let since = cancelingBolusSince else {

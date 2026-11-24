@@ -10,6 +10,10 @@ struct ManualTempBasalView: View {
             List {
                 if let active = viewModel.activeShortTemp {
                     Section("Manual temporary basal running") {
+                        if active.accountingUnresolved {
+                            Text("Delivery history is uncertain. Automatic delivery is blocked until the records can be verified.")
+                                .foregroundStyle(.orange)
+                        }
                         LabeledContent("Rate", value: viewModel.rateFormatter(for: active.rate))
                         LabeledContent("Estimated total", value: String(format: "%.2f U", active.estimatedUnits))
                         TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -74,6 +78,20 @@ struct ManualTempBasalView: View {
                         Spacer()
                         Text(viewModel.estimatedUnits).monospacedDigit().fontWeight(.semibold)
                     }
+                    if let maximum = viewModel.maximumRate {
+                        LabeledContent("Configured maximum", value: viewModel.rateFormatter(for: maximum))
+                        if viewModel.selectedRate > maximum + 0.000001 {
+                            Text("The selected rate exceeds the configured maximum. Change the rate before applying.")
+                                .foregroundStyle(.orange)
+                        }
+                    } else {
+                        Text("Waiting for the configured delivery limit. Applying is unavailable.")
+                            .foregroundStyle(.orange)
+                    }
+                    if viewModel.historyNeedsReview {
+                        Text("Delivery history is uncertain. Automatic delivery is blocked until the records can be verified.")
+                            .foregroundStyle(.orange)
+                    }
                 } footer: {
                     Text("Estimated total = rate × minutes ÷ 60. Actual delivery depends on the pump history.")
                     if viewModel.selectedDuration < .minutes(30) {
@@ -110,7 +128,7 @@ struct ManualTempBasalView: View {
                 }
             }
             .buttonStyle(ActionButtonStyle(.primary))
-            .disabled(viewModel.enacting || viewModel.enactingBolus || viewModel.hasManualTemp)
+            .disabled(viewModel.enacting || viewModel.enactingBolus || viewModel.hasManualTemp || !viewModel.selectionWithinLimit)
             .padding()
         }
     }

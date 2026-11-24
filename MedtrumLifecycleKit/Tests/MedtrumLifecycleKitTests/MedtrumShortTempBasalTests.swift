@@ -61,6 +61,18 @@ final class MedtrumShortTempBasalTests: XCTestCase {
         XCTAssertTrue(restored.cancellationFailed)
     }
 
+    func testAcknowledgedStartHandlesPumpClockOffsetAndBluetoothQueueDelay() throws {
+        let skewed = try XCTUnwrap(plan().confirmed(startedAt: start.addingTimeInterval(600), observedAt: start.addingTimeInterval(3), clockOffset: 600, sequence: 42, acknowledged: true))
+        XCTAssertEqual(skewed.confirmedStart, start)
+        XCTAssertEqual(skewed.targetEnd, start.addingTimeInterval(300))
+        XCTAssertEqual(skewed.pumpStart, start.addingTimeInterval(600))
+        XCTAssertEqual(skewed.segmentSequence, 42)
+        let queued = try XCTUnwrap(plan().confirmed(startedAt: start.addingTimeInterval(90), observedAt: start.addingTimeInterval(91), sequence: 43, acknowledged: true))
+        XCTAssertEqual(queued.targetEnd, start.addingTimeInterval(390))
+        let rounded = try XCTUnwrap(plan().confirmed(startedAt: start.addingTimeInterval(1), observedAt: start.addingTimeInterval(0.5), acknowledged: true))
+        XCTAssertEqual(rounded.confirmedStart, start.addingTimeInterval(0.5), "Do not place the local start in the future due to pump timestamp rounding")
+    }
+
     private func canCancel(_ plan: MedtrumShortTempBasal, at now: Date) -> Bool {
         plan.canCancel(sessionID: session, sessionStartedAt: start.addingTimeInterval(-3600), commandID: command,
                        startDate: plan.confirmedStart ?? start, rate: 6, automatic: false, now: now)
