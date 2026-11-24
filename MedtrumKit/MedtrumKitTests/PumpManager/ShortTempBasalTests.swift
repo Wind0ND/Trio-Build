@@ -210,4 +210,20 @@ final class ShortTempBasalTests: XCTestCase {
         let automatic = MedtrumPumpManager.pumpTempBasalDuration(requested: 300, automatic: true)
         XCTAssertEqual(SetTempBasalPacket(rate: 6, duration: automatic).getRequestBytes(), Data([6, 120, 0, 5, 0]))
     }
+
+    func testAutomaticCommandsCannotOverwriteManualTempBeforeHostNotificationArrives() {
+        let state = makeState()
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        let rejectedBasal = expectation(description: "automatic basal is rejected by the manual guard")
+        manager.enactGuardedAutomaticTempBasal(unitsPerHour: 1, duration: 1800, isValid: { true }) { error in
+            if let error, case .configuration = error {} else { XCTFail("Manual delivery must be protected before connecting") }
+            rejectedBasal.fulfill()
+        }
+        let rejectedSMB = expectation(description: "automatic bolus is rejected by the manual guard")
+        manager.enactGuardedAutomaticBolus(units: 0.1, isValid: { true }) { error in
+            if let error, case .configuration = error {} else { XCTFail("Manual delivery must block an in-flight automatic bolus decision") }
+            rejectedSMB.fulfill()
+        }
+        wait(for: [rejectedBasal, rejectedSMB], timeout: 3)
+    }
 }
