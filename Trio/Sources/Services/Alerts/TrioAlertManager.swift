@@ -250,12 +250,13 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
 
     // MARK: - Issue / Retract
 
-    func issueAlert(_ alert: Alert) {
+    func issueAlert(_ original: Alert) {
         occurrenceLock.lock()
         defer { occurrenceLock.unlock() }
+        let now = Date()
+        let alert = Self.normalizedLoopReminder(original, at: now)
         info(.alerts, "Alert \(alert.identifier.value) issued, level \(alert.interruptionLevel)")
 
-        let now = Date()
         let fireDate: Date
         switch alert.trigger {
         case .immediate: fireDate = now
@@ -639,8 +640,25 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
 
     // MARK: - Persistence bridge
 
+    private static func normalizedLoopReminder(_ alert: Alert, at now: Date) -> Alert {
+        guard alert.metadata?[HiroLoopReminderWindow.deadlineMetadataKey] != nil,
+              alert.identifier.managerIdentifier == "trio.aps",
+              AlertCatalogRegistry.lookup(alert.identifier)?.concept == .notLooping,
+              let deadline = reminderDeadline(for: alert, issuedAt: now) else { return alert }
+        return Alert(identifier: alert.identifier, foregroundContent: alert.foregroundContent, backgroundContent: alert.backgroundContent,
+                     trigger: deadline > now ? .delayed(interval: deadline.timeIntervalSince(now)) : .immediate,
+                     interruptionLevel: alert.interruptionLevel, sound: alert.sound, metadata: alert.metadata,
+                     categoryIdentifier: alert.categoryIdentifier)
+    }
+
     static func reminderDeadline(for alert: Alert, issuedAt: Date) -> Date? {
-        alert.trigger.storedInterval.map { issuedAt.addingTimeInterval($0.doubleValue) }
+        if alert.identifier.managerIdentifier == "trio.aps",
+           AlertCatalogRegistry.lookup(alert.identifier)?.concept == .notLooping,
+           let seconds = alert.metadata?[HiroLoopReminderWindow.deadlineMetadataKey]?.wrapped as? TimeInterval,
+           seconds.isFinite {
+            return Date(timeIntervalSince1970: seconds)
+        }
+        return alert.trigger.storedInterval.map { issuedAt.addingTimeInterval($0.doubleValue) }
     }
 
     private func recordIssued(_ alert: Alert) {
@@ -661,7 +679,7 @@ final class BaseTrioAlertManager: TrioAlertManager, Injectable {
             id: occurrence,
             source: entry.managerIdentifier, kind: entry.alertIdentifier,
             title: entry.contentTitle ?? "", body: entry.contentBody ?? "", issuedAt: entry.issuedDate,
-            scheduledFor: alert.trigger.storedInterval.map { entry.issuedDate.addingTimeInterval($0.doubleValue) }
+            scheduledFor: Self.reminderDeadline(for: alert, issuedAt: entry.issuedDate)
         ))
     }
 }

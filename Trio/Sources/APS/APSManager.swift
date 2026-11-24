@@ -91,30 +91,57 @@ actor LoopGuard {
     private var loopWaiters: [CheckedContinuation<Void, Never>] = []
     private(set) var pendingRetryDate: Date?
     private let retrySleep: @Sendable (TimeInterval) async throws -> Void
+    private let makeRetryLease: @Sendable () async -> LoopRetryLease
     private var pendingRetry: Task<Void, Never>?
     private var pendingRetryID: UUID?
+    private var pendingLease: LoopRetryLease?
+    private var activeRetryLease: LoopRetryLease?
+    private var lastAdmittedStart: Date?
+    private var lastSuccessfulCompletion: Date?
+    private var retryLeaseWaiters: [CheckedContinuation<Void, Never>] = []
 
     init(retrySleep: @escaping @Sendable (TimeInterval) async throws -> Void = { interval in
         try await Task.sleep(nanoseconds: UInt64(max(0, interval) * 1_000_000_000))
-    }, makeRetryLease: @escaping @Sendable () async -> LoopRetryLease = { .none }) { self.retrySleep = retrySleep }
+    }, makeRetryLease: @escaping @Sendable () async -> LoopRetryLease = { .none }) {
+        self.retrySleep = retrySleep
+        self.makeRetryLease = makeRetryLease
+    }
+
+    deinit {
+        pendingRetry?.cancel()
+        retryLeaseWaiters.forEach { $0.resume() }
+        let pending = pendingLease, active = activeRetryLease
+        Task { await pending?.end(); await active?.end() }
+    }
 
     func requestStart(minInterval: TimeInterval, lastLoopDate: Date, lastLoopStartDate: Date,
                       now: Date = Date(), retry: @escaping @Sendable (UUID) -> Void, allowsRetry: Bool = true,
                       retryID: UUID? = nil) -> Bool {
+        if let retryID {
+            guard pendingRetryID == retryID else { return false }
+            guard allowsRetry else { cancelPendingRetry(id: retryID); return false }
+        }
         if !allowsRetry { cancelPendingRetry() }
         guard !isRunning else { return false }
-        if lastLoopDate > lastLoopStartDate {
-            let earliest = lastLoopStartDate.addingTimeInterval(minInterval)
+        let previousStart = max(lastLoopStartDate, lastAdmittedStart ?? .distantPast)
+        let previousSuccess = max(lastLoopDate, lastSuccessfulCompletion ?? .distantPast)
+        if previousSuccess > previousStart {
+            let earliest = previousStart.addingTimeInterval(minInterval)
             if earliest > now {
-                if allowsRetry, pendingRetryDate != earliest {
+                // A wall-clock correction can make a dispatched callback early again.
+                if allowsRetry, pendingRetryDate != earliest || (retryID != nil && pendingRetry == nil) {
                     cancelPendingRetry()
                     let id = UUID()
                     pendingRetryID = id
                     pendingRetryDate = earliest
                     let sleep = retrySleep
+                    let makeLease = makeRetryLease
                     let delay = earliest.timeIntervalSince(now)
                     pendingRetry = Task { [weak self] in
-                        do { try await sleep(delay) } catch { return }
+                        let lease = await makeLease()
+                        guard await self?.installLease(lease, id: id) == true else { await lease.end(); return }
+                        do { try await sleep(delay) }
+                        catch { await self?.cancelPendingRetry(id: id); return }
                         await self?.fireRetry(id: id, retry: retry)
                     }
                     debug(.loop, "Loop request deferred until \(earliest)")
@@ -123,17 +150,45 @@ actor LoopGuard {
                 return false
             }
         }
+        // Transfer any waiting grant through the whole admitted loop. A competing
+        // ordinary start also invalidates the old token without creating a grant gap.
+        activeRetryLease = pendingLease
+        pendingLease = nil
         cancelPendingRetry()
+        lastAdmittedStart = now
         isRunning = true
         return true
     }
 
-    func cancelPendingRetry() {
+    private func installLease(_ lease: LoopRetryLease, id: UUID) -> Bool {
+        guard pendingRetryID == id else { return false }
+        pendingLease = lease
+        resumeRetryLeaseWaiters()
+        return true
+    }
+
+    func waitForPendingLease() async {
+        guard pendingRetryID != nil, pendingLease == nil else { return }
+        await withCheckedContinuation { retryLeaseWaiters.append($0) }
+    }
+
+    private func resumeRetryLeaseWaiters() {
+        let waiters = retryLeaseWaiters
+        retryLeaseWaiters.removeAll()
+        waiters.forEach { $0.resume() }
+    }
+
+    func cancelPendingRetry(id: UUID? = nil) {
+        if let id, pendingRetryID != id { return }
         let hadPending = pendingRetryID != nil
+        let lease = pendingLease
+        pendingLease = nil
         pendingRetryID = nil
         pendingRetryDate = nil
         pendingRetry?.cancel()
         pendingRetry = nil
+        resumeRetryLeaseWaiters()
+        if let lease { Task { await lease.end() } }
         if hadPending { DiagnosticEventStore.shared.record(feature: "loop", stage: "request", outcome: "cancelled") }
     }
 
@@ -141,22 +196,18 @@ actor LoopGuard {
 
     private func fireRetry(id: UUID, retry: @Sendable (UUID) -> Void) {
         guard pendingRetryID == id else { return }
-        pendingRetryID = nil
-        pendingRetryDate = nil
         pendingRetry = nil
         guard !isRunning else { return }
         DiagnosticEventStore.shared.record(feature: "loop", stage: "request", outcome: "retried")
         retry(id)
     }
 
-    /// Atomically checks whether a new loop can start and marks it as running if so.
-    func tryStart(minInterval: TimeInterval, lastLoopDate: Date, lastLoopStartDate: Date, now: Date = Date()) -> Bool {
-        requestStart(minInterval: minInterval, lastLoopDate: lastLoopDate, lastLoopStartDate: lastLoopStartDate,
-                     now: now, retry: { _ in }, allowsRetry: false)
-    }
-
     func finish(succeeded: Bool = false, at date: Date = Date()) {
+        if succeeded { lastSuccessfulCompletion = date }
+        let lease = activeRetryLease
+        activeRetryLease = nil
         isRunning = false
+        if let lease { Task { await lease.end() } }
         let waiters = loopWaiters
         loopWaiters.removeAll()
         waiters.forEach { $0.resume() }
@@ -169,7 +220,7 @@ actor LoopGuard {
     }
 
     /// Claims the guard for a determination that runs outside the loop. Refuses while another one
-    /// runs, since it computes the same state. `tryStart` ignores this claim: a skipped loop has a
+    /// runs, since it computes the same state. `requestStart` ignores this claim: a skipped loop has a
     /// therapy cost, an overlapping determination only wastes work.
     func tryStartStandaloneDetermination() -> Bool {
         guard !isDeterminingStandalone else { return false }
@@ -187,9 +238,12 @@ actor LoopGuard {
 @MainActor private final class LoopRetryBackgroundLease {
     private var identifier: UIBackgroundTaskIdentifier = .invalid
 
-    init() {
-        identifier = UIApplication.shared.beginBackgroundTask(withName: "Loop request retry") { [weak self] in
-            Task { @MainActor in self?.end() }
+    init(name: String = "Loop request retry") {
+        identifier = UIApplication.shared.beginBackgroundTask(withName: name) { [weak self] in
+            Task { @MainActor in
+                DiagnosticEventStore.shared.record(feature: "loop", stage: "execution", outcome: "expired")
+                self?.end()
+            }
         }
     }
 
@@ -212,7 +266,9 @@ struct AutomaticDeliveryContext: Equatable {
     var pumpSessionStartedAt: Date?
 
     func canResumeDeferredRequest(current: Self, refreshedAt: Date?, now: Date, deliveryIsUncertain: Bool) -> Bool {
-        self == current
+        guard self == current, pumpID != nil, mode.automation != .off, !deliveryIsUncertain, let refreshedAt else { return false }
+        let age = now.timeIntervalSince(refreshedAt)
+        return age.isFinite && age >= 0 && age <= 4.5 * 60
     }
 
     /// Retry only a known capability transition on the same patch, mode and glucose source.
@@ -259,14 +315,9 @@ final class BaseAPSManager: APSManager, Injectable {
 
     private var lifetime = Lifetime()
 
-    private let loopGuard = LoopGuard(retrySleep: { interval in
+    private let loopGuard = LoopGuard(makeRetryLease: {
         let lease = await LoopRetryBackgroundLease()
-        do { try await Task.sleep(nanoseconds: UInt64(max(0, interval) * 1_000_000_000)) }
-        catch {
-            await lease.end()
-            throw error
-        }
-        await lease.end()
+        return LoopRetryLease(end: { await lease.end() })
     })
     /// All reads/writes are dispatched onto `processQueue` so the bolus
     /// trigger sink, `cancelBolus`, and the `DoseProgressReporter`
@@ -409,9 +460,11 @@ final class BaseAPSManager: APSManager, Injectable {
     }
 
     // Loop entry point
-    private func loop(isDeferred: Bool = false) {
+    private func loop(retryID: UUID? = nil, expectedContext: AutomaticDeliveryContext? = nil) {
         Task { [weak self] in
             guard let self else { return }
+            let isDeferred = retryID != nil
+            if let retryID, !(await loopGuard.isPendingRetry(id: retryID)) { return }
 
             // Consume the user-initiated flag unconditionally — it was set
             // for the loop the user just triggered. If the guards below block
@@ -422,7 +475,7 @@ final class BaseAPSManager: APSManager, Injectable {
             if !isDeferred { self.nextLoopUserInitiated = false }
             let automaticRecoveryAllowed = !isManualTempBasal && !isSuspended && settings.dosingMode.automation != .off
             if isDeferred, !automaticRecoveryAllowed {
-                await loopGuard.cancelPendingRetry()
+                await loopGuard.cancelPendingRetry(id: retryID)
                 return
             }
 
@@ -431,11 +484,36 @@ final class BaseAPSManager: APSManager, Injectable {
             // not set")` and surface a modal banner on top of the pod
             // activation sheet, closing the sheet (reported by tester during
             // O5 pairing).
-            guard self.pumpManager != nil else {
-                await loopGuard.cancelPendingRetry()
+            guard let pump = self.pumpManager else {
+                await loopGuard.cancelPendingRetry(id: retryID)
                 debug(.loop, "Loop skipped: no pump configured")
                 return
             }
+
+            let executionLease = await LoopRetryBackgroundLease(name: "Loop starting")
+            if let retryID {
+                guard let expectedContext, expectedContext == automaticDeliveryContext else {
+                    await loopGuard.cancelPendingRetry(id: retryID)
+                    await executionLease.end()
+                    return
+                }
+                let refreshedAt: Date? = await withCheckedContinuation { continuation in
+                    pump.ensureCurrentPumpData { continuation.resume(returning: $0) }
+                }
+                let currentContext = automaticDeliveryContext
+                guard await loopGuard.isPendingRetry(id: retryID),
+                      expectedContext.canResumeDeferredRequest(current: currentContext, refreshedAt: refreshedAt,
+                                                               now: Date(), deliveryIsUncertain: pump.status.deliveryIsUncertain),
+                      let observed = ConfirmedPumpDeliveryObservation.confirmed(basal: pump.status.basalDeliveryState,
+                          uncertain: pump.status.deliveryIsUncertain, isCurrentPump: currentContext.pumpID == ObjectIdentifier(pump)),
+                      observed.permitsAutomaticDelivery(manualFlag: isManualTempBasal)
+                else {
+                    await loopGuard.cancelPendingRetry(id: retryID)
+                    await executionLease.end()
+                    return
+                }
+            }
+            let requestContext = automaticDeliveryContext
 
             // Atomic check-and-set via actor — eliminates the race between
             // checking isLooping.value and sending isLooping(true).
@@ -443,9 +521,12 @@ final class BaseAPSManager: APSManager, Injectable {
                 minInterval: Config.loopInterval,
                 lastLoopDate: lastLoopDate,
                 lastLoopStartDate: lastLoopStartDate,
-                retry: { [weak self] _ in self?.loop(isDeferred: true) },
-                allowsRetry: automaticRecoveryAllowed
+                retry: { [weak self] token in self?.loop(retryID: token, expectedContext: requestContext) },
+                allowsRetry: automaticRecoveryAllowed,
+                retryID: retryID
             ) else {
+                await loopGuard.waitForPendingLease()
+                await executionLease.end()
                 debug(.loop, "Loop skipped: already running or too soon")
                 return
             }
@@ -454,18 +535,6 @@ final class BaseAPSManager: APSManager, Injectable {
             // dwell-suppressed (see `surfaceErrorIfNeeded`).
             self.currentLoopUserInitiated = userInitiated
             defer { self.currentLoopUserInitiated = false }
-
-            // Start background task
-            // we probably need to refactor this when implementing Swift 6 due to mutation of a captured var in an async context
-            var taskID: UIBackgroundTaskIdentifier = .invalid
-            taskID = await UIApplication.shared.beginBackgroundTask(withName: "Loop starting") {
-                // closure runs on the Main Thread
-                // removed the Task that provided no guarantee to end the background task
-                if taskID != .invalid {
-                    UIApplication.shared.endBackgroundTask(taskID)
-                    taskID = .invalid
-                }
-            }
 
             isLooping.send(true)
             info(.loop, "Loop started, mode \(settings.dosingMode.rawValue)\(userInitiated ? ", requested by user" : "")")
@@ -481,7 +550,7 @@ final class BaseAPSManager: APSManager, Injectable {
             )
 
             do {
-                try await executeLoop(loopStatRecord: &loopStatRecord)
+                try await executeLoop(loopStatRecord: &loopStatRecord, expectedContext: expectedContext)
                 requestNightscoutUpload(
                     [.carbs, .pumpHistory, .overrides, .tempTargets],
                     source: "APSManager"
@@ -495,11 +564,7 @@ final class BaseAPSManager: APSManager, Injectable {
                 await finalizeLoop(error: error, loopStatRecord: loopStatRecord)
             }
 
-            // End the background task
-            if taskID != .invalid {
-                await UIApplication.shared.endBackgroundTask(taskID)
-                taskID = .invalid
-            }
+            await executionLease.end()
         }
     }
 
@@ -520,9 +585,12 @@ final class BaseAPSManager: APSManager, Injectable {
         )
     }
 
-    private func executeLoop(loopStatRecord: inout LoopStats) async throws {
+    private func executeLoop(loopStatRecord: inout LoopStats, expectedContext: AutomaticDeliveryContext? = nil) async throws {
+        let initialInputs = automaticDeliveryContext
+        if let expectedContext, initialInputs != expectedContext { throw AutomaticDeliveryInvalidation.contextChanged }
         for attempt in 0 ... 1 {
-            let inputs = automaticDeliveryContext
+            let inputs = attempt == 0 ? initialInputs : automaticDeliveryContext
+            if attempt > 0, !initialInputs.canRecalculateBasalOnly(current: inputs) { throw AutomaticDeliveryInvalidation.contextChanged }
             if let medtrum = pumpManager as? MedtrumPumpManager {
                 DiagnosticEventStore.shared.record(feature: "medtrum", stage: "automatic_mode",
                                                    outcome: medtrum.automaticBolusContext().restrictionReason)
@@ -582,9 +650,6 @@ final class BaseAPSManager: APSManager, Injectable {
 
     /// Single exit point for loop — replaces the old `loopCompleted()`.
     private func finalizeLoop(error: Error? = nil, loopStatRecord: LoopStats) async {
-        await loopGuard.finish()
-        isLooping.send(false)
-
         if let error = error {
             warning(.loop, "Loop failed", error: error)
             processError(error)
@@ -595,6 +660,9 @@ final class BaseAPSManager: APSManager, Injectable {
             transientCategoryFirstSeen.removeAll()
             transientCategoryCount.removeAll()
         }
+
+        isLooping.send(false)
+        await loopGuard.finish(succeeded: error == nil, at: error == nil ? lastLoopDate : Date())
 
         loopStats(loopStatRecord: loopStatRecord)
 
@@ -980,7 +1048,7 @@ final class BaseAPSManager: APSManager, Injectable {
         }
 
         // Unable to do temp basal during manual temp basal 😁
-        if isManualTempBasal {
+        if isManualTempBasal || basalState.isManualTempBasal {
             throw APSError.manualBasalTemp(message: "Loop not possible during the manual basal temp")
         }
 
@@ -992,7 +1060,8 @@ final class BaseAPSManager: APSManager, Injectable {
             guard !pump.status.deliveryIsUncertain else { throw PumpManagerError.uncertainDelivery }
             guard let basalState = pump.status.basalDeliveryState,
                   !basalState.isSuspended, basalState != .pumpInoperable,
-                  !isManualTempBasal, !pump.status.pumpStatus.suspended,
+                  let observed = ConfirmedPumpDeliveryObservation.confirmed(basal: basalState, uncertain: pump.status.deliveryIsUncertain, isCurrentPump: true),
+                  observed.permitsAutomaticDelivery(manualFlag: isManualTempBasal), !pump.status.pumpStatus.suspended,
                   (allowReservedBolus || !pump.status.pumpStatus.bolusing) else {
                 throw APSError.invalidPumpState(message: "Pump delivery state changed")
             }
@@ -1047,6 +1116,7 @@ final class BaseAPSManager: APSManager, Injectable {
                 }
             }
         } else {
+            guard validation() else { throw AutomaticDeliveryInvalidation.contextChanged }
             try await pump.enactTempBasal(unitsPerHour: unitsPerHour, for: duration)
         }
     }
@@ -1059,6 +1129,7 @@ final class BaseAPSManager: APSManager, Injectable {
                 }
             }
         } else {
+            guard validation() else { throw AutomaticDeliveryInvalidation.contextChanged }
             try await pump.enactBolus(units: smbToDeliver.decimalValue.nearestDouble, automatic: true)
         }
         bolusProgress.send(0)

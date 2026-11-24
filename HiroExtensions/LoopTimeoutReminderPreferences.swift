@@ -4,6 +4,7 @@ import LoopKit
 
 /// Separate reminder bookkeeping; never changes APS's actual successful-loop date.
 final class HiroLoopReminderWindow {
+    static let deadlineMetadataKey = "hiroLoopReminderDeadline"
     private struct State: Codable {
         var manualActive = false
         var resumeAnchor: Date?
@@ -13,6 +14,7 @@ final class HiroLoopReminderWindow {
     private let defaults: UserDefaults?
     private var state = State()
     var manualActive: Bool { state.manualActive }
+    var hasRecoveryWindow: Bool { state.resumeAnchor != nil }
 
     init(defaults: UserDefaults? = nil) {
         self.defaults = defaults

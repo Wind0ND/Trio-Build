@@ -3,6 +3,8 @@ import Foundation
 import LoopKit
 import Swinject
 import PrivacyKit
+import UIKit
+import UserNotifications
 
 /// Escalating watchdog for a stalled loop. On every successful loop the
 /// pending alarms are retracted and a fresh ladder is armed: a Time-Sensitive
@@ -38,6 +40,7 @@ final class NotLoopingMonitor: Injectable {
     private var window = HiroLoopReminderWindow()
     private var now: () -> Date = Date.init
     private var suspended = false
+    private var reconciliationInFlight = false
 
     /// Minutes of staleness for each Time-Sensitive warning step.
     private static let warningMinutes: [Int] = [20, 40, 60, 80, 100]
@@ -84,6 +87,12 @@ final class NotLoopingMonitor: Injectable {
         broadcaster.register(SettingsObserver.self, observer: self)
         if !expectsAutomaticDosing { retractAll() }
         else if manualChanged { rescheduleAlarm() }
+        for name in [UIApplication.protectedDataDidBecomeAvailableNotification, UIApplication.didBecomeActiveNotification] {
+            Foundation.NotificationCenter.default.publisher(for: name).receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in self?.requestReconciliation() }.store(in: &subscriptions)
+        }
+        // loadServices replays retained foreground alerts immediately after this init.
+        DispatchQueue.main.async { [weak self] in self?.requestReconciliation() }
     }
 
     /// Publisher-only seam for tests: assigns the alert manager directly and
@@ -98,6 +107,7 @@ final class NotLoopingMonitor: Injectable {
         self.trioAlertManager = trioAlertManager
         self.window = window
         self.now = now
+        if let initialLoopDate { lastLoopDate = initialLoopDate; hasLoopAnchor = true }
         subscribe(to: loopDates)
         subscribe(to: remindersEnabled)
         subscribe(toManualBasal: manualTempBasal)
@@ -168,7 +178,61 @@ final class NotLoopingMonitor: Injectable {
         for identifier in Self.allIDs { trioAlertManager.retractAlert(identifier: identifier) }
     }
 
-    func reconcileReminders(pending: [String: Date], journal: [JournalAlert], expectedAnchor: Date) {}
+    private func requestReconciliation() {
+        let anchor = alarmLock.withLock { () -> Date? in
+            guard !reconciliationInFlight, hasLoopAnchor, window.hasRecoveryWindow,
+                  remindersEnabled, expectsAutomaticDosing else { return nil }
+            reconciliationInFlight = true
+            return window.anchor(lastSuccess: lastLoopDate)
+        }
+        guard let anchor else { return }
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.alarmLock.withLock { self.reconciliationInFlight = false } }
+            let center = UNUserNotificationCenter.current()
+            let requests = await center.pendingNotificationRequests()
+            for note in await center.deliveredNotifications() { HiroAlertJournal.shared.observedNotification(note) }
+            guard !HiroAlertJournal.shared.unavailable else { return }
+            let journal = HiroAlertJournal.shared.recent()
+            var pending: [String: Date] = [:]
+            for request in requests {
+                if let date = request.trigger?.nextTriggerDate() { pending[request.identifier] = date }
+                else if let raw = request.content.userInfo[HiroAlertJournal.occurrenceKey] as? String,
+                        let occurrence = UUID(uuidString: raw),
+                        let entry = journal.first(where: { $0.id == occurrence }) {
+                    pending[request.identifier] = entry.scheduledFor ?? entry.issuedAt
+                }
+            }
+            self.reconcileReminders(pending: pending, journal: journal, expectedAnchor: anchor)
+        }
+    }
+
+    func reconcileReminders(pending: [String: Date], journal: [JournalAlert], expectedAnchor: Date) {
+        alarmLock.withLock {
+            guard hasLoopAnchor, window.hasRecoveryWindow, remindersEnabled, expectsAutomaticDosing,
+                  window.anchor(lastSuccess: lastLoopDate) == expectedAnchor else { return }
+            let now = self.now()
+            let minutes = Self.warningMinutes + [Self.criticalMinutes]
+            let latestDue = minutes.lastIndex { expectedAnchor.addingTimeInterval(Double($0 * 60)) <= now }
+            for (index, step) in minutes.enumerated() {
+                let identifier = index == Self.warningMinutes.count ? Self.alertID : Self.warningID(index + 1)
+                let deadline = expectedAnchor.addingTimeInterval(Double(step * 60))
+                let installed = pending[identifier.value].map { abs($0.timeIntervalSince(deadline)) < 2 } ?? false
+                let observed = journal.contains {
+                    $0.source == identifier.managerIdentifier && $0.kind == identifier.alertIdentifier &&
+                        abs(($0.scheduledFor ?? $0.issuedAt).timeIntervalSince(deadline)) < 2 &&
+                        ($0.acknowledgedAt != nil || $0.deliveredAt != nil || $0.triggeredAt != nil)
+                }
+                let obsoletePastStep = deadline <= now && index != latestDue
+                if pending[identifier.value] != nil, !installed || observed || obsoletePastStep {
+                    trioAlertManager.retractAlert(identifier: identifier)
+                }
+                guard !observed, !installed, !obsoletePastStep else { continue }
+                issue(identifier: identifier, after: step,
+                      level: index == Self.warningMinutes.count ? .critical : .timeSensitive, now: now, allowOverdue: true)
+            }
+        }
+    }
 
     private func rescheduleAlarm(includeOverdue: Bool = false) {
         alarmLock.lock()
@@ -226,7 +290,8 @@ final class NotLoopingMonitor: Injectable {
             backgroundContent: content,
             trigger: remaining > 0 ? .delayed(interval: remaining) : .immediate,
             interruptionLevel: level,
-            sound: .sound(name: "honk.caf")
+            sound: .sound(name: "honk.caf"),
+            metadata: [HiroLoopReminderWindow.deadlineMetadataKey: .init(fireDate.timeIntervalSince1970)]
         )
         trioAlertManager.issueAlert(alert)
     }

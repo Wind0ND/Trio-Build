@@ -44,10 +44,17 @@ struct ConfirmedPumpDeliveryObservation: Equatable {
     let suspended: Bool
 
     static func confirmed(basal: PumpManagerStatus.BasalDeliveryState?, uncertain: Bool, isCurrentPump: Bool) -> Self? {
-        Self(manual: basal?.isManualTempBasal ?? false, suspended: basal?.isSuspended ?? false)
+        guard isCurrentPump, !uncertain, let basal else { return nil }
+        switch basal {
+        case let .active(at):
+            guard at != .distantPast else { return nil }
+        case .tempBasal, .suspended: break
+        default: return nil
+        }
+        return Self(manual: basal.isManualTempBasal, suspended: basal.isSuspended)
     }
 
-    func permitsAutomaticDelivery(manualFlag: Bool) -> Bool { !manualFlag && !suspended }
+    func permitsAutomaticDelivery(manualFlag: Bool) -> Bool { !manual && !manualFlag && !suspended }
 }
 
 final class BaseDeviceDataManager: DeviceDataManager, Injectable {
@@ -341,6 +348,7 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
         debug(.pump, "Updating pump data")
         processQueue.safeSync {
             pumpManager.ensureCurrentPumpData { _ in
+                guard self.pumpManager.map({ ObjectIdentifier($0) }) == ObjectIdentifier(pumpManager) else { return }
                 debug(.pump, "Pump data updated")
                 self.updateUpdateFinished(true)
             }
@@ -471,6 +479,10 @@ extension BaseDeviceDataManager: PumpManagerDelegate {
 
     func pumpManager(_ pumpManager: PumpManager, didUpdate status: PumpManagerStatus, oldStatus: PumpManagerStatus) {
         dispatchPrecondition(condition: .onQueue(processQueue))
+        guard self.pumpManager.map({ ObjectIdentifier($0) }) == ObjectIdentifier(pumpManager) else {
+            debug(.pump, "Ignoring status from a detached pump")
+            return
+        }
         debug(
             .pump,
             "Pump status: bolusing \(status.bolusState != .noBolus), suspended \(status.basalDeliveryState?.isSuspended ?? false), battery \(status.pumpBatteryChargeRemaining.map { "\(Int($0 * 100))%" } ?? "n/a")"
@@ -497,22 +509,22 @@ extension BaseDeviceDataManager: PumpManagerDelegate {
             bolusTrigger.send(.noBolus)
         }
 
+        let observed = ConfirmedPumpDeliveryObservation.confirmed(basal: status.basalDeliveryState,
+            uncertain: status.deliveryIsUncertain, isCurrentPump: true)
+        if let observed { suspended.send(observed.suspended) }
         switch status.basalDeliveryState {
         case let .active(at):
             if at == .distantPast {
                 scheduledBasal.send(nil) // pump is not currently available
             } else {
-                suspended.send(false)
-                scheduledBasal.send(true)
+                scheduledBasal.send(observed == nil ? nil : true)
             }
         case .suspended:
-            suspended.send(true)
-            scheduledBasal.send(false)
+            scheduledBasal.send(observed == nil ? nil : false)
         case .pumpInoperable:
             scheduledBasal.send(nil) // pump is not currently available
         default:
-            suspended.send(false)
-            scheduledBasal.send(false)
+            scheduledBasal.send(observed == nil ? nil : false)
         }
 
         if status.insulinType != oldStatus.insulinType {
@@ -520,11 +532,10 @@ extension BaseDeviceDataManager: PumpManagerDelegate {
         }
 
         // Check if manual temp basal is active
-        let manualTempBasalActive = status.basalDeliveryState?.isManualTempBasal ?? false
-        if manualTempBasalActive {
-            debug(.pump, "Manual temp basal active")
+        if let observed {
+            if observed.manual { debug(.pump, "Manual temp basal active") }
+            manualTempBasal.send(observed.manual)
         }
-        manualTempBasal.send(manualTempBasalActive)
 
         if let medtrumPump = pumpManager as? MedtrumPumpManager {
             broadcaster.notify(PumpReservoirObserver.self, on: processQueue) {

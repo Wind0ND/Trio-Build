@@ -380,9 +380,10 @@ private actor RetryCounter {
         let admitted = await gate.requestStart(minInterval: 180, lastLoopDate: start.addingTimeInterval(2), lastLoopStartDate: start,
                                               now: start.addingTimeInterval(181), retry: { _ in }, retryID: token)
         #expect(admitted)
+        #expect(await ended.count == 0)
+        await gate.finish()
         try await Task.sleep(nanoseconds: 150_000_000)
         #expect(await ended.count == 1)
-        await gate.finish()
     }
     @Test("An early request is retained until the unchanged three-minute boundary", arguments: [159.0, 174.0])
     func earlyRequestRetained(offset: Double) async {
