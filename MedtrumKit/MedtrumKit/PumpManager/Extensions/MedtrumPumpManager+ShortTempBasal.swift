@@ -213,10 +213,9 @@ extension StateSyncer {
             return false
         }
         if basal.type == .STANDARD || basal.type.isSuspendedByPump() {
-            let transition = state.localDate(forPumpDate: basal.startTime)
             guard state.pendingTempBasal?.decisionId != intent.commandID,
-                  let started = intent.confirmedStart, transition >= started,
-                  transition <= observedAt, transition <= started.addingTimeInterval(.minutes(30)),
+                  let transition = intent.confirmedEnd(pumpEnd: basal.startTime, observedAt: observedAt,
+                    clockOffset: state.pumpTime.timeIntervalSince(state.pumpTimeSyncedAt)),
                   state.basalDose.decisionId == intent.commandID else {
                 state.shortTempBasal?.accountingUnresolved = true
                 state.basalDeliveryUncertain = true

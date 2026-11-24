@@ -60,4 +60,16 @@ public struct MedtrumShortTempBasal: Codable, Equatable {
               rate.isFinite, abs(self.rate - rate) < 0.001 else { return false }
         return true
     }
+
+    /// Normalize a confirmed pump transition without recording delivery after its reply or native end.
+    public func confirmedEnd(pumpEnd: Date, observedAt: Date, clockOffset: TimeInterval) -> Date? {
+        guard isValid, let started = confirmedStart, clockOffset.isFinite,
+              pumpEnd.timeIntervalSince1970.isFinite, observedAt.timeIntervalSince1970.isFinite,
+              observedAt >= started else { return nil }
+        let mapped = pumpEnd.addingTimeInterval(-clockOffset)
+        let nativeEnd = started.addingTimeInterval(1800)
+        guard mapped >= started.addingTimeInterval(-2), mapped <= observedAt.addingTimeInterval(2),
+              mapped <= nativeEnd.addingTimeInterval(2) else { return nil }
+        return max(started, min(min(mapped, observedAt), nativeEnd))
+    }
 }

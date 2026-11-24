@@ -671,16 +671,15 @@ public extension MedtrumPumpManager {
                     return
                 }
                 var cancelledAt = Date()
-                if self.state.shortTempBasal != nil {
+                if let intent = self.state.shortTempBasal {
                     guard case let .success(data) = result, let response = data as? CancelTempBasalPacketResponse,
                           response.basalType == .STANDARD,
-                          response.basalPatchId == Double(self.state.patchId.toUInt64()) else {
+                          response.basalPatchId == Double(self.state.patchId.toUInt64()),
+                          let end = intent.confirmedEnd(pumpEnd: response.basalStartTime, observedAt: Date(),
+                            clockOffset: self.state.pumpTime.timeIntervalSince(self.state.pumpTimeSyncedAt)) else {
                         finish(self.handleBasalWriteError(.invalidData, requested: nil, expectedSession: originalSession)); return
                     }
-                    cancelledAt = self.state.localDate(forPumpDate: response.basalStartTime)
-                    guard cancelledAt >= self.state.basalDose.startDate, cancelledAt <= Date() else {
-                        finish(self.handleBasalWriteError(.invalidData, requested: nil, expectedSession: originalSession)); return
-                    }
+                    cancelledAt = end
                 }
                 let applied = self.deliveryLock.withLock {
                     guard self.state.patchId == originalSession.sessionID,
