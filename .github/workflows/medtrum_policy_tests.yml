@@ -3,11 +3,11 @@ on:
   workflow_dispatch:
 jobs:
   policy:
-    runs-on: macos-26
+    runs-on: ubuntu-24.04
     steps:
-      - run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
       - uses: actions/checkout@v5
         with:
           sparse-checkout: MedtrumLifecycleKit
+      - run: swift --version
       - name: Test pure Medtrum lifecycle and short-session policies
         run: swift test --package-path MedtrumLifecycleKit
