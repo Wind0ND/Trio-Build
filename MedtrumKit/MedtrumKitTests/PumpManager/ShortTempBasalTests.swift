@@ -135,10 +135,12 @@ final class ShortTempBasalTests: XCTestCase {
 
     func testEditorDefaultsAndEstimatedTotalStayEditable() {
         let model = ManualTempBasalViewModel(pumpManager: nil, goBack: {})
-        XCTAssertEqual(model.selectedRate, 6)
-        XCTAssertEqual(model.selectedDuration, 300)
+        XCTAssertEqual(model.selectedRate, 30)
+        XCTAssertEqual(model.selectedDuration, 60)
         XCTAssertEqual(model.estimatedUnits, "0.50 U")
         model.selectedDuration = 1500
+        XCTAssertEqual(model.estimatedUnits, "12.50 U")
+        model.selectedRate = 6
         XCTAssertEqual(model.estimatedUnits, "2.50 U")
         XCTAssertFalse(model.enacting)
     }
