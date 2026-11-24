@@ -313,6 +313,30 @@ final class ShortTempBasalTests: XCTestCase {
         }
     }
 
+    func testNearZeroOffStepAndJustOverMaximumRatesAreRejectedBeforeTransport() {
+        for (rate, maximum) in [(0.0000005, 0.0), (6.0000005, 30.0), (6.0, 5.9999995)] {
+            let state = makeState()
+            state.shortTempBasal = nil
+            state.pumpSN = Data([18, 187, 192, 52])
+            state.manualBasalMaximum = maximum
+            let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+            let model = ManualTempBasalViewModel(pumpManager: manager, goBack: {})
+            model.selectedRate = rate
+            XCTAssertFalse(model.selectionWithinLimit)
+            XCTAssertFalse(manager.manualTempBasalRateAllowed(rate))
+            let completed = expectation(description: "Off-step or over-limit request is rejected before connecting")
+            manager.enactTempBasal(decisionId: nil, unitsPerHour: rate, duration: 300, automatic: false) { error in
+                if let error, case .configuration = error {} else {
+                    XCTFail("Expected configuration rejection, got \(String(describing: error))")
+                }
+                XCTAssertNil(state.shortTempBasal)
+                XCTAssertNil(state.pendingTempBasal)
+                completed.fulfill()
+            }
+            wait(for: [completed], timeout: 3)
+        }
+    }
+
     func testIntentAndPendingDoseAreCheckpointedTogether() throws {
         let state = makeState()
         let intent = state.shortTempBasal
