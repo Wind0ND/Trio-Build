@@ -415,6 +415,9 @@ public extension MedtrumPumpManager {
         validation: (() -> Bool)?, completion: @escaping (LoopKit.PumpManagerError?) -> Void
     ) {
         guard validation?() ?? true else { completion(.configuration(MedtrumWriteError.contextChanged)); return }
+        guard activationType != .automatic || !hasManualTempBasal else {
+            completion(.configuration(MedtrumWriteError.contextChanged)); return
+        }
         let originalContext = automaticBolusContext()
         guard activationType != .automatic || originalContext.allowsAutomaticBolus else {
             completion(.deviceState(MedtrumConnectError.automaticBolusUnavailable))
@@ -477,7 +480,7 @@ public extension MedtrumPumpManager {
             }
             let result = self.bluetooth.write(SetBolusPacket(bolusAmount: units), validation: {
                 (validation?() ?? true) &&
-                    (activationType != .automatic || self.automaticBolusContext() == originalContext)
+                    (activationType != .automatic || (!self.hasManualTempBasal && self.automaticBolusContext() == originalContext))
             })
             self.deliveryLock.lock()
             defer { self.deliveryLock.unlock() }
@@ -618,6 +621,9 @@ public extension MedtrumPumpManager {
         guard duration.isFinite, duration >= 0, duration <= .hours(24), unitsPerHour.isFinite else {
             completion(.configuration(MedtrumWriteError.contextChanged)); return
         }
+        guard !automatic || !hasManualTempBasal else {
+            completion(.configuration(MedtrumWriteError.contextChanged)); return
+        }
         let shortMinutes = Int(duration / 60)
         let isShort = !automatic && duration > 0 && duration < .minutes(30)
         guard !isShort || ([5, 10, 15, 20, 25].contains(shortMinutes) && duration == Double(shortMinutes) * 60 &&
@@ -629,6 +635,7 @@ public extension MedtrumPumpManager {
         let writeValidation: () -> Bool = { [weak self] in
             guard let self, validation?() ?? true else { return false }
             return self.deliveryLock.withLock {
+                guard !automatic || !self.hasManualTempBasal else { return false }
                 guard automatic || duration == 0 || self.manualTempBasalRateAllowed(unitsPerHour) else { return false }
                 return !isShort || (self.shortTempBasalMonitoringEnabled && !self.state.patchSessionEnded &&
                     self.state.patchId == originalSession.sessionID && self.state.patchActivatedAt == originalSession.sessionStartedAt)

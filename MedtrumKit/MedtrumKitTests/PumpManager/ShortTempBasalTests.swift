@@ -226,4 +226,15 @@ final class ShortTempBasalTests: XCTestCase {
         }
         wait(for: [rejectedBasal, rejectedSMB], timeout: 3)
     }
+
+    func testRecoveredLaterStartRechecksAtItsDeadlineWithoutAddingRetryDelay() {
+        let state = makeState()
+        state.shortTempBasal = state.shortTempBasal?.confirmed(startedAt: start.addingTimeInterval(3), observedAt: start.addingTimeInterval(4))
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        manager.shortTempBasalNextAttempt = start.addingTimeInterval(330)
+        XCTAssertTrue(manager.deferShortTempBasalUntilDeadline(command: command, now: start.addingTimeInterval(300)))
+        XCTAssertEqual(manager.shortTempBasalNextAttempt, start.addingTimeInterval(303))
+        XCTAssertFalse(state.shortTempBasal?.cancellationFailed ?? true)
+        XCTAssertFalse(manager.deferShortTempBasalUntilDeadline(command: command, now: start.addingTimeInterval(303)))
+    }
 }

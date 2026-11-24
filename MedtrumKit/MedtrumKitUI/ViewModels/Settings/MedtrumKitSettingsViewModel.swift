@@ -316,7 +316,7 @@ class MedtrumKitSettingsViewModel: PatchLifetimeFormatting, ObservableObject, Pu
         }
 
         isUpdatingTempBasal = true
-        pumpManager.enactTempBasal(decisionId: nil, unitsPerHour: 0, for: 0) { error in
+        let completion: (PumpManagerError?) -> Void = { error in
             DispatchQueue.main.async {
                 self.isUpdatingTempBasal = false
             }
@@ -324,6 +324,11 @@ class MedtrumKitSettingsViewModel: PatchLifetimeFormatting, ObservableObject, Pu
             if let error = error {
                 self.log.error("Failed to stop temp basal: \(error)")
             }
+        }
+        if pumpManager.hasManualTempBasal {
+            pumpManager.cancelCurrentManualTempBasal(completion: completion)
+        } else {
+            pumpManager.enactTempBasal(decisionId: nil, unitsPerHour: 0, for: 0, completion: completion)
         }
     }
 

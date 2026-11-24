@@ -81,6 +81,9 @@ extension MedtrumPumpManager {
                 self.emitShortTempBasalDiagnostic("invalidated")
                 self.finishShortTempBasalAttempt(command: command, error: false); return
             }
+            if self.deferShortTempBasalUntilDeadline(command: command, now: Date()) {
+                self.finishShortTempBasalAttempt(command: command, error: false); return
+            }
             let canCancel = self.deliveryLock.withLock { self.shortTempBasalCanCancel(command: command, at: Date()) }
             guard canCancel else { self.finishShortTempBasalAttempt(command: command, error: true); return }
             self.enactTempBasal(decisionId: nil, unitsPerHour: 0, duration: 0, automatic: false,
@@ -91,6 +94,16 @@ extension MedtrumPumpManager {
                     if error == nil { self?.emitShortTempBasalDiagnostic("cancelled") }
                     self?.finishShortTempBasalAttempt(command: command, error: error != nil)
                 })
+        }
+    }
+
+    /// A recovered pump start may move the real deadline past the initial pending-intent check.
+    func deferShortTempBasalUntilDeadline(command: UUID, now: Date) -> Bool {
+        deliveryLock.withLock {
+            guard let intent = state.shortTempBasal, intent.commandID == command,
+                  intent.confirmedStart != nil, !intent.accountingUnresolved, intent.targetEnd > now else { return false }
+            shortTempBasalNextAttempt = min(shortTempBasalNextAttempt, intent.targetEnd)
+            return true
         }
     }
 
