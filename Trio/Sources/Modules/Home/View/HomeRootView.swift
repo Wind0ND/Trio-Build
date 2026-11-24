@@ -1,4 +1,5 @@
 import CoreData
+import MedtrumKit
 import SpriteKit
 import SwiftDate
 import SwiftUI
@@ -34,6 +35,7 @@ extension Home {
         @State var pendingCGM: CGMCatalogEntry?
         @State var showSnoozeSheet: Bool = false
         @State var showManualGlucose: Bool = false
+        @State var showManualTempBasal = false
         @State var showReleaseNotes: Bool = false
         @ObservedObject var releaseNotesService = ReleaseNotesService.shared
         // Pull-down-to-force-loop (see HomeRootView+Refresh.swift)
@@ -101,10 +103,12 @@ extension Home {
                     .offset(x: 0, y: -18)
             }
             .overlay(alignment: .topTrailing) {
-                // borderless capsule (not a control); centered in the basal
-                // pane band so it clears the y-axis labels on every device size
+                // Keep the actual rate in the basal pane; Medtrum also uses it as the manual editor entry.
                 if let basal = currentBasalReadout {
-                    HStack(spacing: 3) {
+                    Button {
+                        if state.apsManager?.pumpManager is MedtrumPumpManager { showManualTempBasal = true }
+                    } label: {
+                      HStack(spacing: 3) {
                         if basal.isManual {
                             Image(systemName: "hand.raised.fill")
                                 .font(.system(size: 11, weight: .semibold))
@@ -112,7 +116,13 @@ extension Home {
                         Text(basal.label)
                             .font(.system(size: 14, weight: .semibold))
                             .fontDesign(.rounded)
+                        if state.apsManager?.pumpManager is MedtrumPumpManager {
+                            Image(systemName: "chevron.right").font(.caption2)
+                        }
+                      }
                     }
+                    .buttonStyle(.plain)
+                    .disabled(!(state.apsManager?.pumpManager is MedtrumPumpManager))
                     .foregroundStyle(basal.isManual ? Color.loopManualTemp : Color.insulin)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
@@ -121,6 +131,7 @@ extension Home {
                     .padding(.trailing, 16)
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(Text(basal.accessibilityLabel))
+                    .accessibilityHint(Text("Opens manual temporary basal settings"))
                 }
             }
         }
@@ -294,6 +305,11 @@ extension Home {
             .sheet(isPresented: $showManualGlucose) {
                 ManualGlucoseEntryView(units: state.units, isPresented: $showManualGlucose) { amount in
                     state.addManualGlucose(amount)
+                }
+            }
+            .sheet(isPresented: $showManualTempBasal) {
+                if let pump = state.apsManager?.pumpManager as? MedtrumPumpManager {
+                    MedtrumManualTempBasalView(pumpManager: pump) { showManualTempBasal = false }
                 }
             }
             // DEVICE SELECTION (pump + CGM)

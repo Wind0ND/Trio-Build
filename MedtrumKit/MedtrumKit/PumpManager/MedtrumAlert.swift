@@ -15,6 +15,7 @@ enum MedtrumAlert {
     case patchFaultNotification
     case reservoirEmptyNotification
     case baseResetNotification
+    case shortTempBasalCancellationFailed
 
     var title: String? {
         switch self {
@@ -103,6 +104,9 @@ enum MedtrumAlert {
                 managerIdentifier: MedtrumAlert.managerIdentifier,
                 alertIdentifier: "com.nightscout.medtrumkit.base-reset"
             )
+        case .shortTempBasalCancellationFailed:
+            return Alert.Identifier(managerIdentifier: MedtrumAlert.managerIdentifier,
+                                    alertIdentifier: "com.nightscout.medtrumkit.short-temp-cancel")
         case .lowReservoir:
             return Alert.Identifier(
                 managerIdentifier: MedtrumAlert.managerIdentifier,
@@ -113,6 +117,10 @@ enum MedtrumAlert {
 
     private var alertContent: Alert.Content {
         switch self {
+        case .shortTempBasalCancellationFailed:
+            return Alert.Content(title: String(localized: "Temporary basal cancellation delayed"),
+                body: String(localized: "Cancellation could not be confirmed. Open hiro and check the pump connection. The temporary basal may still be running."),
+                acknowledgeActionButtonLabel: String(localized: "OK"))
         case let .patchExpiredNotification(_, remaining):
             return Alert.Content(
                 title: String(

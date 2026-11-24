@@ -1,14 +1,25 @@
 import LoopKit
 
 class ManualTempBasalViewModel: ObservableObject {
-    @Published var selectedRate = 0.05
-    @Published var selectedDuration = TimeInterval.minutes(30)
+    @Published var selectedRate = 6.0
+    @Published var selectedDuration = TimeInterval.minutes(5)
     @Published var enacting: Bool = false
     @Published var enactingBolus: Bool = false
     @Published var error: String? = nil
+    @Published var activeShortTemp: ShortTempBasalStatus?
+    @Published var hasManualTemp = false
 
     public let allowedRates: [Double] = MedtrumPumpManager.onboardingSupportedBasalRates.filter { $0 > 0 && $0 < 10 }
-    public let allowedDurations: [Double] = (1 ... 24).map { Double($0) * TimeInterval.minutes(30) }
+    public let allowedDurations: [Double] = [5, 10, 15, 20, 25].map { TimeInterval.minutes(Double($0)) } +
+        (1 ... 24).map { Double($0) * TimeInterval.minutes(30) }
+
+    var estimatedUnits: String { String(format: "%.2f U", selectedRate * selectedDuration / 3600) }
+
+    func refreshStatus() {
+        activeShortTemp = pumpManager?.shortTempBasalStatus
+        hasManualTemp = pumpManager?.hasManualTempBasal ?? false
+        enactingBolus = pumpManager?.state.bolusDose != nil
+    }
 
     func rateFormatter(for basal: Double) -> String {
         let stepped = (basal / 0.05).rounded() * 0.05
@@ -40,9 +51,7 @@ class ManualTempBasalViewModel: ObservableObject {
         self.goBack = goBack
 
         if let pumpManager {
-            selectedRate = pumpManager.state.currentBaseBasalRate
-            enactingBolus = pumpManager.state.bolusDose != nil
-
+            refreshStatus()
             pumpManager.addStatusObserver(self, queue: DispatchQueue.main)
         }
     }
@@ -52,16 +61,28 @@ class ManualTempBasalViewModel: ObservableObject {
     }
 
     func enact() {
-        guard let pumpManager else {
+        guard let pumpManager, !enacting, !pumpManager.hasManualTempBasal,
+              allowedRates.contains(selectedRate), allowedDurations.contains(selectedDuration) else {
             return
         }
 
         enacting = true
-        pumpManager.syncPumpData { _ in
+        error = nil
+        let rate = selectedRate
+        let duration = selectedDuration
+        pumpManager.syncPumpData { syncedAt in
+            guard syncedAt != nil else {
+                DispatchQueue.main.async {
+                    self.enacting = false
+                    self.error = MedtrumWriteError.noManager.localizedDescription
+                    self.refreshStatus()
+                }
+                return
+            }
             pumpManager.enactTempBasal(
                 decisionId: nil,
-                unitsPerHour: self.selectedRate,
-                duration: self.selectedDuration,
+                unitsPerHour: rate,
+                duration: duration,
                 automatic: false
             ) { error in
                 DispatchQueue.main.async {
@@ -69,10 +90,23 @@ class ManualTempBasalViewModel: ObservableObject {
 
                     if let error {
                         self.error = error.localizedDescription
-                    } else {
-                        self.goBack()
                     }
+                    self.refreshStatus()
+                    if error == nil, duration >= .minutes(30) { self.goBack() }
                 }
+            }
+        }
+    }
+
+    func cancel() {
+        guard let pumpManager, !enacting else { return }
+        enacting = true
+        error = nil
+        pumpManager.cancelCurrentManualTempBasal { error in
+            DispatchQueue.main.async {
+                self.enacting = false
+                self.error = error?.localizedDescription
+                self.refreshStatus()
             }
         }
     }
@@ -81,7 +115,7 @@ class ManualTempBasalViewModel: ObservableObject {
 extension ManualTempBasalViewModel: PumpManagerStatusObserver {
     func pumpManager(_: any LoopKit.PumpManager, didUpdate _: LoopKit.PumpManagerStatus, oldStatus _: LoopKit.PumpManagerStatus) {
         DispatchQueue.main.async {
-            self.enactingBolus = self.pumpManager?.state.bolusDose != nil
+            self.refreshStatus()
         }
     }
 }

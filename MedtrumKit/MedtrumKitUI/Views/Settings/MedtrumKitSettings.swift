@@ -219,7 +219,7 @@ struct MedtrumKitSettings: View {
                             .isUpdatingSuspend || viewModel.isClearingAlert
                     )
 
-                    if !viewModel.tempBasalManual, viewModel.patchLifecycleState != .fault {
+                    if viewModel.patchLifecycleState != .fault {
                         Button(action: { viewModel.toTempBasal() }) {
                             HStack {
                                 Text("Manual Temp Basal", comment: "sync pump")

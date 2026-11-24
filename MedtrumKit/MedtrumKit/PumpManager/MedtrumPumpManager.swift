@@ -1,6 +1,7 @@
 import CoreBluetooth
 import HealthKit
 import LoopKit
+import MedtrumLifecycleKit
 import UIKit
 
 public class MedtrumPumpManager: DeviceManager {
@@ -19,7 +20,7 @@ public class MedtrumPumpManager: DeviceManager {
 
     /// The host atomically saves this manager's current raw state before the patch receives a dose command.
     public var persistPendingDelivery: (() throws -> Void)?
-    private func checkpointDelivery() throws {
+    func checkpointDelivery() throws {
         guard let persistPendingDelivery else { throw CocoaError(.fileWriteUnknown) }
         try persistPendingDelivery()
     }
@@ -38,6 +39,10 @@ public class MedtrumPumpManager: DeviceManager {
     // Protects the pending dose and delivery-command reservation across BLE callbacks.
     let deliveryLock = NSRecursiveLock()
     private var submittingDelivery = false
+    var shortTempBasalTimer: DispatchSourceTimer?
+    var shortTempBasalCheckInFlight = false
+    var shortTempBasalNextAttempt = Date.distantPast
+    var shortTempBasalLastVerifiedSync = Date.distantPast
     private let logDeviceIdentifierLock = NSLock()
     private var logDeviceIdentifierStorage = ""
 
@@ -78,9 +83,11 @@ public class MedtrumPumpManager: DeviceManager {
 
         bluetooth.pumpManager = self
         MedtrumLogger.pumpManager = self
+        startShortTempBasalMonitoring()
     }
 
     deinit {
+        shortTempBasalTimer?.cancel()
         NotificationCenter.default.removeObserver(self)
         log.info("MedtrumPumpManager deallocated")
     }
@@ -247,6 +254,7 @@ public class MedtrumPumpManager: DeviceManager {
 
     @objc func appMovedToForeground() {
         backgroundTask.stopBackgroundTask()
+        serviceShortTempBasalDeadline()
     }
 }
 
@@ -597,7 +605,24 @@ public extension MedtrumPumpManager {
         validation: (() -> Bool)? = nil, completion: @escaping (LoopKit.PumpManagerError?) -> Void
     ) {
         guard validation?() ?? true else { completion(.configuration(MedtrumWriteError.contextChanged)); return }
+        guard duration.isFinite, duration >= 0, duration <= .hours(24), unitsPerHour.isFinite else {
+            completion(.configuration(MedtrumWriteError.contextChanged)); return
+        }
+        let shortMinutes = Int(duration / 60)
+        let isShort = !automatic && duration > 0 && duration < .minutes(30)
+        guard !isShort || ([5, 10, 15, 20, 25].contains(shortMinutes) && duration == Double(shortMinutes) * 60 &&
+            unitsPerHour.isFinite && unitsPerHour > 0 && unitsPerHour < 10 &&
+            supportedBasalRates.contains(where: { abs($0 - unitsPerHour) < 0.00001 })) else {
+            completion(.configuration(MedtrumWriteError.contextChanged)); return
+        }
         let originalSession = automaticBolusContext()
+        let writeValidation: () -> Bool = { [weak self] in
+            guard let self, validation?() ?? true else { return false }
+            return !isShort || self.deliveryLock.withLock {
+                !self.state.patchSessionEnded && self.state.patchId == originalSession.sessionID &&
+                    self.state.patchActivatedAt == originalSession.sessionStartedAt
+            }
+        }
         log.info("Setting temp basal at \(unitsPerHour)U/hr for \(duration)s")
 
         guard let finish = reserveDeliveryCommand(completion) else { return }
@@ -610,7 +635,10 @@ public extension MedtrumPumpManager {
                 finish(.deviceState(MedtrumConnectError.isSuspended))
                 return
             }
-            guard validation?() ?? true else { finish(.configuration(MedtrumWriteError.contextChanged)); return }
+            guard writeValidation() else { finish(.configuration(MedtrumWriteError.contextChanged)); return }
+            guard !isShort || !self.hasManualTempBasal else {
+                finish(.configuration(MedtrumWriteError.contextChanged)); return
+            }
             if self.state.basalState == .tempBasal {
                 do {
                     try self.checkpointBasal(requested: nil)
@@ -619,7 +647,7 @@ public extension MedtrumPumpManager {
                     finish(.configuration(MedtrumWriteError.persistenceFailed))
                     return
                 }
-                let result = self.bluetooth.write(CancelTempBasalPacket(), validation: validation)
+                let result = self.bluetooth.write(CancelTempBasalPacket(), validation: writeValidation)
                 if case let .failure(error) = result {
                     finish(self.handleBasalWriteError(error, requested: nil, expectedSession: originalSession))
                     return
@@ -627,6 +655,7 @@ public extension MedtrumPumpManager {
                 self.deliveryLock.withLock {
                     self.state.awaitingBasalReply = false
                     self.state.basalState = .active
+                    self.state.shortTempBasal = nil
                     self.reportScheduledBasal()
                 }
             }
@@ -636,21 +665,45 @@ public extension MedtrumPumpManager {
                 return
             }
 
-            let tempBasalDose = UnfinalizedDose(
-                decisionId: decisionId, tempRate: unitsPerHour, duration: duration,
+            let actualDuration: TimeInterval = isShort ? .minutes(30) : duration
+            let commandID = isShort ? UUID() : decisionId
+            var tempBasalDose = UnfinalizedDose(
+                decisionId: commandID, tempRate: unitsPerHour, duration: actualDuration,
                 insulinType: self.state.insulinType, automatic: automatic
             )
+            if isShort {
+                guard let sessionStart = self.state.patchActivatedAt, !self.state.patchSessionEnded,
+                      self.state.patchId == originalSession.sessionID,
+                      sessionStart == originalSession.sessionStartedAt,
+                      let commandID,
+                      let intent = MedtrumShortTempBasal(sessionID: self.state.patchId, sessionStartedAt: sessionStart,
+                          commandID: commandID, rate: unitsPerHour, minutes: shortMinutes, requestedAt: tempBasalDose.startDate) else {
+                    finish(.configuration(MedtrumWriteError.contextChanged)); return
+                }
+                self.deliveryLock.withLock { self.state.shortTempBasal = intent }
+            }
             do {
                 try self.checkpointBasal(requested: tempBasalDose)
             } catch {
                 self.log.error("Cannot checkpoint delivery: \(error.localizedDescription)")
+                if isShort { self.deliveryLock.withLock { self.state.shortTempBasal = nil } }
                 finish(.configuration(MedtrumWriteError.persistenceFailed))
                 return
             }
-            let result = self.bluetooth.write(SetTempBasalPacket(rate: unitsPerHour, duration: duration), validation: validation)
+            let result = self.bluetooth.write(SetTempBasalPacket(rate: unitsPerHour, duration: actualDuration), validation: writeValidation)
             if case let .failure(error) = result {
+                if isShort, !error.deliveryMayHaveStarted {
+                    self.deliveryLock.withLock { self.state.shortTempBasal = nil }
+                }
                 finish(self.handleBasalWriteError(error, requested: tempBasalDose, expectedSession: originalSession))
                 return
+            }
+
+            if isShort, case let .success(data) = result, let response = data as? SetTempBasalResponse,
+               let intent = self.state.shortTempBasal?.confirmed(startedAt: response.basalStartTime, observedAt: Date()) {
+                self.deliveryLock.withLock { self.state.shortTempBasal = intent }
+                tempBasalDose = UnfinalizedDose(decisionId: commandID, tempRate: unitsPerHour, duration: actualDuration,
+                    insulinType: self.state.insulinType, automatic: false, startDate: response.basalStartTime)
             }
 
             self.deliveryLock.lock()
@@ -666,6 +719,7 @@ public extension MedtrumPumpManager {
             self.notifyStateDidChange()
 
             self.emitPumpEvents(events)
+            if isShort { self.emitShortTempBasalDiagnostic("started") }
             finish(nil)
         }
     }

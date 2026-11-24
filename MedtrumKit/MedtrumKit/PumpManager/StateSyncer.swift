@@ -71,6 +71,10 @@ enum StateSyncer {
         }
 
         var events: [NewPumpEvent] = []
+        if !syncResponse.invalidPayload, !syncResponse.truncated, let basal = syncResponse.basal {
+            if fullSync { pumpManager.shortTempBasalLastVerifiedSync = syncDate }
+            reconcileShortTempBasal(state: state, basal: basal, observedAt: syncDate, fullSync: fullSync)
+        }
         if fullSync, !syncResponse.invalidPayload, !syncResponse.truncated,
            state.basalDeliveryUncertain, let basal = syncResponse.basal {
             if let requested = state.pendingTempBasal {
