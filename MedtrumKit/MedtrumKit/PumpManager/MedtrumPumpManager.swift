@@ -1279,6 +1279,7 @@ public extension MedtrumPumpManager {
         state.initialReservoir = nil
         state.patchId = patchId
         state.patchActivatedAt = activatedAt
+        state.patchActivationIsProvisional = activatedAt == start
         state.extendedLifePolicy = .init()
         state.lastSync = Date.now
         notifyStateDidChange()

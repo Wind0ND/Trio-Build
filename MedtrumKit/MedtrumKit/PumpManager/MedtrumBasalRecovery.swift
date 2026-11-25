@@ -209,9 +209,11 @@ extension MedtrumPumpManager {
 }
 
 extension StateSyncer {
-    static func basalRecoverySessionIsCurrent(_ response: SynchronizePacketResponse, state: MedtrumPumpState) -> Bool {
-        guard !response.invalidPayload, !response.truncated, response.state.isDelivering,
-              state.pumpState.isDelivering, !state.patchSessionEnded, state.patchId.toUInt64() > 0,
+    static func basalRecoverySessionIsCurrent(_ response: SynchronizePacketResponse, state: MedtrumPumpState,
+                                             requiresDelivery: Bool = true) -> Bool {
+        guard !response.invalidPayload, !response.truncated,
+              response.state.isDelivering || (!requiresDelivery && response.state.isDeliveryHalted),
+              !state.patchSessionEnded, !state.patchActivationIsProvisional, state.patchId.toUInt64() > 0,
               let sessionStart = state.patchActivatedAt, let reportedStart = response.startTime,
               sessionStart == reportedStart, let basal = response.basal,
               basal.patchId == Double(state.patchId.toUInt64()),

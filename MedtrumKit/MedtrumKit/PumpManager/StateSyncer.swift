@@ -53,6 +53,26 @@ enum StateSyncer {
             break
         }
 
+        // Activation ACK supplies a host estimate. Establish its native timestamp once,
+        // only without any pending/uncertain delivery; this packet never resolves a request.
+        if fullSync, state.patchActivationIsProvisional || state.patchActivatedAt == nil,
+           !state.patchSessionEnded, !syncResponse.invalidPayload, !syncResponse.truncated,
+           syncResponse.state.isRunning, let incomingStart = syncResponse.startTime,
+           let storage = syncResponse.storage, let basal = syncResponse.basal,
+           storage.patchId == basal.patchId, storage.patchId.isFinite, storage.patchId > 0,
+           storage.patchId.rounded() == storage.patchId, storage.patchId <= Double(UInt32.max),
+           (storage.patchId == Double(state.patchId.toUInt64()) ||
+            (state.patchId.isEmpty && UInt64(storage.patchId).toData(length: 4) != state.previousPatch?.patchId)),
+           state.pendingTempBasal == nil, !state.basalDeliveryUncertain, !state.bolusDeliveryUncertain,
+           !state.awaitingBasalReply, !state.awaitingBolusReply, !pumpManager.submittingDelivery,
+           state.shortTempBasal == nil {
+            state.patchActivatedAt = incomingStart
+            state.patchActivationIsProvisional = false
+            state.patchId = UInt64(storage.patchId).toData(length: 4)
+            pumpManager.invalidateBasalObservation()
+            pumpManager.notifyStateDidChange()
+            return
+        }
         if let knownStart = state.patchActivatedAt, let incomingStart = syncResponse.startTime,
            !state.patchSessionEnded, !state.pumpState.isSetup, incomingStart != knownStart {
             pumpManager.invalidateBasalObservation()
@@ -66,7 +86,10 @@ enum StateSyncer {
         if fullSync, recoveryQuery != nil, !verifiedQuery {
             pumpManager.invalidateBasalObservation()
             logger.warning("Status query did not establish a current-session observation")
-            return
+            // A verified halt must still update suspend/accounting and alerts. It cannot
+            // provide fresh delivery data or clear an uncertain request.
+            guard syncResponse.state.isDeliveryHalted,
+                  basalRecoverySessionIsCurrent(syncResponse, state: state, requiresDelivery: false) else { return }
         }
 
         // No session: the id kept can be stale - the previous patch's, or one never started - and would reject the new

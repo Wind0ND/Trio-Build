@@ -60,6 +60,7 @@ public class MedtrumPumpState: RawRepresentable {
         patchId = rawValue["patchId"] as? Data ?? Data()
         peripheralIdentifier = (rawValue["peripheralIdentifier"] as? String).flatMap { UUID(uuidString: $0) }
         patchActivatedAt = rawValue["patchActivatedAt"] as? Date ?? nil
+        patchActivationIsProvisional = rawValue["patchActivationIsProvisional"] as? Bool ?? false
         if let data = rawValue["extendedLifePolicy"] as? Data {
             extendedLifePolicy = (try? JSONDecoder().decode(MedtrumExtendedLifePolicy.self, from: data)) ?? .init()
         }
@@ -209,6 +210,7 @@ public class MedtrumPumpState: RawRepresentable {
         value["patchId"] = patchId
         value["peripheralIdentifier"] = peripheralIdentifier?.uuidString
         value["patchActivatedAt"] = patchActivatedAt
+        value["patchActivationIsProvisional"] = patchActivationIsProvisional
         value["extendedLifePolicy"] = try? JSONEncoder().encode(extendedLifePolicy)
         value["patchGracePeriodFrom"] = patchGracePeriodFrom
         value["patchExpiresAt"] = patchExpiresAt
@@ -282,6 +284,7 @@ public class MedtrumPumpState: RawRepresentable {
     public var peripheralIdentifier: UUID?
 
     public var patchActivatedAt: Date?
+    var patchActivationIsProvisional = false
     public var extendedLifePolicy = MedtrumExtendedLifePolicy()
     public var patchGracePeriodFrom: Date? {
         guard let activatedAt = patchActivatedAt else {

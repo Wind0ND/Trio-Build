@@ -304,6 +304,54 @@ final class DeliveryRecoveryTests: XCTestCase {
         XCTAssertNotNil(manager.verifiedPumpDataDate(at: Date()))
     }
 
+    func testFirstNativeActivationCanReplaceOnlyProvisionalEstimateWithoutPendingDelivery() {
+        let (manager, basal) = fixture()
+        manager.state.pendingTempBasal = nil
+        manager.state.basalDeliveryUncertain = false
+        manager.state.patchActivationIsProvisional = true
+        var packet = response(manager, basal)
+        packet.startTime = manager.state.patchActivatedAt!.addingTimeInterval(-0.4)
+        sync(manager, packet, logs: [])
+        XCTAssertEqual(manager.state.patchActivatedAt, packet.startTime)
+        XCTAssertFalse(MedtrumPumpState(rawValue: manager.rawState).patchActivationIsProvisional)
+        XCTAssertNil(manager.verifiedPumpObservation)
+        sync(manager, packet, logs: [])
+        XCTAssertNotNil(manager.verifiedPumpDataDate(at: Date()))
+    }
+
+    func testProvisionalActivationCannotNormalizeAnUncertainRequest() {
+        let (manager, basal) = fixture()
+        manager.state.patchActivationIsProvisional = true
+        let activation = manager.state.patchActivatedAt
+        var packet = response(manager, basal)
+        packet.startTime = activation!.addingTimeInterval(-0.4)
+        sync(manager, packet)
+        XCTAssertEqual(manager.state.patchActivatedAt, activation)
+        XCTAssertTrue(manager.status.deliveryIsUncertain)
+    }
+
+    func testFreshNativeResponseAfterResumeDoesNotRequirePriorDeliveringState() {
+        let (manager, basal) = fixture()
+        manager.state.pendingTempBasal = nil
+        manager.state.basalDeliveryUncertain = false
+        manager.state.pumpState = .suspended
+        sync(manager, response(manager, basal), logs: [])
+        XCTAssertEqual(manager.state.pumpState, .active)
+        XCTAssertNotNil(manager.verifiedPumpDataDate(at: Date()))
+    }
+
+    func testAuthoritativeHaltUpdatesStateWithoutResolvingPendingDelivery() {
+        let (manager, basal) = fixture()
+        let stopped = BasalData(type: .SUSPEND_MANUAL, sequence: 908, patchId: 256,
+            startTime: basal.startTime, rate: 0, delivery: 0)
+        let packet = response(manager, stopped, state: .suspended)
+        sync(manager, packet)
+        XCTAssertEqual(manager.state.pumpState, .suspended)
+        XCTAssertTrue(manager.state.basalDeliveryUncertain)
+        XCTAssertNotNil(manager.state.pendingTempBasal)
+        XCTAssertNil(manager.verifiedPumpDataDate(at: Date()))
+    }
+
     func testRecoveryPersistenceFailureLeavesLiveAndRestartStateBlocked() {
         let (manager, basal) = fixture()
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
