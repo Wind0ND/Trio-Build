@@ -128,8 +128,11 @@ public class MedtrumPumpState: RawRepresentable {
         awaitingBasalReply = false
         awaitingBolusReply = false
         pendingTempBasal = (rawValue["pendingTempBasal"] as? UnfinalizedDose.RawValue).flatMap(UnfinalizedDose.init(rawValue:))
+        legacyBasalRecoveryAllowed = rawValue["legacyBasalRecoveryAllowed"] as? Bool ??
+            (rawValue["basalRecoveryVersion"] == nil && pendingTempBasal != nil)
         if let data = rawValue["basalRecoveryCheckpoint"] as? Data {
             basalRecoveryCheckpoint = try? JSONDecoder().decode(MedtrumBasalRecoveryCheckpoint.self, from: data)
+            if basalRecoveryCheckpoint == nil { legacyBasalRecoveryAllowed = false }
         }
         if let data = rawValue["shortTempBasal"] as? Data,
            let intent = try? JSONDecoder().decode(MedtrumShortTempBasal.self, from: data), intent.isValid {
@@ -226,6 +229,8 @@ public class MedtrumPumpState: RawRepresentable {
         value["awaitingBasalReply"] = awaitingBasalReply
         value["pendingTempBasal"] = pendingTempBasal?.rawValue
         value["basalRecoveryCheckpoint"] = basalRecoveryCheckpoint.flatMap { try? JSONEncoder().encode($0) }
+        value["basalRecoveryVersion"] = 1
+        value["legacyBasalRecoveryAllowed"] = legacyBasalRecoveryAllowed
         value["shortTempBasal"] = shortTempBasal.flatMap { try? JSONEncoder().encode($0) }
         value["manualBasalMaximum"] = manualBasalMaximum
         value["unresolvedShortTempBasals"] = try? JSONEncoder().encode(unresolvedShortTempBasals)
@@ -337,6 +342,7 @@ public class MedtrumPumpState: RawRepresentable {
     /// Present for an unacknowledged set command. A cancellation targets the existing basal dose.
     var pendingTempBasal: UnfinalizedDose?
     var basalRecoveryCheckpoint: MedtrumBasalRecoveryCheckpoint?
+    var legacyBasalRecoveryAllowed = false
     var shortTempBasal: MedtrumShortTempBasal?
     var unresolvedShortTempBasals: [MedtrumShortTempBasal] = []
     var manualBasalMaximum: Double?

@@ -135,7 +135,7 @@ extension StateSyncer {
         let baseline = state.basalDose
         let gap = request.startDate.timeIntervalSince(baseline.startDate)
         let localStart = state.localDate(forPumpDate: basal.startTime)
-        guard request.estimatedEndDate <= now,
+        guard state.legacyBasalRecoveryAllowed, request.estimatedEndDate <= now,
               request.estimatedEndDate.timeIntervalSince(request.startDate) == 1800,
               clockAge.isFinite, clockAge >= 0, clockAge <= MedtrumPumpManager.patchTimeRefreshInterval,
               gap >= 0, gap <= 2, baseline.startDate <= now,

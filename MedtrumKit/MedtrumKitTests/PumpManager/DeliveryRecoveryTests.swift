@@ -18,6 +18,7 @@ final class DeliveryRecoveryTests: XCTestCase {
         state.pendingTempBasal = UnfinalizedDose(decisionId: UUID(), tempRate: 1.1, duration: 1800,
             insulinType: nil, automatic: true, startDate: start.addingTimeInterval(0.4))
         state.basalDeliveryUncertain = true
+        state.legacyBasalRecoveryAllowed = true
         let manager = MedtrumPumpManager(state: state, bluetooth: nil)
         manager.persistPendingDelivery = {}
         return (manager, BasalData(type: .STANDARD, sequence: 907, patchId: 256,
@@ -64,7 +65,10 @@ final class DeliveryRecoveryTests: XCTestCase {
         let (manager, basal) = fixture()
         let originalStart = manager.state.basalDose.startDate
         let originalRate = manager.state.basalDose.value
-        let restored = MedtrumPumpManager(state: MedtrumPumpState(rawValue: manager.rawState), bluetooth: nil)
+        var oldRaw = manager.rawState
+        oldRaw.removeValue(forKey: "basalRecoveryVersion")
+        oldRaw.removeValue(forKey: "legacyBasalRecoveryAllowed")
+        let restored = MedtrumPumpManager(state: MedtrumPumpState(rawValue: oldRaw), bluetooth: nil)
         restored.persistPendingDelivery = {}
         StateSyncer.sync(syncResponse: response(restored, basal), state: restored.state,
             pumpManager: restored, duringReconnect: true, fullSync: true)
@@ -148,6 +152,19 @@ final class DeliveryRecoveryTests: XCTestCase {
             pumpManager: manager, duringReconnect: true, fullSync: true)
         XCTAssertTrue(manager.status.deliveryIsUncertain)
         XCTAssertNotNil(manager.state.pendingTempBasal)
+    }
+
+    func testCorruptCheckpointCannotDowngradeToLegacyRecovery() {
+        let (manager, basal) = fixture()
+        var raw = manager.rawState
+        raw["basalRecoveryCheckpoint"] = Data("invalid".utf8)
+        let restored = MedtrumPumpManager(state: MedtrumPumpState(rawValue: raw), bluetooth: nil)
+        restored.persistPendingDelivery = {}
+        StateSyncer.sync(syncResponse: response(restored, basal), state: restored.state,
+            pumpManager: restored, duringReconnect: true, fullSync: true)
+        XCTAssertTrue(restored.status.deliveryIsUncertain)
+        XCTAssertFalse(restored.state.legacyBasalRecoveryAllowed)
+        XCTAssertFalse(MedtrumPumpState(rawValue: restored.rawState).legacyBasalRecoveryAllowed)
     }
 
     func testIndependentBolusUncertaintyIsNeverClearedByBasalRecovery() {

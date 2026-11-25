@@ -801,6 +801,7 @@ public extension MedtrumPumpManager {
             if let shortIntent { state.shortTempBasal = shortIntent }
             state.pendingTempBasal = requested
             state.basalRecoveryCheckpoint = captureBasalRecoveryCheckpoint(for: requested)
+            state.legacyBasalRecoveryAllowed = false
             state.awaitingBasalReply = true
         }
         do {
@@ -1248,6 +1249,7 @@ public extension MedtrumPumpManager {
         state.basalDeliveryUncertain = false
         state.pendingTempBasal = nil
         state.basalRecoveryCheckpoint = nil
+        state.legacyBasalRecoveryAllowed = false
         verifiedBasalBaseline = nil
         state.patchSessionEnded = false
         state.initialReservoir = nil
