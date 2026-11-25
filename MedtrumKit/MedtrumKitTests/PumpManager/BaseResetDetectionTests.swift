@@ -158,6 +158,12 @@ extension BaseResetDetectionTests {
     func testCheckpointPrecedesBasalCommandAndSurvivesRelaunch() {
         let manager = MedtrumPumpManager(state: makeState(pumpState: .active), bluetooth: nil)
         let dose = UnfinalizedDose(decisionId: UUID(), tempRate: 1.5, duration: 1800, insulinType: nil, automatic: true)
+        manager.state.patchActivatedAt = Date().addingTimeInterval(-7200)
+        manager.verifiedBasalBaseline = MedtrumBasalRecoveryBaseline(
+            segment: BasalData(type: .STANDARD, sequence: 5, patchId: 256,
+                startTime: dose.startDate.addingTimeInterval(-60), rate: 0.8, delivery: 0),
+            sessionID: manager.state.patchId, sessionStartedAt: manager.state.patchActivatedAt!,
+            observedAt: dose.startDate.addingTimeInterval(-1))
         for request in [dose, nil] as [UnfinalizedDose?] {
             var saved: MedtrumPumpState?
             manager.persistPendingDelivery = { saved = MedtrumPumpState(rawValue: manager.rawState) }

@@ -112,6 +112,24 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
                             try self._rawPumpManager.store(medtrum.rawValue)
                         }
                     }
+                    medtrum.persistBasalRecovery = { [weak self, weak medtrum] transaction in
+                        guard let self, let medtrum else { throw CocoaError(.fileWriteUnknown) }
+                        try self.processQueue.safeSync {
+                            guard self.pumpManager === medtrum else { throw CocoaError(.fileWriteUnknown) }
+                            try transaction { candidate in
+                                try self._rawPumpManager.store(["managerIdentifier": medtrum.pluginIdentifier, "state": candidate])
+                            }
+                        }
+                    }
+                    medtrum.legacyBasalEvidenceProvider = { [weak self] window, completion in
+                        guard let self else { completion([]); return }
+                        Task {
+                            let entries = await self.deviceLogStore.entries(in: window, managerIdentifier: "Medtrum")
+                            completion(entries.map {
+                                MedtrumBasalRecoveryLogEntry(timestamp: $0.timestamp, deviceIdentifier: $0.deviceIdentifier, message: $0.message)
+                            })
+                        }
+                    }
                 }
 
                 // Re-apply the latest CGM-aligned heartbeat request to a freshly set pump

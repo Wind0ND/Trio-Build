@@ -109,8 +109,9 @@ import Foundation
     /// A command which could start delivery must be able to distinguish a durable checkpoint from a failed save.
     func store(_ value: Value) throws {
         let data = try PropertyListSerialization.data(fromPropertyList: value, format: .binary, options: 0)
-        try data.write(to: storageURL, options: .atomic)
-        try FileManager.default.setAttributes([.protectionKey: FileProtectionType.none], ofItemAtPath: storageURL.path)
+        // Apply protection as part of the atomic write. Never throw a separate attribute error
+        // after replacing the live checkpoint, which would make an apparent failed save durable.
+        try data.write(to: storageURL, options: [.atomic, .noFileProtection])
     }
     func remove() throws {
         do { try FileManager.default.removeItem(at: storageURL) }

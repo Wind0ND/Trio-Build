@@ -9,19 +9,26 @@ enum StateSyncer {
         state: MedtrumPumpState,
         pumpManager: MedtrumPumpManager,
         duringReconnect: Bool,
-        fullSync: Bool
+        fullSync: Bool,
+        recoveryQuery: MedtrumBasalSyncContext? = nil,
+        legacyEvidence: [MedtrumBasalRecoveryLogEntry] = []
     ) {
         pumpManager.deliveryLock.lock()
-        var recovered: (UnfinalizedDose, MedtrumBasalRecoveryCheckpoint?, Data, Date?, String)?
+        var recovered: (MedtrumBasalSyncContext, String)?
         var recoveryEvents: [NewPumpEvent] = []
+        var confirmedRecoveryDose: UnfinalizedDose?
         defer {
             pumpManager.deliveryLock.unlock()
             if let recovered {
-                pumpManager.completeBasalRecovery(request: recovered.0, checkpoint: recovered.1,
-                    sessionID: recovered.2, sessionStart: recovered.3, events: recoveryEvents, reason: recovered.4)
+                pumpManager.completeBasalRecovery(query: recovered.0, events: recoveryEvents, reason: recovered.1,
+                    confirmedDose: confirmedRecoveryDose)
             }
         }
         let syncDate = Date.now
+        if let recoveryQuery, !recoveryQuery.matches(pumpManager) {
+            logger.warning("Ignoring a status query superseded by a delivery command or session change")
+            return
+        }
 
         // Checked on the payload as received: a rebooted base reports a new patch id, and validation
         // would strip exactly the fields that tell a reset apart - and when it happened
@@ -44,6 +51,22 @@ enum StateSyncer {
 
         case .noReset:
             break
+        }
+
+        if let knownStart = state.patchActivatedAt, let incomingStart = syncResponse.startTime,
+           !state.patchSessionEnded, !state.pumpState.isSetup, incomingStart != knownStart {
+            pumpManager.invalidateBasalObservation()
+            logger.warning("Ignoring a status packet with a conflicting patch activation")
+            return
+        }
+        let verifiedQuery = fullSync && recoveryQuery != nil &&
+            basalRecoverySessionIsCurrent(syncResponse, state: state) &&
+            syncDate.timeIntervalSince(recoveryQuery!.startedAt) >= 0 &&
+            syncDate.timeIntervalSince(recoveryQuery!.startedAt) <= MedtrumPumpManager.loopSyncFreshnessInterval
+        if fullSync, recoveryQuery != nil, !verifiedQuery {
+            pumpManager.invalidateBasalObservation()
+            logger.warning("Status query did not establish a current-session observation")
+            return
         }
 
         // No session: the id kept can be stale - the previous patch's, or one never started - and would reject the new
@@ -80,9 +103,11 @@ enum StateSyncer {
         }
 
         var events: [NewPumpEvent] = []
-        if fullSync, basalRecoverySessionIsCurrent(syncResponse, state: state), let basal = syncResponse.basal {
+        if verifiedQuery, let basal = syncResponse.basal, let query = recoveryQuery {
             pumpManager.verifiedBasalBaseline = MedtrumBasalRecoveryBaseline(segment: basal,
-                sessionID: state.patchId, sessionStartedAt: state.patchActivatedAt!, observedAt: syncDate)
+                sessionID: state.patchId, sessionStartedAt: state.patchActivatedAt!, observedAt: query.startedAt)
+            pumpManager.verifiedPumpObservation = MedtrumVerifiedPumpObservation(sessionID: state.patchId,
+                sessionStart: state.patchActivatedAt!, date: query.startedAt)
         }
         var allowBasalUpdate = state.shortTempBasal == nil
         let pendingShortCommand = state.pendingTempBasal?.decisionId
@@ -96,20 +121,24 @@ enum StateSyncer {
             }
         }
         if allowBasalUpdate, fullSync, !syncResponse.invalidPayload, !syncResponse.truncated,
-           state.basalDeliveryUncertain, let basal = syncResponse.basal {
+           state.basalDeliveryUncertain, let basal = syncResponse.basal,
+           let query = recoveryQuery, verifiedQuery, query.canRecover, query.matches(pumpManager),
+           !pumpManager.basalRecoveryInProgress {
             if let requested = state.pendingTempBasal {
                 if let confirmed = confirmedTempBasal(requested, basal: basal, observedAt: syncDate) {
-                    state.basalDose = confirmed
+                    confirmedRecoveryDose = confirmed
                     events.append(NewPumpEvent.tempBasal(dose: confirmed.toDoseEntry(isMutable: true)))
-                    state.pendingTempBasal = nil
-                    state.basalRecoveryCheckpoint = nil
-                    state.basalDeliveryUncertain = false
-                } else if let reason = unstartedAutomaticBasalReason(state: state, response: syncResponse, now: syncDate) {
-                    recovered = (requested, state.basalRecoveryCheckpoint, state.patchId, state.patchActivatedAt, reason)
+                    recovered = (query, "confirmed_native_temp_segment")
                     pumpManager.basalRecoveryInProgress = true
-                    state.pendingTempBasal = nil
-                    state.basalRecoveryCheckpoint = nil
-                    state.basalDeliveryUncertain = false
+                } else if let reason = unstartedAutomaticBasalReason(state: state, response: syncResponse, now: syncDate,
+                    evidence: legacyEvidence, deviceIdentifier: pumpManager.logDeviceIdentifier) {
+                    recovered = (query, reason)
+                    pumpManager.basalRecoveryInProgress = true
+                } else if !pumpManager.basalRecoveryBlockReported {
+                    pumpManager.basalRecoveryBlockReported = true
+                    logger.warning("Basal recovery blocked: native evidence is insufficient; pending delivery remains protected")
+                    NotificationCenter.default.post(name: Notification.Name("com.trio.diagnostics.event"), object: nil,
+                        userInfo: ["schema": 1, "feature": "medtrum", "stage": "basal_recovery", "outcome": "blocked"])
                 }
             } else if basal.type == .STANDARD || basal.type.isSuspendedByPump() ||
                 (basal.type == .ABSOLUTE_TEMP && state.basalDose.type == .tempBasal &&
@@ -198,7 +227,7 @@ enum StateSyncer {
         let expectedID = Double(state.patchId.toUInt64())
         let provenSession = !state.patchId.isEmpty &&
             (syncResponse.storage?.patchId == expectedID || syncResponse.basal?.patchId == expectedID)
-        if provenSession, let startTime = syncResponse.startTime {
+        if provenSession, state.patchActivatedAt == nil, let startTime = syncResponse.startTime {
             state.patchActivatedAt = startTime
         }
 

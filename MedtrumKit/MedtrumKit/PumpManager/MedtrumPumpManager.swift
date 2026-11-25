@@ -20,6 +20,9 @@ public class MedtrumPumpManager: DeviceManager {
 
     /// The host atomically saves this manager's current raw state before the patch receives a dose command.
     public var persistPendingDelivery: (() throws -> Void)?
+    public typealias BasalRecoveryTransaction = (_ save: (PumpManager.RawStateValue) throws -> Void) throws -> Void
+    public var persistBasalRecovery: ((BasalRecoveryTransaction) throws -> Void)?
+    public var legacyBasalEvidenceProvider: ((DateInterval, @escaping ([MedtrumBasalRecoveryLogEntry]) -> Void) -> Void)?
     func checkpointDelivery() throws {
         guard let persistPendingDelivery else { throw CocoaError(.fileWriteUnknown) }
         try persistPendingDelivery()
@@ -39,8 +42,11 @@ public class MedtrumPumpManager: DeviceManager {
     // Protects the pending dose and delivery-command reservation across BLE callbacks.
     let deliveryLock = NSRecursiveLock()
     var verifiedBasalBaseline: MedtrumBasalRecoveryBaseline?
+    var verifiedPumpObservation: MedtrumVerifiedPumpObservation?
+    var deliveryGeneration = UUID()
     var basalRecoveryInProgress = false
-    private var submittingDelivery = false
+    var basalRecoveryBlockReported = false
+    var submittingDelivery = false
     var shortTempBasalTimer: DispatchSourceTimer?
     var shortTempBasalCheckInFlight = false
     var shortTempBasalNextAttempt = Date.distantPast
@@ -339,8 +345,9 @@ public extension MedtrumPumpManager {
                 return
             }
 
-            let syncResult = self.bluetooth.write(SynchronizePacket())
             StateSyncer.fetchPatchTimeIfStale(pumpManager: self)
+            let query = self.captureBasalSyncContext()
+            let syncResult = self.bluetooth.write(SynchronizePacket())
 
             switch syncResult {
             case let .failure(error):
@@ -361,16 +368,11 @@ public extension MedtrumPumpManager {
                     self.log.warning("State update: Failed to encode JSON")
                 }
 
-                StateSyncer.sync(
-                    syncResponse: syncResponse,
-                    state: self.state,
-                    pumpManager: self,
-                    duringReconnect: false,
-                    fullSync: true
-                )
-
-                completion?(StateSyncer.basalRecoverySessionIsCurrent(syncResponse, state: self.state) &&
-                    !self.status.deliveryIsUncertain ? self.state.lastSync : nil)
+                self.withLegacyBasalEvidence(for: query) { evidence in
+                    StateSyncer.sync(syncResponse: syncResponse, state: self.state, pumpManager: self,
+                        duringReconnect: false, fullSync: true, recoveryQuery: query, legacyEvidence: evidence)
+                    completion?(self.verifiedPumpDataDate(at: Date()))
+                }
             }
         }
     }
@@ -522,6 +524,7 @@ public extension MedtrumPumpManager {
             return nil
         }
         submittingDelivery = true
+        deliveryGeneration = UUID()
         deliveryLock.unlock()
         return { error in
             self.deliveryLock.withLock { self.submittingDelivery = false }
@@ -632,6 +635,9 @@ public extension MedtrumPumpManager {
         let writeValidation: () -> Bool = { [weak self] in
             guard let self, validation?() ?? true else { return false }
             return self.deliveryLock.withLock {
+                guard self.state.patchId == originalSession.sessionID,
+                      self.state.patchActivatedAt == originalSession.sessionStartedAt,
+                      !self.state.patchSessionEnded else { return false }
                 guard !automatic || !self.hasManualTempBasal else { return false }
                 guard automatic || duration == 0 || self.manualTempBasalRateAllowed(unitsPerHour) else { return false }
                 return !isShort || (self.shortTempBasalMonitoringEnabled && !self.state.patchSessionEnded &&
@@ -737,9 +743,14 @@ public extension MedtrumPumpManager {
                 return
             }
             let result = self.bluetooth.write(SetTempBasalPacket(rate: unitsPerHour, duration: actualDuration), validation: {
-                writeValidation() && (!isShort || self.deliveryLock.withLock {
-                    self.state.shortTempBasal?.commandID == commandID && self.state.pendingTempBasal?.decisionId == commandID
-                })
+                writeValidation() && self.deliveryLock.withLock {
+                    guard !self.state.basalDeliveryUncertain, !self.state.bolusDeliveryUncertain,
+                          self.state.pendingTempBasal?.startDate == tempBasalDose.startDate,
+                          self.state.pendingTempBasal?.estimatedEndDate == tempBasalDose.estimatedEndDate,
+                          self.state.pendingTempBasal?.value == tempBasalDose.value,
+                          !automatic || self.state.basalRecoveryCheckpoint?.matches(tempBasalDose) == true else { return false }
+                    return !isShort || self.state.shortTempBasal?.commandID == commandID
+                }
             })
             if case let .failure(error) = result {
                 if isShort, !error.deliveryMayHaveStarted {
@@ -782,6 +793,8 @@ public extension MedtrumPumpManager {
                   !self.state.patchSessionEnded else { finish(.configuration(MedtrumWriteError.contextChanged)); return }
             self.state.awaitingBasalReply = false
             self.state.pendingTempBasal = nil
+            self.state.basalRecoveryCheckpoint = nil
+            self.deliveryGeneration = UUID()
             var events = self.finalizedTempBasal(endedAt: Date.now)
             events.append(NewPumpEvent.tempBasal(dose: tempBasalDose.toDoseEntry(isMutable: true)))
 
@@ -797,12 +810,18 @@ public extension MedtrumPumpManager {
     }
 
     func checkpointBasal(requested: UnfinalizedDose?, shortIntent: MedtrumShortTempBasal? = nil) throws {
-        deliveryLock.withLock {
+        try deliveryLock.withLock {
+            let checkpoint = captureBasalRecoveryCheckpoint(for: requested)
+            if requested?.automatic == true, checkpoint == nil {
+                throw MedtrumWriteError.contextChanged
+            }
             if let shortIntent { state.shortTempBasal = shortIntent }
             state.pendingTempBasal = requested
-            state.basalRecoveryCheckpoint = captureBasalRecoveryCheckpoint(for: requested)
+            state.basalRecoveryCheckpoint = checkpoint
             state.legacyBasalRecoveryAllowed = false
+            basalRecoveryBlockReported = false
             state.awaitingBasalReply = true
+            deliveryGeneration = UUID()
         }
         do {
             try checkpointDelivery()
@@ -825,6 +844,7 @@ public extension MedtrumPumpManager {
                 return .communication(error)
             }
             state.awaitingBasalReply = false
+            deliveryGeneration = UUID()
             guard error.deliveryMayHaveStarted else {
                 state.pendingTempBasal = nil
                 notifyStateDidChange()
@@ -866,6 +886,7 @@ public extension MedtrumPumpManager {
     }
 
     func suspendPatch(duration: TimeInterval, completion: @escaping ((any Error)?) -> Void) {
+        invalidateBasalObservation()
         log.info("Suspending delivery...")
 
         ensureConnectedAndActive { error in
@@ -901,6 +922,7 @@ public extension MedtrumPumpManager {
     }
 
     func resumeDelivery(completion: @escaping ((any Error)?) -> Void) {
+        invalidateBasalObservation()
         log.info("Resuming delivery...")
 
         ensureConnectedAndActive { error in
@@ -1251,6 +1273,8 @@ public extension MedtrumPumpManager {
         state.basalRecoveryCheckpoint = nil
         state.legacyBasalRecoveryAllowed = false
         verifiedBasalBaseline = nil
+        verifiedPumpObservation = nil
+        deliveryGeneration = UUID()
         state.patchSessionEnded = false
         state.initialReservoir = nil
         state.patchId = patchId
