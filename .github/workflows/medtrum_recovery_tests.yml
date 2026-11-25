@@ -1,0 +1,39 @@
+name: Medtrum delivery recovery focused checks
+on:
+  workflow_dispatch:
+jobs:
+  recovery:
+    runs-on: macos-26
+    steps:
+      - run: sudo xcode-select -s /Applications/Xcode_26.5.app/Contents/Developer
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - uses: actions/cache/restore@v5
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: macOS-delivery-recovery-${{ github.sha }}
+          restore-keys: |
+            macOS-delivery-recovery-
+            macOS-loop-recovery-release-
+            macOS-dd-
+      - run: python3 scripts/apply_zh_hans.py
+      - name: Focused recovery tests
+        run: |
+          set -o pipefail
+          xcodebuild test -workspace Trio.xcworkspace -scheme MedtrumKitTests \
+            -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
+            -only-testing:MedtrumKitTests/DeliveryRecoveryTests \
+            -parallel-testing-enabled NO -skipPackagePluginValidation -skipMacroValidation \
+            CODE_SIGN_IDENTITY='-' CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM='' \
+            PROVISIONING_PROFILE_SPECIFIER='' -quiet 2>&1 | tee delivery-recovery-tests.log
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: delivery-recovery-focused-log
+          path: delivery-recovery-tests.log
+      - uses: actions/cache/save@v5
+        if: always()
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: macOS-delivery-recovery-${{ github.sha }}

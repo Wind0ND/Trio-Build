@@ -1,10 +1,10 @@
 {
   "en-US": {
     "description": "hiro is a personal test build with customizable on-screen presentation, viewing protection and device connectivity.",
-    "whats_new": "Refines session defaults and minute-by-minute choices. Improves reminder scheduling and recovery after manual sessions. Please check value selection, progress and reminders."
+    "whats_new": "Improves recovery after interrupted requests and handling of recently updated device data. Adds recovery checks and diagnostics. Please check reconnection, progress and reminders."
   },
   "zh-Hans": {
     "description": "hiro 是用于个人测试的应用版本，提供可自定义的界面展示、查看保护和设备连接功能。",
-    "whats_new": "调整默认选项，细化逐分钟时间选择，改进手动操作后的提醒排程与运行恢复。请检查数值选择、运行进度和提醒表现。"
+    "whats_new": "改进请求中断后的状态恢复及近期设备数据的处理，增加恢复核验和诊断记录。请检查重新连接、运行进度和提醒表现。"
   }
 }

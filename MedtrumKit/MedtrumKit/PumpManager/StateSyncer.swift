@@ -1,3 +1,4 @@
+import Foundation
 import LoopKit
 
 enum StateSyncer {
@@ -11,7 +12,15 @@ enum StateSyncer {
         fullSync: Bool
     ) {
         pumpManager.deliveryLock.lock()
-        defer { pumpManager.deliveryLock.unlock() }
+        var recovered: (UnfinalizedDose, MedtrumBasalRecoveryCheckpoint?, Data, Date?, String)?
+        var recoveryEvents: [NewPumpEvent] = []
+        defer {
+            pumpManager.deliveryLock.unlock()
+            if let recovered {
+                pumpManager.completeBasalRecovery(request: recovered.0, checkpoint: recovered.1,
+                    sessionID: recovered.2, sessionStart: recovered.3, events: recoveryEvents, reason: recovered.4)
+            }
+        }
         let syncDate = Date.now
 
         // Checked on the payload as received: a rebooted base reports a new patch id, and validation
@@ -71,6 +80,10 @@ enum StateSyncer {
         }
 
         var events: [NewPumpEvent] = []
+        if fullSync, basalRecoverySessionIsCurrent(syncResponse, state: state), let basal = syncResponse.basal {
+            pumpManager.verifiedBasalBaseline = MedtrumBasalRecoveryBaseline(segment: basal,
+                sessionID: state.patchId, sessionStartedAt: state.patchActivatedAt!, observedAt: syncDate)
+        }
         var allowBasalUpdate = state.shortTempBasal == nil
         let pendingShortCommand = state.pendingTempBasal?.decisionId
         if !syncResponse.invalidPayload, !syncResponse.truncated, let basal = syncResponse.basal {
@@ -89,6 +102,13 @@ enum StateSyncer {
                     state.basalDose = confirmed
                     events.append(NewPumpEvent.tempBasal(dose: confirmed.toDoseEntry(isMutable: true)))
                     state.pendingTempBasal = nil
+                    state.basalRecoveryCheckpoint = nil
+                    state.basalDeliveryUncertain = false
+                } else if let reason = unstartedAutomaticBasalReason(state: state, response: syncResponse, now: syncDate) {
+                    recovered = (requested, state.basalRecoveryCheckpoint, state.patchId, state.patchActivatedAt, reason)
+                    pumpManager.basalRecoveryInProgress = true
+                    state.pendingTempBasal = nil
+                    state.basalRecoveryCheckpoint = nil
                     state.basalDeliveryUncertain = false
                 }
             } else if basal.type == .STANDARD || basal.type.isSuspendedByPump() ||
@@ -206,12 +226,13 @@ enum StateSyncer {
             pumpManager.checkBolusDone()
         }
 
-        if fullSync || !events.isEmpty {
+        if (fullSync && !syncResponse.invalidPayload && !syncResponse.truncated && syncResponse.basal != nil) || !events.isEmpty {
             pumpManager.state.lastSync = syncDate
-            pumpManager.emitPumpEvents(events)
+            if recovered == nil { pumpManager.emitPumpEvents(events) }
+            else { recoveryEvents = events }
         }
 
-        pumpManager.notifyStateDidChange()
+        if recovered == nil { pumpManager.notifyStateDidChange() }
         if !syncResponse.invalidPayload, !syncResponse.truncated, state.shortTempBasal != nil {
             DispatchQueue.global(qos: .utility).async { [weak pumpManager] in
                 pumpManager?.serviceShortTempBasalDeadline()

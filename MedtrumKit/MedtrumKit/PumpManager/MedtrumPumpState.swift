@@ -128,6 +128,9 @@ public class MedtrumPumpState: RawRepresentable {
         awaitingBasalReply = false
         awaitingBolusReply = false
         pendingTempBasal = (rawValue["pendingTempBasal"] as? UnfinalizedDose.RawValue).flatMap(UnfinalizedDose.init(rawValue:))
+        if let data = rawValue["basalRecoveryCheckpoint"] as? Data {
+            basalRecoveryCheckpoint = try? JSONDecoder().decode(MedtrumBasalRecoveryCheckpoint.self, from: data)
+        }
         if let data = rawValue["shortTempBasal"] as? Data,
            let intent = try? JSONDecoder().decode(MedtrumShortTempBasal.self, from: data), intent.isValid {
             shortTempBasal = intent
@@ -222,6 +225,7 @@ public class MedtrumPumpState: RawRepresentable {
         value["basalDeliveryUncertain"] = basalDeliveryUncertain
         value["awaitingBasalReply"] = awaitingBasalReply
         value["pendingTempBasal"] = pendingTempBasal?.rawValue
+        value["basalRecoveryCheckpoint"] = basalRecoveryCheckpoint.flatMap { try? JSONEncoder().encode($0) }
         value["shortTempBasal"] = shortTempBasal.flatMap { try? JSONEncoder().encode($0) }
         value["manualBasalMaximum"] = manualBasalMaximum
         value["unresolvedShortTempBasals"] = try? JSONEncoder().encode(unresolvedShortTempBasals)
@@ -332,6 +336,7 @@ public class MedtrumPumpState: RawRepresentable {
     var basalDeliveryUncertain = false
     /// Present for an unacknowledged set command. A cancellation targets the existing basal dose.
     var pendingTempBasal: UnfinalizedDose?
+    var basalRecoveryCheckpoint: MedtrumBasalRecoveryCheckpoint?
     var shortTempBasal: MedtrumShortTempBasal?
     var unresolvedShortTempBasals: [MedtrumShortTempBasal] = []
     var manualBasalMaximum: Double?
@@ -454,7 +459,13 @@ public class MedtrumPumpState: RawRepresentable {
             "* insulinType: \(String(describing: insulinType))",
             "* reservoirLevel: \(reservoir)",
             "* lowReservoirWarning: \(String(describing: lowReservoirWarning))",
-            "* bolusState: \(bolusState.rawValue)"
+            "* bolusState: \(bolusState.rawValue)",
+            "* basalDeliveryUncertain: \(basalDeliveryUncertain)",
+            "* bolusDeliveryUncertain: \(bolusDeliveryUncertain)",
+            "* awaitingBasalReply: \(awaitingBasalReply)",
+            "* hasPendingTempBasal: \(pendingTempBasal != nil)",
+            "* hasBasalRecoveryCheckpoint: \(basalRecoveryCheckpoint != nil)",
+            "* unresolvedShortTempBasalCount: \(unresolvedShortTempBasals.count)"
         ].joined(separator: "\n")
     }
 }

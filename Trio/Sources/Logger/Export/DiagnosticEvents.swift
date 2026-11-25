@@ -31,8 +31,8 @@ enum DiagnosticEventContract {
 
     /// Add a feature here, not in `LogExport`.
     static let features: [String: Feature] = [
-        "medtrum": Feature(stages: ["automatic_mode", "delivery_guard", "short_temp"],
-                           outcomes: ["available", "basal_only", "age_unknown", "no_active_session", "invalidated", "started", "cancelled", "failed"]),
+        "medtrum": Feature(stages: ["automatic_mode", "delivery_guard", "short_temp", "basal_recovery"],
+                           outcomes: ["available", "basal_only", "age_unknown", "no_active_session", "invalidated", "started", "cancelled", "failed", "recovered", "checkpoint_failed"]),
         "ottai": Feature(
             stages: [
                 "nfc",

@@ -38,6 +38,8 @@ public class MedtrumPumpManager: DeviceManager {
 
     // Protects the pending dose and delivery-command reservation across BLE callbacks.
     let deliveryLock = NSRecursiveLock()
+    var verifiedBasalBaseline: MedtrumBasalRecoveryBaseline?
+    var basalRecoveryInProgress = false
     private var submittingDelivery = false
     var shortTempBasalTimer: DispatchSourceTimer?
     var shortTempBasalCheckInFlight = false
@@ -287,26 +289,21 @@ public extension MedtrumPumpManager {
             timeZone: TimeZone.current,
             device: device(state),
             pumpBatteryChargeRemaining: nil, // Patch pumps do not need to report back battery status
-            basalDeliveryState: state.basalDeliveryUncertain ? nil : state.basalDeliveryState,
+            basalDeliveryState: state.basalDeliveryUncertain || basalRecoveryInProgress ? nil : state.basalDeliveryState,
             bolusState: state.bolusDeliveryState,
             insulinType: state.insulinType,
-            deliveryIsUncertain: state.bolusDeliveryUncertain || state.basalDeliveryUncertain || !state.unresolvedShortTempBasals.isEmpty
+            deliveryIsUncertain: basalRecoveryInProgress || state.bolusDeliveryUncertain || state.basalDeliveryUncertain || !state.unresolvedShortTempBasals.isEmpty
         )
     }
 
     func ensureCurrentPumpData(completion: ((Date?) -> Void)?) {
-        let age = Date.now.timeIntervalSince(state.lastSync)
-
-        guard let activatedAt = state.patchActivatedAt,
-              status.deliveryIsUncertain || age > Self.loopSyncFreshnessInterval ||
-              Date.now.timeIntervalSince(activatedAt) < .minutes(4)
-        else {
-            log.info("Skipping status update -> data is fresh or not active: \(Int(age)) sec")
-            completion?(nil)
+        if let observedAt = cachedPumpDataDate(at: Date()) {
+            log.info("Using confirmed fresh pump data for loop recovery")
+            completion?(observedAt)
             return
         }
 
-        guard !state.pumpState.isSetup else {
+        guard state.patchActivatedAt != nil, !state.patchSessionEnded, !state.pumpState.isSetup else {
             log.error("(ensureCurrentPumpData) patch not in active state yet")
             completion?(nil)
             return
@@ -372,7 +369,8 @@ public extension MedtrumPumpManager {
                     fullSync: true
                 )
 
-                completion?(Date.now)
+                completion?(StateSyncer.basalRecoverySessionIsCurrent(syncResponse, state: self.state) &&
+                    !self.status.deliveryIsUncertain ? self.state.lastSync : nil)
             }
         }
     }
@@ -687,6 +685,14 @@ public extension MedtrumPumpManager {
                     self.state.awaitingBasalReply = false
                     self.state.basalState = .active
                     self.state.shortTempBasal = nil
+                    if case let .success(data) = result, let response = data as? CancelTempBasalPacketResponse,
+                       response.basalType == .STANDARD, response.basalPatchId == Double(self.state.patchId.toUInt64()),
+                       let sessionStart = self.state.patchActivatedAt {
+                        self.verifiedBasalBaseline = MedtrumBasalRecoveryBaseline(segment: BasalData(type: response.basalType,
+                            sequence: response.basalSequence, patchId: response.basalPatchId,
+                            startTime: response.basalStartTime, rate: response.basalValue, delivery: 0),
+                            sessionID: self.state.patchId, sessionStartedAt: sessionStart, observedAt: Date())
+                    }
                     self.reportScheduledBasal(at: cancelledAt)
                     return true
                 }
@@ -698,6 +704,10 @@ public extension MedtrumPumpManager {
                 return
             }
 
+            if automatic, !self.ensureAutomaticBasalBaseline() {
+                finish(.communication(MedtrumWriteError.noData))
+                return
+            }
             let actualDuration = Self.pumpTempBasalDuration(requested: duration, automatic: automatic)
             let commandID = isShort ? UUID() : decisionId
             var tempBasalDose = UnfinalizedDose(
@@ -790,6 +800,7 @@ public extension MedtrumPumpManager {
         deliveryLock.withLock {
             if let shortIntent { state.shortTempBasal = shortIntent }
             state.pendingTempBasal = requested
+            state.basalRecoveryCheckpoint = captureBasalRecoveryCheckpoint(for: requested)
             state.awaitingBasalReply = true
         }
         do {
@@ -797,6 +808,7 @@ public extension MedtrumPumpManager {
         } catch {
             deliveryLock.withLock {
                 state.pendingTempBasal = nil
+                state.basalRecoveryCheckpoint = nil
                 state.awaitingBasalReply = false
                 notifyStateDidChange()
             }
@@ -1235,6 +1247,8 @@ public extension MedtrumPumpManager {
         state.awaitingBolusReply = false
         state.basalDeliveryUncertain = false
         state.pendingTempBasal = nil
+        state.basalRecoveryCheckpoint = nil
+        verifiedBasalBaseline = nil
         state.patchSessionEnded = false
         state.initialReservoir = nil
         state.patchId = patchId
