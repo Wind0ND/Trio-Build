@@ -14,12 +14,17 @@ public enum MedtrumBasalPulseError: LocalizedError {
 /// Transport plan only. The native dosing algorithm supplies the insulin budget.
 public struct MedtrumBasalPulsePlan: Codable, Equatable {
     public static func permitsProtectiveInterruption(rate: Double, duration: TimeInterval,
-                                                     scheduledRate: Double, pulseRate: Double) -> Bool { false }
+                                                     scheduledRate: Double, pulseRate: Double) -> Bool {
+        guard rate.isFinite, duration.isFinite, scheduledRate.isFinite, pulseRate.isFinite,
+              rate >= 0, duration >= 0 else { return false }
+        return duration == 0 || rate <= min(scheduledRate, pulseRate)
+    }
     public let requestedUnits: Double
     public let rate: Double
     public let minutes: Int
     public let companionRate: Double
     public let companionMinutes: Int
+    public var companionEnd: Date?
     public var extraUnits: Double { (rate - companionRate) * Double(minutes) / 60 }
 
     public static func make(units: Double, companionRate: Double, companionMinutes: Int,
@@ -28,18 +33,18 @@ public struct MedtrumBasalPulsePlan: Codable, Equatable {
               (0 ... 120).contains(companionMinutes), maximumRate.isFinite,
               maximumRate > companionRate, maximumRate <= 30 else { return nil }
         let rates = supportedRates.filter { $0.isFinite && $0 >= 0 && $0 <= maximumRate }.sorted()
-        guard !rates.isEmpty else { return nil }
+        guard let hardwareCompanion = rates.last(where: { $0 <= companionRate + 0.000000001 }) else { return nil }
         for minutes in MedtrumShortTempBasal.supportedMinutes {
             guard companionMinutes == 0 || minutes < companionMinutes else { continue }
-            let required = companionRate + units * 60 / Double(minutes)
+            let required = hardwareCompanion + units * 60 / Double(minutes)
             guard required.isFinite, required <= maximumRate + 0.00000001 else { continue }
             // A rate-table entry may have a binary rounding tail. Never exceed the insulin budget.
             guard let rate = rates.last(where: {
                 $0 <= required + 0.000000001 &&
-                    ($0 - companionRate) * Double(minutes) / 60 <= units + 0.000000001
-            }), rate > companionRate else { continue }
+                    ($0 - hardwareCompanion) * Double(minutes) / 60 <= units + 0.000000001
+            }), rate > hardwareCompanion else { continue }
             return Self(requestedUnits: units, rate: rate, minutes: minutes,
-                        companionRate: companionRate, companionMinutes: companionMinutes)
+                        companionRate: hardwareCompanion, companionMinutes: companionMinutes)
         }
         return nil
     }
