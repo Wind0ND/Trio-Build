@@ -2,6 +2,22 @@ import XCTest
 @testable import MedtrumLifecycleKit
 
 final class MedtrumShortTempAlarmOwnershipTests: XCTestCase {
+    func testLongIncidentKeepsNewestSoundAndFutureGuardsWithoutAccumulatingElapsedTickets() throws {
+        var ledger = MedtrumShortTempAlarmOwnership()
+        let command = UUID()
+        let now = Date(timeIntervalSince1970: 1000)
+        var tickets: [MedtrumShortTempAlarmOwnership.Ticket] = []
+        for offset in [-120.0, -60, -1, 30, 90] {
+            let ticket = try XCTUnwrap(ledger.reserve(commandID: command, deadline: now.addingTimeInterval(offset)))
+            XCTAssertTrue(ledger.accept(ticket))
+            tickets.append(ticket)
+        }
+        let cleanup = ledger.supersededElapsedTickets(command, at: now)
+        XCTAssertEqual(Set(cleanup.map(\.id)), Set(tickets.prefix(2).map(\.id)))
+        for ticket in cleanup { ledger.cancelled(ticket) }
+        XCTAssertEqual(Set(ledger.activeTickets(command).map(\.id)), Set(tickets.suffix(3).map(\.id)))
+        XCTAssertFalse(ledger.isResolved(command))
+    }
     func testStoppingSoundPreservesOwnershipAndAbsoluteRepeatWindow() throws {
         var ledger = MedtrumShortTempAlarmOwnership()
         let command = UUID()
