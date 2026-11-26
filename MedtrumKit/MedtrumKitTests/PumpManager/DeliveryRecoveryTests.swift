@@ -463,4 +463,26 @@ final class DeliveryRecoveryTests: XCTestCase {
         XCTAssertTrue(MedtrumPumpState(rawValue: manager.rawState).basalDeliveryUncertain)
         XCTAssertFalse(manager.basalRecoveryInProgress)
     }
+
+    func testUntrustedStatusInvalidatesObservationWithoutDeletingSession() {
+        for condition in 0..<4 {
+            let (manager, basal) = fixture()
+            manager.state.basalDeliveryUncertain = false
+            manager.state.pendingTempBasal = nil
+            observation(manager, at: Date().addingTimeInterval(-20))
+            let activation = manager.state.patchActivatedAt
+            var packet = response(manager, basal, state: condition == 0 ? .none : .active)
+            if condition == 1 {
+                packet.basal = BasalData(type: .NONE, sequence: 907, patchId: 256,
+                    startTime: basal.startTime, rate: 0.8, delivery: 0)
+            }
+            if condition == 2 { packet.truncated = true }
+            if condition == 3 { packet.storage = StorageData(sequence: 907, patchId: 257) }
+            sync(manager, packet, logs: [], full: condition == 0)
+            XCTAssertNil(manager.cachedPumpDataDate(at: Date()), "condition \(condition)")
+            XCTAssertFalse(manager.state.patchSessionEnded)
+            XCTAssertEqual(manager.state.patchActivatedAt, activation)
+            XCTAssertEqual(manager.state.patchId, UInt64(256).toData(length: 4))
+        }
+    }
 }
