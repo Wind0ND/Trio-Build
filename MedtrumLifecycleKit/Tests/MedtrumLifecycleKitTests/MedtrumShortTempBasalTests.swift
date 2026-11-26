@@ -3,6 +3,30 @@ import XCTest
 @testable import MedtrumLifecycleKit
 
 final class MedtrumShortTempBasalTests: XCTestCase {
+    func testLongAutomaticCompanionKeepsIdentityAndAbsoluteEnd() throws {
+        var intent = try XCTUnwrap(MedtrumShortTempBasal(sessionID: session, sessionStartedAt: start.addingTimeInterval(-3600),
+            commandID: command, rate: 0, minutes: 60, requestedAt: start, automatic: true))
+        intent.absoluteEnd = start.addingTimeInterval(3550)
+        let restored = try JSONDecoder().decode(MedtrumShortTempBasal.self, from: JSONEncoder().encode(intent))
+        XCTAssertEqual(restored.targetEnd, start.addingTimeInterval(3550))
+    }
+
+    func testSetCheckpointTimeIsAfterRealBaselineWithoutReopeningCompanionWindow() throws {
+        var intent = plan(minutes: 1)
+        intent.absoluteEnd = start.addingTimeInterval(60)
+        let prepared = try XCTUnwrap(intent.preparedForWrite(at: start.addingTimeInterval(5), uptime: 100))
+        XCTAssertEqual(prepared.requestedAt, start.addingTimeInterval(5))
+        XCTAssertEqual(prepared.targetEnd, start.addingTimeInterval(60))
+    }
+
+    func testWallClockRollbackCannotDelayMonotonicCancellation() throws {
+        var intent = plan(minutes: 1)
+        intent.requestedUptime = 100
+        intent.deadlineUptime = 160
+        XCTAssertTrue(intent.deadlineHasPassed(at: start.addingTimeInterval(-3600), uptime: 160))
+        XCTAssertFalse(intent.deadlineHasPassed(at: start.addingTimeInterval(10), uptime: 110))
+    }
+
     func testAutomaticCompanionCanBeZeroAndCannotExtendOriginalDeadline() throws {
         var intent = try XCTUnwrap(MedtrumShortTempBasal(sessionID: session, sessionStartedAt: start.addingTimeInterval(-3600),
             commandID: command, rate: 0, minutes: 29, requestedAt: start, automatic: true))

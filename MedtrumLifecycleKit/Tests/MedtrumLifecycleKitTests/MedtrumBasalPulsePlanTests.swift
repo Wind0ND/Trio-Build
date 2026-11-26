@@ -2,6 +2,21 @@ import XCTest
 @testable import MedtrumLifecycleKit
 
 final class MedtrumBasalPulsePlanTests: XCTestCase {
+    func testWholePlanNormalizesNativeFractionalLowBasalBeforePulse() throws {
+        let plan = try XCTUnwrap(MedtrumBasalPulsePlan.make(units: 0.2, companionRate: 0.53,
+            companionMinutes: 30, supportedRates: rates, maximumRate: 30))
+        XCTAssertTrue(rates.contains(plan.companionRate))
+        XCTAssertLessThanOrEqual(plan.companionRate, 0.53)
+        XCTAssertLessThanOrEqual(plan.extraUnits, 0.2 + 0.000001)
+    }
+
+    func testProtectiveInterruptionPermitsOnlyNonAddingRatesOrCancellation() {
+        XCTAssertTrue(MedtrumBasalPulsePlan.permitsProtectiveInterruption(rate: 0, duration: 1800, scheduledRate: 0.8, pulseRate: 12))
+        XCTAssertTrue(MedtrumBasalPulsePlan.permitsProtectiveInterruption(rate: 0.5, duration: 1800, scheduledRate: 0.8, pulseRate: 12))
+        XCTAssertTrue(MedtrumBasalPulsePlan.permitsProtectiveInterruption(rate: 0, duration: 0, scheduledRate: 0.8, pulseRate: 12))
+        XCTAssertFalse(MedtrumBasalPulsePlan.permitsProtectiveInterruption(rate: 10, duration: 1800, scheduledRate: 0.8, pulseRate: 12))
+    }
+
     private let rates = (0 ... 600).map { Double($0) / 20 }
 
     func testNativeBudgetUsesOneMinuteAndIncludesCompanionOnlyOnce() throws {

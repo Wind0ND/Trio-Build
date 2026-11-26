@@ -13,6 +13,8 @@ public enum MedtrumBasalPulseError: LocalizedError {
 
 /// Transport plan only. The native dosing algorithm supplies the insulin budget.
 public struct MedtrumBasalPulsePlan: Codable, Equatable {
+    public static func permitsProtectiveInterruption(rate: Double, duration: TimeInterval,
+                                                     scheduledRate: Double, pulseRate: Double) -> Bool { false }
     public let requestedUnits: Double
     public let rate: Double
     public let minutes: Int

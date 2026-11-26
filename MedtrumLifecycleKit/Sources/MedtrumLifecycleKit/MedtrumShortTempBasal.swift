@@ -22,6 +22,12 @@ public struct MedtrumShortTempBasal: Codable, Equatable {
     public var absoluteEnd: Date?
     public var pulseParentCommandID: UUID?
     public var alarmPrepared: Bool?
+    public var requestedUptime: TimeInterval?
+    public var deadlineUptime: TimeInterval?
+    public var previousPulseAt: Date?
+
+    public func preparedForWrite(at date: Date, uptime: TimeInterval) -> Self? { self }
+    public func deadlineHasPassed(at date: Date, uptime: TimeInterval) -> Bool { date >= targetEnd }
 
     public init?(sessionID: Data, sessionStartedAt: Date, commandID: UUID,
                  rate: Double, minutes: Int, requestedAt: Date, automatic: Bool = false) {
