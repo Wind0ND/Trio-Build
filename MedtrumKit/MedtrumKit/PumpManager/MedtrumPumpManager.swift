@@ -57,6 +57,11 @@ public class MedtrumPumpManager: DeviceManager {
     var shortTempBasalLastVerifiedSync = Date.distantPast
     var shortTempBasalObservedSegment: BasalData?
     var shortTempBasalMonitoringEnabled = true
+    public var armShortTempBasalAlarm: ((UUID, Date, @escaping (Bool) -> Void) -> Void)?
+    public var retireShortTempBasalAlarm: ((UUID) -> Void)?
+    public var automaticBasalPulseEnabled: (() -> Bool)?
+    var pulseContinuationInFlight = false
+    var pulseContinuationNextAttempt = Date.distantPast
     private let logDeviceIdentifierLock = NSLock()
     private var logDeviceIdentifierStorage = ""
 
@@ -422,6 +427,9 @@ public extension MedtrumPumpManager {
         decisionId: UUID?, units: Double, activationType: LoopKit.BolusActivationType,
         validation: (() -> Bool)?, completion: @escaping (LoopKit.PumpManagerError?) -> Void
     ) {
+        guard activationType != .automatic || (automaticBasalPulseEnabled?() != true && !hasActiveBasalPulse) else {
+            completion(.deviceState(MedtrumConnectError.automaticBolusUnavailable)); return
+        }
         guard validation?() ?? true else { completion(.configuration(MedtrumWriteError.contextChanged)); return }
         guard activationType != .automatic || !hasManualTempBasal else {
             completion(.configuration(MedtrumWriteError.contextChanged)); return
@@ -624,7 +632,9 @@ public extension MedtrumPumpManager {
 
     func enactTempBasal(
         decisionId: UUID?, unitsPerHour: Double, duration: TimeInterval, automatic: Bool,
-        validation: (() -> Bool)? = nil, completion: @escaping (LoopKit.PumpManagerError?) -> Void
+        validation: (() -> Bool)? = nil, shortIntent shortIntentTemplate: MedtrumShortTempBasal? = nil,
+        alarmPrepared: Bool = false,
+        completion: @escaping (LoopKit.PumpManagerError?) -> Void
     ) {
         guard validation?() ?? true else { completion(.configuration(MedtrumWriteError.contextChanged)); return }
         guard duration.isFinite, duration >= 0, duration <= .hours(24), unitsPerHour.isFinite else {
@@ -634,10 +644,38 @@ public extension MedtrumPumpManager {
             completion(.configuration(MedtrumWriteError.contextChanged)); return
         }
         let shortMinutes = Int(duration / 60)
-        let isShort = !automatic && duration > 0 && duration < .minutes(30)
-        guard !isShort || (MedtrumShortTempBasal.supportedMinutes.contains(shortMinutes) &&
-            duration == Double(shortMinutes) * 60 && manualTempBasalRateAllowed(unitsPerHour)) else {
+        let isShort = duration > 0 && ((!automatic && duration < .minutes(30)) || (shortIntentTemplate != nil && duration <= .minutes(30)))
+        guard !automatic || !hasActiveBasalPulse || (pulseContinuationInFlight && state.shortTempBasal == nil) else {
             completion(.configuration(MedtrumWriteError.contextChanged)); return
+        }
+        guard !isShort || (duration == Double(shortMinutes) * 60 &&
+            shortTempRateAllowed(unitsPerHour, automatic: automatic) &&
+            (automatic ? shortIntentTemplate?.isValid == true && shortIntentTemplate?.automaticPulse == true : MedtrumShortTempBasal.supportedMinutes.contains(shortMinutes))) else {
+            completion(.configuration(MedtrumWriteError.contextChanged)); return
+        }
+        if isShort, !automatic, !alarmPrepared {
+            ensureConnectedAndActive { error in
+                if let error { completion(.communication(error)); return }
+                guard let sessionStart = self.state.patchActivatedAt,
+                      var intent = MedtrumShortTempBasal(sessionID: self.state.patchId, sessionStartedAt: sessionStart,
+                          commandID: UUID(), rate: unitsPerHour, minutes: shortMinutes, requestedAt: Date()) else {
+                    completion(.configuration(MedtrumWriteError.contextChanged)); return
+                }
+                let start: (Bool) -> Void = { armed in
+                    intent.alarmPrepared = armed
+                    self.enactTempBasal(decisionId: intent.commandID, unitsPerHour: unitsPerHour,
+                        duration: duration, automatic: false, validation: validation, shortIntent: intent,
+                        alarmPrepared: true) { error in
+                            if error != nil, self.deliveryLock.withLock({ self.state.shortTempBasal?.commandID != intent.commandID && self.state.pendingTempBasal?.decisionId != intent.commandID }) {
+                                self.retireShortTempBasalAlarm?(intent.commandID)
+                            }
+                            completion(error)
+                        }
+                }
+                if let arm = self.armShortTempBasalAlarm { arm(intent.commandID, intent.targetEnd.addingTimeInterval(15), start) }
+                else { start(false) }
+            }
+            return
         }
         let originalSession = automaticBolusContext()
         let writeValidation: () -> Bool = { [weak self] in
@@ -647,6 +685,9 @@ public extension MedtrumPumpManager {
                       self.state.patchActivatedAt == originalSession.sessionStartedAt,
                       !self.state.patchSessionEnded else { return false }
                 guard !automatic || !self.hasManualTempBasal else { return false }
+                guard shortIntentTemplate == nil || ((!automatic || self.automaticBasalPulseEnabled?() == true) &&
+                    shortIntentTemplate?.sessionID == self.state.patchId && shortIntentTemplate?.sessionStartedAt == self.state.patchActivatedAt &&
+                    shortIntentTemplate.map { $0.targetEnd > Date() } == true) else { return false }
                 guard automatic || duration == 0 || self.manualTempBasalRateAllowed(unitsPerHour) else { return false }
                 return !isShort || (self.shortTempBasalMonitoringEnabled && !self.state.patchSessionEnded &&
                     self.state.patchId == originalSession.sessionID && self.state.patchActivatedAt == originalSession.sessionStartedAt)
@@ -665,7 +706,7 @@ public extension MedtrumPumpManager {
                 return
             }
             guard writeValidation() else { finish(.configuration(MedtrumWriteError.contextChanged)); return }
-            guard !isShort || !self.hasManualTempBasal else {
+            guard !isShort || (!self.hasManualTempBasal && (!self.hasActiveBasalPulse || self.pulseContinuationInFlight)) else {
                 finish(.configuration(MedtrumWriteError.contextChanged)); return
             }
             if self.state.basalState == .tempBasal {
@@ -682,6 +723,7 @@ public extension MedtrumPumpManager {
                     return
                 }
                 var cancelledAt = Date()
+                let endingIntent = self.deliveryLock.withLock { self.state.shortTempBasal }
                 if let intent = self.state.shortTempBasal {
                     guard case let .success(data) = result, let response = data as? CancelTempBasalPacketResponse,
                           response.basalType == .STANDARD,
@@ -698,6 +740,7 @@ public extension MedtrumPumpManager {
                           !self.state.patchSessionEnded else { return false }
                     self.state.awaitingBasalReply = false
                     self.state.basalState = .active
+                    if let endingIntent { StateSyncer.rememberPulseCompanion(state: self.state, ended: endingIntent, at: cancelledAt) }
                     self.state.shortTempBasal = nil
                     if case let .success(data) = result, let response = data as? CancelTempBasalPacketResponse,
                        response.basalType == .STANDARD, response.basalPatchId == Double(self.state.patchId.toUInt64()),
@@ -711,6 +754,9 @@ public extension MedtrumPumpManager {
                     return true
                 }
                 guard applied else { finish(.configuration(MedtrumWriteError.contextChanged)); return }
+                if let endingIntent {
+                    self.finishEndedShortTempBasal(endingIntent)
+                }
             }
 
             guard duration >= .ulpOfOne else {
@@ -722,11 +768,11 @@ public extension MedtrumPumpManager {
                 finish(.communication(MedtrumWriteError.noData))
                 return
             }
-            let actualDuration = Self.pumpTempBasalDuration(requested: duration, automatic: automatic)
-            let commandID = isShort ? UUID() : decisionId
+            let actualDuration = Self.pumpTempBasalDuration(requested: duration, automatic: isShort ? false : automatic)
+            let commandID = shortIntentTemplate?.commandID ?? (isShort ? UUID() : decisionId)
             var tempBasalDose = UnfinalizedDose(
                 decisionId: commandID, tempRate: unitsPerHour, duration: actualDuration,
-                insulinType: self.state.insulinType, automatic: automatic
+                insulinType: self.state.insulinType, automatic: automatic, startDate: shortIntentTemplate?.requestedAt ?? Date()
             )
             var shortIntent: MedtrumShortTempBasal?
             if isShort {
@@ -734,7 +780,7 @@ public extension MedtrumPumpManager {
                       self.state.patchId == originalSession.sessionID,
                       sessionStart == originalSession.sessionStartedAt,
                       let commandID,
-                      let intent = MedtrumShortTempBasal(sessionID: self.state.patchId, sessionStartedAt: sessionStart,
+                      let intent = shortIntentTemplate ?? MedtrumShortTempBasal(sessionID: self.state.patchId, sessionStartedAt: sessionStart,
                           commandID: commandID, rate: unitsPerHour, minutes: shortMinutes, requestedAt: tempBasalDose.startDate) else {
                     finish(.configuration(MedtrumWriteError.contextChanged)); return
                 }
@@ -789,9 +835,12 @@ public extension MedtrumPumpManager {
                     }
                     finish(.uncertainDelivery); return
                 }
-                self.deliveryLock.withLock { self.state.shortTempBasal = intent }
+                self.deliveryLock.withLock {
+                    self.state.shortTempBasal = intent
+                    if intent.pulseBudget != nil { self.state.lastBasalPulseAt = localStart }
+                }
                 tempBasalDose = UnfinalizedDose(decisionId: commandID, tempRate: unitsPerHour, duration: actualDuration,
-                    insulinType: self.state.insulinType, automatic: false, startDate: localStart)
+                    insulinType: self.state.insulinType, automatic: automatic, startDate: localStart)
             }
 
             self.deliveryLock.lock()
@@ -823,7 +872,14 @@ public extension MedtrumPumpManager {
             if requested?.automatic == true, checkpoint == nil {
                 throw MedtrumWriteError.contextChanged
             }
-            if let shortIntent { state.shortTempBasal = shortIntent }
+            if let shortIntent {
+                state.shortTempBasal = shortIntent
+                if shortIntent.pulseBudget != nil {
+                    state.lastBasalPulseAt = shortIntent.requestedAt
+                    state.lastBasalPulseSessionID = shortIntent.sessionID
+                    state.lastBasalPulseSessionStart = shortIntent.sessionStartedAt
+                }
+            }
             state.pendingTempBasal = requested
             state.basalRecoveryCheckpoint = checkpoint
             state.legacyBasalRecoveryAllowed = false

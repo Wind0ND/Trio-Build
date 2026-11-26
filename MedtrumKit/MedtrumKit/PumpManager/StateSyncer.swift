@@ -15,12 +15,22 @@ enum StateSyncer {
         historyResolution: MedtrumBasalHistoryResolution? = nil
     ) {
         pumpManager.deliveryLock.lock()
+        let priorShortIntent = state.shortTempBasal
+        let priorPulseContinuation = state.basalPulseContinuation
         var recovered: (MedtrumBasalSyncContext, String)?
         var recoveryEvents: [NewPumpEvent] = []
         var confirmedRecoveryDose: UnfinalizedDose?
         var historyCommitRequired = false
         defer {
+            let shortEnded = state.shortTempBasal == nil && state.shortTempBasalTransitionTime != nil
+            let continuationStarted = state.basalPulseContinuation == nil && state.shortTempBasal?.pulseParentCommandID == priorPulseContinuation?.commandID
             pumpManager.deliveryLock.unlock()
+            if let priorShortIntent, shortEnded {
+                pumpManager.finishEndedShortTempBasal(priorShortIntent)
+            }
+            if let priorPulseContinuation, continuationStarted {
+                pumpManager.finishEndedShortTempBasal(priorPulseContinuation)
+            }
             if let recovered {
                 if historyCommitRequired {
                     pumpManager.completeBasalHistoryRecovery(query: recovered.0, events: recoveryEvents,

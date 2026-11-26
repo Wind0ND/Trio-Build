@@ -1,9 +1,21 @@
 import Foundation
 import Testing
+import LoopKit
 
 @testable import Trio
 
 @Suite("Trio Alerts: alarm sound catalog") struct AlarmSoundCatalogTests {
+    @Test("Short-temp alarm ownership is command-scoped and cannot collide with ordinary alarms")
+    func protectedShortTempIdentity() {
+        let a = Alert.Identifier(managerIdentifier: "Medtrum", alertIdentifier: "com.nightscout.medtrumkit.short-temp-cancel.A")
+        let b = Alert.Identifier(managerIdentifier: "Medtrum", alertIdentifier: "com.nightscout.medtrumkit.short-temp-cancel.B")
+        let ordinary = Alert.Identifier(managerIdentifier: "Trio", alertIdentifier: "loop.notActive")
+        #expect(CriticalAlertAlarmScheduler.isProtectedShortTemp(a))
+        #expect(!CriticalAlertAlarmScheduler.isProtectedShortTemp(ordinary))
+        #expect(CriticalAlertAlarmScheduler.alarmID(for: a) != CriticalAlertAlarmScheduler.alarmID(for: b))
+        #expect(CriticalAlertAlarmScheduler.alarmID(for: a) == CriticalAlertAlarmScheduler.alarmID(for: a))
+    }
+
     @Test("Every catalog filename is bundled at the main bundle root") func allBundled() {
         for filename in AlarmSoundCatalog.allFilenames {
             let resource = (filename as NSString).deletingPathExtension

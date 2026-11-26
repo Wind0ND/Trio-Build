@@ -20,6 +20,8 @@ public struct MedtrumShortTempBasal: Codable, Equatable {
     public var pulseCompanionRate: Double?
     public var pulseCompanionEnd: Date?
     public var absoluteEnd: Date?
+    public var pulseParentCommandID: UUID?
+    public var alarmPrepared: Bool?
 
     public init?(sessionID: Data, sessionStartedAt: Date, commandID: UUID,
                  rate: Double, minutes: Int, requestedAt: Date, automatic: Bool = false) {
@@ -35,7 +37,7 @@ public struct MedtrumShortTempBasal: Codable, Equatable {
 
     public var isValid: Bool {
         !sessionID.isEmpty && rate.isFinite && rate >= 0 && (rate > 0 || automaticPulse == true) && rate <= 30 &&
-            (automaticPulse == true ? (1 ... 29).contains(minutes) : Self.supportedMinutes.contains(minutes)) &&
+            (automaticPulse == true ? (1 ... 30).contains(minutes) : Self.supportedMinutes.contains(minutes)) &&
             (pulseBudget.map { $0.isFinite && $0 > 0 } ?? true) &&
             (pulseCompanionRate.map { $0.isFinite && (0 ... 30).contains($0) } ?? true) &&
             (pulseCompanionEnd.map { $0.timeIntervalSince1970.isFinite && $0 >= requestedAt } ?? true) &&

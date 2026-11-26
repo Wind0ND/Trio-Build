@@ -5,6 +5,7 @@ import LoopKit
 import LoopKitUI
 import MockKit
 import MedtrumKit
+import MedtrumLifecycleKit
 import SwiftDate
 import Swinject
 import UIKit
@@ -612,6 +613,15 @@ final class BaseAPSManager: APSManager, Injectable {
                 break
             } catch {
                 await reportEnacted(determinationID, wasEnacted: false)
+                if inputs.mode.usesBasalPulse, Self.isPulsePreflightFailure(error) {
+                    // Only a proven no-write preflight refusal may recalculate through pure basal.
+                    let fallbackID = try await calculateDetermination(for: .basalOnly,
+                        simulatedPump: inputs.mockPump, automaticBolusAllowed: false)
+                    let enacted = try await enactDetermination(fallbackID, inputs: inputs)
+                    await reportEnacted(fallbackID, wasEnacted: enacted)
+                    info(.loop, "Pulse preflight unavailable; enacted a fresh native basal-only determination")
+                    break
+                }
                 throw error
             }
         }
@@ -620,6 +630,14 @@ final class BaseAPSManager: APSManager, Injectable {
         loopStatRecord.end = endDate
         loopStatRecord.duration = roundDouble((endDate - loopStatRecord.start).timeInterval / 60, 2)
         loopStatRecord.loopStatus = "Success"
+    }
+
+    static func isPulsePreflightFailure(_ error: Error) -> Bool {
+        if error is MedtrumBasalPulseError { return true }
+        if let pumpError = error as? PumpManagerError, case let .configuration(cause) = pumpError {
+            return cause is MedtrumBasalPulseError
+        }
+        return false
     }
 
     private func calculateLoopInterval(loopStartDate: Date) async -> Double? {
@@ -795,6 +813,7 @@ final class BaseAPSManager: APSManager, Injectable {
                 supportedBasalRates: supportedBasalRates,
                 shouldSmoothGlucose: settingsManager.settings.smoothGlucose,
                 automaticBolusAllowed: automaticBolusAllowed,
+                lastBasalPulseAt: (pumpManager as? MedtrumPumpManager)?.lastBasalPulseAt,
                 clock: now
             )
             iobFileDidUpdate.send(())
@@ -1071,6 +1090,30 @@ final class BaseAPSManager: APSManager, Injectable {
             do { try checkDelivery(allowReservedBolus: true); return true } catch { return false }
         }
 
+        if inputs.mode.usesBasalPulse {
+            guard let medtrum = pump as? MedtrumPumpManager else {
+                throw APSError.invalidPumpState(message: String(localized: "Basal pulse requires a supported Medtrum pump"))
+            }
+            if let smb = smbToDeliver, smb.doubleValue > 0 {
+                guard let maximum = medtrum.manualTempBasalMaximum,
+                      let plan = MedtrumBasalPulsePlan.make(units: smb.doubleValue,
+                          companionRate: rateDecimal?.doubleValue ?? medtrum.basalPulseCurrentRate,
+                          companionMinutes: durationInSeconds.map { Int($0 / 60) } ?? medtrum.basalPulseCurrentMinutes,
+                          supportedRates: medtrum.supportedBasalRates, maximumRate: maximum) else {
+                    throw MedtrumBasalPulseError.cannotRepresent
+                }
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    medtrum.enactAutomaticBasalPulse(plan, isValid: commandStillValid) { error in
+                        if let error { continuation.resume(throwing: error) } else { continuation.resume() }
+                    }
+                }
+                info(.loop, "Native SMB plan accepted through basal pulse; delivery follows confirmed basal history")
+            } else if let rate = rateDecimal, let duration = durationInSeconds {
+                try await performBasal(pump: pump, rate: rate, duration: duration, validation: commandStillValid)
+            }
+            return true // The pulse route cannot fall through to performBolus, including on error.
+        }
+
         if let rate = rateDecimal, let duration = durationInSeconds {
             try await performBasal(pump: pump, rate: rate, duration: duration, validation: commandStillValid)
             info(.loop, "Temp basal enacted: \(rate) U/h for \(Int(duration / 60)) min")
@@ -1122,6 +1165,7 @@ final class BaseAPSManager: APSManager, Injectable {
     }
 
     private func performBolus(pump: PumpManager, smbToDeliver: NSDecimalNumber, validation: @escaping () -> Bool) async throws {
+        guard !automaticDeliveryContext.mode.usesBasalPulse else { throw AutomaticDeliveryInvalidation.contextChanged }
         if let medtrum = pump as? MedtrumPumpManager {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                 medtrum.enactGuardedAutomaticBolus(units: smbToDeliver.decimalValue.nearestDouble, isValid: validation) { error in
@@ -1782,6 +1826,9 @@ extension BaseAPSManager: SettingsObserver {
     func settingsDidChange(_ settings: TrioSettings) {
         let previous = lastDosingMode
         lastDosingMode = settings.dosingMode
+        if settings.dosingMode.usesBasalPulse, previous != settings.dosingMode {
+            Task { @MainActor in await CriticalAlertAlarmScheduler.requestAuthorization() }
+        }
         if settings.dosingMode.automation == .off { Task { await loopGuard.cancelPendingRetry() } }
 
         // Only basal testing clears a running temp. Elsewhere it may be protecting against a low,

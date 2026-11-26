@@ -229,6 +229,7 @@ final class OpenAPS {
         supportedBasalRates: [Decimal],
         shouldSmoothGlucose: Bool,
         automaticBolusAllowed: Bool = true,
+        lastBasalPulseAt: Date? = nil,
         clock: Date = Date(),
         simulatedCarbsAmount: Decimal? = nil,
         simulatedBolusAmount: Decimal? = nil,
@@ -301,13 +302,19 @@ final class OpenAPS {
         )
 
         // IOB calculation
-        let iob = try self.iob(
+        var iob = try self.iob(
             pumphistory: pumpHistory,
             profile: profile,
             clock: clock,
             autosens: autosens
         )
 
+        // Interval bookkeeping only: insulin remains actual basal history, never a second bolus.
+        if dosingMode.usesBasalPulse, let lastBasalPulseAt,
+           lastBasalPulseAt.timeIntervalSince1970.isFinite, lastBasalPulseAt.timeIntervalSince1970 > 0, !iob.isEmpty {
+            let pulseMilliseconds = UInt64(lastBasalPulseAt.timeIntervalSince1970 * 1000)
+            iob[0].lastBolusTime = max(iob[0].lastBolusTime ?? 0, pulseMilliseconds)
+        }
         // TODO: refactor this to core data
         if !simulation {
             storage.save(iob, as: Monitor.iobFile(simulated: simulatedPump))
@@ -327,7 +334,7 @@ final class OpenAPS {
             profile: profile,
             autosens: autosens,
             meal: meal,
-            microBolusAllowed: automaticBolusAllowed && dosingMode.allowsAutomaticSMB,
+            microBolusAllowed: dosingMode.allowsSMBDecision(automaticBolusAllowed: automaticBolusAllowed),
             preferences: preferences,
             trioCustomOrefVariables: trioCustomOrefVariables
         )

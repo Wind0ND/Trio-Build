@@ -3,6 +3,18 @@ import XCTest
 @testable import MedtrumLifecycleKit
 
 final class MedtrumShortTempBasalTests: XCTestCase {
+    func testAutomaticCompanionCanBeZeroAndCannotExtendOriginalDeadline() throws {
+        var intent = try XCTUnwrap(MedtrumShortTempBasal(sessionID: session, sessionStartedAt: start.addingTimeInterval(-3600),
+            commandID: command, rate: 0, minutes: 29, requestedAt: start, automatic: true))
+        intent.absoluteEnd = start.addingTimeInterval(1700)
+        let confirmed = try XCTUnwrap(intent.confirmed(startedAt: start.addingTimeInterval(3), observedAt: start.addingTimeInterval(4)))
+        XCTAssertEqual(confirmed.targetEnd, start.addingTimeInterval(1700))
+        XCTAssertFalse(confirmed.canCancel(sessionID: session, sessionStartedAt: start.addingTimeInterval(-3600),
+            commandID: command, startDate: start.addingTimeInterval(3), rate: 0, automatic: false, now: start.addingTimeInterval(1700)))
+        XCTAssertTrue(confirmed.canCancel(sessionID: session, sessionStartedAt: start.addingTimeInterval(-3600),
+            commandID: command, startDate: start.addingTimeInterval(3), rate: 0, automatic: true, now: start.addingTimeInterval(1700)))
+    }
+
     func testRestoredAutomaticPulseCanCancelOnlyItsAutomaticDoseAtDeadline() throws {
         let confirmed = try XCTUnwrap(plan(minutes: 1).confirmed(startedAt: start, observedAt: start))
         var json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(confirmed)) as? [String: Any])

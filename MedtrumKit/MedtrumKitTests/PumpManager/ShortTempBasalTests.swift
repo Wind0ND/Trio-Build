@@ -1,8 +1,59 @@
 @testable import MedtrumKit
 import LoopKit
+import MedtrumLifecycleKit
 import XCTest
 
 final class ShortTempBasalTests: XCTestCase {
+    func testAutomaticPulseRestoresAsActualAutomaticBasalWithoutManualFlag() throws {
+        let state = makeState()
+        var intent = try XCTUnwrap(MedtrumShortTempBasal(sessionID: state.patchId, sessionStartedAt: state.patchActivatedAt!,
+            commandID: command, rate: 6, minutes: 1, requestedAt: start, automatic: true))
+        intent.pulseBudget = 0.1
+        state.shortTempBasal = intent
+        XCTAssertTrue(StateSyncer.reconcileShortTempBasal(state: state, basal: basal(), observedAt: start.addingTimeInterval(2), fullSync: true))
+        let manager = MedtrumPumpManager(state: MedtrumPumpState(rawValue: state.rawValue), bluetooth: nil)
+        XCTAssertTrue(manager.hasActiveBasalPulse)
+        XCTAssertFalse(manager.hasManualTempBasal)
+        XCTAssertTrue(manager.state.basalDose.automatic)
+        XCTAssertEqual(manager.lastBasalPulseAt, start)
+    }
+
+    func testPulseModeRejectsAutomaticBolusBeforeTransport() {
+        let state = makeState()
+        state.shortTempBasal = nil
+        state.basalDose = UnfinalizedDose(basalRate: 1, insulinType: nil, startDate: start)
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        manager.automaticBasalPulseEnabled = { true }
+        let done = expectation(description: "physical automatic bolus is rejected")
+        manager.enactGuardedAutomaticBolus(units: 0.1, isValid: { true }) { error in
+            if let error, case .deviceState = error {} else { XCTFail("Expected bolus route refusal before communication") }
+            done.fulfill()
+        }
+        wait(for: [done], timeout: 2)
+    }
+
+    func testPulseCompanionRetainsAbsoluteDeadlineAndClearsParentOnRestoredConfirmation() throws {
+        let state = makeState()
+        var original = try XCTUnwrap(MedtrumShortTempBasal(sessionID: state.patchId, sessionStartedAt: state.patchActivatedAt!,
+            commandID: command, rate: 6, minutes: 1, requestedAt: start, automatic: true))
+        original.pulseBudget = 0.1
+        original.pulseCompanionRate = 0
+        original.pulseCompanionEnd = start.addingTimeInterval(1800)
+        StateSyncer.rememberPulseCompanion(state: state, ended: original, at: start.addingTimeInterval(65))
+        XCTAssertEqual(state.basalPulseContinuation?.pulseCompanionEnd, start.addingTimeInterval(1800))
+        let childID = UUID()
+        var child = try XCTUnwrap(MedtrumShortTempBasal(sessionID: state.patchId, sessionStartedAt: state.patchActivatedAt!,
+            commandID: childID, rate: 0, minutes: 29, requestedAt: start.addingTimeInterval(65), automatic: true))
+        child.absoluteEnd = original.pulseCompanionEnd
+        child.pulseParentCommandID = command
+        state.shortTempBasal = child
+        let restored = MedtrumPumpState(rawValue: state.rawValue)
+        XCTAssertTrue(StateSyncer.reconcileShortTempBasal(state: restored,
+            basal: basal(at: start.addingTimeInterval(65), rate: 0), observedAt: start.addingTimeInterval(66), fullSync: true))
+        XCTAssertNil(restored.basalPulseContinuation)
+        XCTAssertEqual(restored.shortTempBasal?.targetEnd, start.addingTimeInterval(1800))
+    }
+
     func testCancellationFailureAlwaysRequestsCriticalAudibleAlert() {
         let alert = MedtrumAlert.shortTempBasalCancellationFailed.alert
         XCTAssertEqual(alert.interruptionLevel, .critical)

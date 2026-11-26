@@ -23,11 +23,50 @@ import PrivacyKit
 /// Ported from Loop's `CriticalAlertAlarmScheduler`.
 @MainActor
 final class CriticalAlertAlarmScheduler {
+    nonisolated static func isProtectedShortTemp(_ identifier: Alert.Identifier) -> Bool {
+        identifier.managerIdentifier == "Medtrum" &&
+            identifier.alertIdentifier.hasPrefix("com.nightscout.medtrumkit.short-temp-cancel")
+    }
+
+    func containsShortTempAlarm(_ identifier: Alert.Identifier) -> Bool {
+        guard #available(iOS 26, *), isAuthorizedAndAvailable else { return false }
+        #if canImport(AlarmKit)
+            return (try? AlarmManager.shared.alarms.contains { $0.id == Self.alarmID(for: identifier) }) ?? false
+        #else
+            return false
+        #endif
+    }
+
+    /// Unlike scheduleAlarm's synchronous acceptance, this returns only after the OS accepted the alarm.
+    func prearmShortTemp(_ alert: Alert, at deadline: Date) async -> Bool {
+        guard #available(iOS 26, *), isAuthorizedAndAvailable, deadline > Date() else { return false }
+        #if canImport(AlarmKit)
+            let stopButton = AlarmButton(text: LocalizedStringResource(stringLiteral: String(localized: "Stop")),
+                textColor: .white, systemImageName: "stop.circle")
+            let presentation = AlarmPresentation(alert: AlarmPresentation.Alert(
+                title: LocalizedStringResource(stringLiteral: TrioPrivacyAlert.content(alert.backgroundContent, for: alert)?.title ?? alert.backgroundContent.title),
+                stopButton: stopButton))
+            let attributes = AlarmAttributes<EmptyAlarmMetadata>(presentation: presentation, tintColor: .red)
+            let config = AlarmManager.AlarmConfiguration<EmptyAlarmMetadata>.alarm(schedule: .fixed(deadline),
+                attributes: attributes, stopIntent: StopCriticalAlertIntent(identifier: alert.identifier),
+                sound: .named(alert.sound?.filename ?? "honk.caf"))
+            do {
+                _ = try await AlarmManager.shared.schedule(id: Self.alarmID(for: alert.identifier), configuration: config)
+                DiagnosticEventStore.shared.record(feature: "alerts", stage: "alarm", outcome: "scheduled")
+                return true
+            } catch {
+                DiagnosticEventStore.shared.record(feature: "alerts", stage: "alarm", outcome: "failed")
+                return false
+            }
+        #else
+            return false
+        #endif
+    }
     private var pendingSchedules: [UUID: (token: UUID, task: Task<Void, Never>)] = [:]
     private var burstStops: [UUID: Task<Void, Never>] = [:]
     /// The AlarmKit alarm ID for an alert, derived from the alert identifier so
     /// a relaunched app can still stop an alarm scheduled by an earlier process.
-    static func alarmID(for identifier: Alert.Identifier) -> UUID {
+    nonisolated static func alarmID(for identifier: Alert.Identifier) -> UUID {
         var bytes = Array(SHA256.hash(data: Data(identifier.value.utf8)).prefix(16))
         bytes[6] = (bytes[6] & 0x0F) | 0x50
         bytes[8] = (bytes[8] & 0x3F) | 0x80
@@ -129,6 +168,7 @@ final class CriticalAlertAlarmScheduler {
                     DiagnosticEventStore.shared.record(feature: "alerts", stage: "alarm", outcome: "scheduled")
                     info(.alerts, "AlarmKit alarm scheduled for \(identifier.value)")
                     onScheduled()
+                    if Self.isProtectedShortTemp(identifier) { return }
                     burstStops[id] = Task {
                         do { try await Task.sleep(for: .seconds(max(0, fireDate.timeIntervalSinceNow + burst))) }
                         catch { return }
@@ -253,8 +293,13 @@ final class CriticalAlertAlarmScheduler {
         }
 
         func perform() async throws -> some IntentResult {
+            let identifier = Alert.Identifier(managerIdentifier: managerIdentifier, alertIdentifier: alertIdentifier)
+            if CriticalAlertAlarmScheduler.isProtectedShortTemp(identifier),
+               await HiroBasalPulseAlarms.shared.stopped(identifier) {
+                return .result()
+            }
             await CriticalAlertAcknowledgementBridge.shared.acknowledge(
-                Alert.Identifier(managerIdentifier: managerIdentifier, alertIdentifier: alertIdentifier)
+                identifier
             )
             return .result()
         }

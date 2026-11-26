@@ -17,6 +17,7 @@ enum DosingMode: String, JSON, CaseIterable, Identifiable, Codable, Hashable {
     var id: String { rawValue }
     case closed
     case basalOnly
+    case basalPulse
     case open
     case lowGlucoseSuspend
     case basalTesting
@@ -25,7 +26,7 @@ enum DosingMode: String, JSON, CaseIterable, Identifiable, Codable, Hashable {
     /// can take insulin away but never add it, because Max IOB is clamped to 0.
     var automation: AutomationLevel {
         switch self {
-        case .closed, .basalOnly:
+        case .closed, .basalOnly, .basalPulse:
             return .full
         case .open:
             return .off
@@ -36,7 +37,11 @@ enum DosingMode: String, JSON, CaseIterable, Identifiable, Codable, Hashable {
         }
     }
 
-    var allowsAutomaticSMB: Bool { self != .basalOnly }
+    var allowsAutomaticSMB: Bool { self != .basalOnly && self != .basalPulse }
+    var usesBasalPulse: Bool { self == .basalPulse }
+    func allowsSMBDecision(automaticBolusAllowed: Bool) -> Bool {
+        usesBasalPulse || (automaticBolusAllowed && allowsAutomaticSMB)
+    }
 
     /// A device restriction changes the effective mode, not the user's stored selection.
     func effectiveForDevice(basalOnly: Bool) -> Self {
@@ -52,6 +57,8 @@ enum DosingMode: String, JSON, CaseIterable, Identifiable, Codable, Hashable {
             return String(localized: "Closed Loop", comment: "Dosing mode")
         case .basalOnly:
             return String(localized: "Basal-only Closed Loop")
+        case .basalPulse:
+            return String(localized: "Basal Pulse Closed Loop")
         case .open:
             return String(localized: "Open Loop", comment: "Dosing mode")
         case .lowGlucoseSuspend:
@@ -67,6 +74,8 @@ enum DosingMode: String, JSON, CaseIterable, Identifiable, Codable, Hashable {
             return String(localized: "Trio adjusts your insulin automatically.")
         case .basalOnly:
             return String(localized: "Automatically adjusts basal insulin without SMB.")
+        case .basalPulse:
+            return String(localized: "Uses native SMB decisions through short temporary basal delivery.")
         case .open:
             return String(localized: "Trio only shows what it would do. It never changes your insulin.")
         case .lowGlucoseSuspend:
@@ -79,7 +88,7 @@ enum DosingMode: String, JSON, CaseIterable, Identifiable, Codable, Hashable {
     /// Symbol shown beside the name in the hint sheet.
     var icon: String {
         switch self {
-        case .closed, .basalOnly:
+        case .closed, .basalOnly, .basalPulse:
             return "circle"
         case .open:
             return "circle.dashed"
@@ -98,6 +107,8 @@ enum DosingMode: String, JSON, CaseIterable, Identifiable, Codable, Hashable {
             )
         case .basalOnly:
             return String(localized: "Trio automatically raises or lowers basal insulin using its existing algorithm. Automatic SMB is off. Your saved SMB preferences and safety limits stay unchanged. Manual boluses remain available.")
+        case .basalPulse:
+            return String(localized: "Uses the existing SMB algorithm for all eligible automatic corrections, delivered only through temporary basal commands. A system alarm must be authorized and armed before a pulse starts. Short delivery depends on the phone cancelling the pump's native temporary basal. Existing safety limits remain in effect.")
         case .open:
             return String(
                 localized: "Trio still shows what it would do, but it never changes your insulin. Your pump keeps running the basal rates you set, and every dose is your choice. Trio is running in manual mode. It will not stop a low or fix a high for you."

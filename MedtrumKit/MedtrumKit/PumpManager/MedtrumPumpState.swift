@@ -141,6 +141,13 @@ public class MedtrumPumpState: RawRepresentable {
             shortTempBasal = intent
         }
         manualBasalMaximum = (rawValue["manualBasalMaximum"] as? Double).flatMap { $0.isFinite && (0 ... 30).contains($0) ? $0 : nil }
+        lastBasalPulseAt = rawValue["lastBasalPulseAt"] as? Date
+        lastBasalPulseSessionID = rawValue["lastBasalPulseSessionID"] as? Data
+        lastBasalPulseSessionStart = rawValue["lastBasalPulseSessionStart"] as? Date
+        if let data = rawValue["basalPulseContinuation"] as? Data,
+           let intent = try? JSONDecoder().decode(MedtrumShortTempBasal.self, from: data), intent.isValid {
+            basalPulseContinuation = intent
+        }
         if let data = rawValue["unresolvedShortTempBasals"] as? Data {
             unresolvedShortTempBasals = ((try? JSONDecoder().decode([MedtrumShortTempBasal].self, from: data)) ?? [])
                 .filter(\.isValid).suffix(20).map { $0 }
@@ -237,6 +244,10 @@ public class MedtrumPumpState: RawRepresentable {
         value["legacyBasalRecoveryAllowed"] = legacyBasalRecoveryAllowed
         value["shortTempBasal"] = shortTempBasal.flatMap { try? JSONEncoder().encode($0) }
         value["manualBasalMaximum"] = manualBasalMaximum
+        value["lastBasalPulseAt"] = lastBasalPulseAt
+        value["lastBasalPulseSessionID"] = lastBasalPulseSessionID
+        value["lastBasalPulseSessionStart"] = lastBasalPulseSessionStart
+        value["basalPulseContinuation"] = basalPulseContinuation.flatMap { try? JSONEncoder().encode($0) }
         value["unresolvedShortTempBasals"] = try? JSONEncoder().encode(unresolvedShortTempBasals)
         value["basalDose"] = basalDose.rawValue
         value["reservoir"] = reservoir
@@ -350,6 +361,10 @@ public class MedtrumPumpState: RawRepresentable {
     var basalRecoveryCheckpoint: MedtrumBasalRecoveryCheckpoint?
     var legacyBasalRecoveryAllowed = false
     var shortTempBasal: MedtrumShortTempBasal?
+    var lastBasalPulseAt: Date?
+    var lastBasalPulseSessionID: Data?
+    var lastBasalPulseSessionStart: Date?
+    var basalPulseContinuation: MedtrumShortTempBasal?
     var unresolvedShortTempBasals: [MedtrumShortTempBasal] = []
     var manualBasalMaximum: Double?
     var shortTempBasalTransitionTime: Date?

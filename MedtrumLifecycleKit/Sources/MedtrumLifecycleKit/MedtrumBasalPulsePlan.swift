@@ -1,5 +1,16 @@
 import Foundation
 
+public enum MedtrumBasalPulseError: LocalizedError {
+    case alarmUnavailable
+    case cannotRepresent
+    public var errorDescription: String? {
+        switch self {
+        case .alarmUnavailable: return String(localized: "System alarm protection is unavailable for this temporary delivery.")
+        case .cannotRepresent: return String(localized: "SMB plan cannot be represented within the saved basal limit")
+        }
+    }
+}
+
 /// Transport plan only. The native dosing algorithm supplies the insulin budget.
 public struct MedtrumBasalPulsePlan: Codable, Equatable {
     public let requestedUnits: Double

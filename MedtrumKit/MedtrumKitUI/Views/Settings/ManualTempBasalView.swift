@@ -9,7 +9,7 @@ struct ManualTempBasalView: View {
         VStack {
             List {
                 if let active = viewModel.activeShortTemp {
-                    Section("Manual Temp Basal") {
+                    Section(LocalizedStringKey(active.automatic ? "Automatic basal pulse" : "Manual Temp Basal")) {
                         if active.accountingUnresolved {
                             Text("Delivery history is uncertain. Automatic delivery is blocked until the records can be verified.")
                                 .foregroundStyle(.orange)
@@ -29,11 +29,15 @@ struct ManualTempBasalView: View {
                             }
                         }
                         LabeledContent("Planned cancellation", value: active.endDate.formatted(date: .omitted, time: .standard))
+                        if !active.alarmPrepared {
+                            Text("System alarm protection is unavailable for this temporary delivery.")
+                                .foregroundStyle(.orange)
+                        }
                         if active.cancellationFailed {
                             Text("Cancellation could not be confirmed. Check the pump connection.")
                                 .foregroundStyle(.orange)
                         }
-                        Button("Cancel manual temporary basal", role: .destructive, action: viewModel.cancel)
+                        Button("Cancel temporary delivery", role: .destructive, action: viewModel.cancel)
                             .disabled(viewModel.enacting || viewModel.enactingBolus)
                     }
                 } else if viewModel.hasManualTemp {

@@ -16,6 +16,7 @@ enum MedtrumAlert {
     case reservoirEmptyNotification
     case baseResetNotification
     case shortTempBasalCancellationFailed
+    case basalPulseContinuationFailed
 
     var title: String? {
         switch self {
@@ -54,7 +55,7 @@ enum MedtrumAlert {
 
     var alert: Alert {
         let content = alertContent
-        if case .baseResetNotification = self {
+        if self.requiresCriticalSound {
             return Alert(identifier: identifier, foregroundContent: content, backgroundContent: content, trigger: trigger,
                          interruptionLevel: .critical, sound: .sound(name: "honk.caf"))
         }
@@ -67,6 +68,12 @@ enum MedtrumAlert {
     }
 
     private static let managerIdentifier = "Medtrum"
+    private var requiresCriticalSound: Bool {
+        switch self {
+        case .baseResetNotification, .shortTempBasalCancellationFailed, .basalPulseContinuationFailed: return true
+        default: return false
+        }
+    }
     private var identifier: Alert.Identifier {
         switch self {
         case .patchExpiredNotification:
@@ -107,6 +114,9 @@ enum MedtrumAlert {
         case .shortTempBasalCancellationFailed:
             return Alert.Identifier(managerIdentifier: MedtrumAlert.managerIdentifier,
                                     alertIdentifier: "com.nightscout.medtrumkit.short-temp-cancel")
+        case .basalPulseContinuationFailed:
+            return Alert.Identifier(managerIdentifier: MedtrumAlert.managerIdentifier,
+                                    alertIdentifier: "com.nightscout.medtrumkit.short-temp-cancel.companion")
         case .lowReservoir:
             return Alert.Identifier(
                 managerIdentifier: MedtrumAlert.managerIdentifier,
@@ -117,6 +127,10 @@ enum MedtrumAlert {
 
     private var alertContent: Alert.Content {
         switch self {
+        case .basalPulseContinuationFailed:
+            return Alert.Content(title: String(localized: "Pulse follow-up basal not confirmed"),
+                body: String(localized: "The pulse ended but its follow-up basal could not be confirmed. Open hiro and check the pump."),
+                acknowledgeActionButtonLabel: String(localized: "View status"))
         case .shortTempBasalCancellationFailed:
             return Alert.Content(title: String(localized: "Temporary basal cancellation delayed"),
                 body: String(localized: "Cancellation could not be confirmed. Open hiro and check the pump connection. The temporary basal may still be running."),

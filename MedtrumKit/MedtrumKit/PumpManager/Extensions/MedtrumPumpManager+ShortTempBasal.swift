@@ -1,5 +1,6 @@
 import Foundation
 import LoopKit
+import MedtrumLifecycleKit
 
 public struct ShortTempBasalStatus {
     public let endDate: Date
@@ -9,9 +10,178 @@ public struct ShortTempBasalStatus {
     public let awaitingConfirmation: Bool
     public let cancellationFailed: Bool
     public let accountingUnresolved: Bool
+    public let alarmPrepared: Bool
+    public let automatic: Bool
 }
 
 extension MedtrumPumpManager {
+    public var hasActiveBasalPulse: Bool {
+        deliveryLock.withLock { state.shortTempBasal?.pulseBudget != nil || state.basalPulseContinuation != nil }
+    }
+
+    public var lastBasalPulseAt: Date? {
+        deliveryLock.withLock {
+            guard state.lastBasalPulseSessionID == state.patchId,
+                  state.lastBasalPulseSessionStart == state.patchActivatedAt else { return nil }
+            return state.lastBasalPulseAt
+        }
+    }
+
+    public var basalPulseCurrentRate: Double { deliveryLock.withLock { state.basalDose.value } }
+    public var basalPulseCurrentMinutes: Int {
+        deliveryLock.withLock {
+            state.basalDose.type == .tempBasal ? max(0, Int(state.basalDose.estimatedEndDate.timeIntervalSinceNow / 60)) : 0
+        }
+    }
+
+    public var shortTempAlarmRequests: [(commandID: UUID, deadline: Date)] {
+        deliveryLock.withLock {
+            var intents = state.unresolvedShortTempBasals
+            if let active = state.shortTempBasal { intents.append(active) }
+            if let continuation = state.basalPulseContinuation { intents.append(continuation) }
+            return intents.map { ($0.commandID, $0.targetEnd.addingTimeInterval(15)) }
+        }
+    }
+
+    func shortTempRateAllowed(_ rate: Double, automatic: Bool) -> Bool {
+        if !automatic { return manualTempBasalRateAllowed(rate) }
+        return deliveryLock.withLock {
+            guard let maximum = state.manualBasalMaximum else { return false }
+            return rate.isFinite && rate >= 0 && rate <= maximum && supportedBasalRates.contains(rate)
+        }
+    }
+
+    /// The only transport used here is the existing temp-basal set/cancel transaction.
+    public func enactAutomaticBasalPulse(_ plan: MedtrumBasalPulsePlan, isValid: @escaping () -> Bool,
+                                         completion: @escaping (PumpManagerError?) -> Void) {
+        guard isValid(), automaticBasalPulseEnabled?() == true, !hasActiveBasalPulse, !hasManualTempBasal,
+              !status.deliveryIsUncertain, shortTempRateAllowed(plan.rate, automatic: true) else {
+            completion(.configuration(MedtrumWriteError.contextChanged)); return
+        }
+        ensureConnectedAndActive { error in
+            if let error { completion(.communication(error)); return }
+            let template: MedtrumShortTempBasal? = self.deliveryLock.withLock {
+                guard let sessionStart = self.state.patchActivatedAt, !self.state.patchSessionEnded,
+                      isValid(), self.automaticBasalPulseEnabled?() == true,
+                      var intent = MedtrumShortTempBasal(sessionID: self.state.patchId, sessionStartedAt: sessionStart,
+                          commandID: UUID(), rate: plan.rate, minutes: plan.minutes, requestedAt: Date(), automatic: true) else { return nil }
+                intent.pulseBudget = plan.extraUnits
+                intent.alarmPrepared = true
+                if plan.companionMinutes > 0 {
+                    intent.pulseCompanionRate = plan.companionRate
+                    intent.pulseCompanionEnd = intent.requestedAt.addingTimeInterval(Double(plan.companionMinutes) * 60)
+                }
+                return intent
+            }
+            guard let template else {
+                completion(.configuration(MedtrumWriteError.contextChanged)); return
+            }
+            guard let arm = self.armShortTempBasalAlarm else {
+                completion(.configuration(MedtrumBasalPulseError.alarmUnavailable)); return
+            }
+            arm(template.commandID, template.targetEnd.addingTimeInterval(15)) { armed in
+                guard armed else {
+                    self.retireShortTempBasalAlarm?(template.commandID)
+                    completion(.configuration(MedtrumBasalPulseError.alarmUnavailable)); return
+                }
+                guard isValid() else {
+                    self.retireShortTempBasalAlarm?(template.commandID)
+                    completion(.configuration(MedtrumWriteError.contextChanged)); return
+                }
+                self.enactTempBasal(decisionId: template.commandID, unitsPerHour: plan.rate,
+                    duration: Double(plan.minutes) * 60, automatic: true, validation: isValid, shortIntent: template) { error in
+                    let mayHaveRun = self.deliveryLock.withLock {
+                        self.state.shortTempBasal?.commandID == template.commandID ||
+                            self.state.pendingTempBasal?.decisionId == template.commandID
+                    }
+                    if error != nil, !mayHaveRun { self.retireShortTempBasalAlarm?(template.commandID) }
+                    completion(error)
+                }
+            }
+        }
+    }
+
+    func finishEndedShortTempBasal(_ intent: MedtrumShortTempBasal) {
+        // Always leave the host persistence queue outside deliveryLock.
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self else { return }
+            do { try self.checkpointDelivery() }
+            catch { self.emitAlert(alertType: .shortTempBasalCancellationFailed); return }
+            if self.deliveryLock.withLock({ self.state.basalPulseContinuation?.commandID != intent.commandID }) {
+                self.retireShortTempBasalAlarm?(intent.commandID)
+            }
+            self.servicePulseCompanion()
+        }
+    }
+
+    func servicePulseCompanion() {
+        let pending: MedtrumShortTempBasal? = deliveryLock.withLock {
+            guard !pulseContinuationInFlight, !submittingDelivery, Date() >= pulseContinuationNextAttempt, state.shortTempBasal == nil,
+                  !state.basalDeliveryUncertain, !state.bolusDeliveryUncertain,
+                  let intent = state.basalPulseContinuation else { return nil }
+            pulseContinuationInFlight = true
+            pulseContinuationNextAttempt = Date().addingTimeInterval(30)
+            return intent
+        }
+        guard let pending else { return }
+        let valid = { [weak self] in
+            guard let self else { return false }
+            return self.deliveryLock.withLock {
+                self.automaticBasalPulseEnabled?() == true && !self.hasManualTempBasal &&
+                    self.state.patchId == pending.sessionID && self.state.patchActivatedAt == pending.sessionStartedAt &&
+                    self.state.basalPulseContinuation?.commandID == pending.commandID &&
+                    !self.state.patchSessionEnded && !self.status.deliveryIsUncertain
+            }
+        }
+        guard valid(), let end = pending.pulseCompanionEnd, let rate = pending.pulseCompanionRate,
+              end > Date(), shortTempRateAllowed(rate, automatic: true),
+              rate <= basalPulseCurrentRate || Date().timeIntervalSince(pending.requestedAt) <= 4.5 * 60 else {
+            deliveryLock.withLock { state.basalPulseContinuation = nil; pulseContinuationInFlight = false }
+            finishEndedShortTempBasal(pending)
+            return
+        }
+        let remaining = end.timeIntervalSinceNow
+        let duration = remaining >= 1800 ? floor(remaining / 60) * 60 : ceil(remaining / 60) * 60
+        let callback: (PumpManagerError?) -> Void = { [weak self] error in
+            guard let self else { return }
+            self.deliveryLock.withLock {
+                self.pulseContinuationInFlight = false
+                if error == nil, self.state.basalPulseContinuation?.commandID == pending.commandID {
+                    self.state.basalPulseContinuation = nil
+                }
+            }
+            if error == nil { self.finishEndedShortTempBasal(pending) }
+            else { self.emitAlert(alertType: .basalPulseContinuationFailed) }
+        }
+        if remaining >= 1800 {
+            // This native companion ends no later than the original native plan.
+            enactTempBasal(decisionId: nil, unitsPerHour: rate, duration: duration,
+                automatic: true, validation: valid, completion: callback)
+            return
+        }
+        guard var template = MedtrumShortTempBasal(sessionID: pending.sessionID, sessionStartedAt: pending.sessionStartedAt,
+            commandID: UUID(), rate: rate, minutes: Int(duration / 60), requestedAt: Date(), automatic: true),
+            let arm = armShortTempBasalAlarm else { callback(.configuration(MedtrumWriteError.contextChanged)); return }
+        template.absoluteEnd = end
+        template.pulseParentCommandID = pending.commandID
+        template.alarmPrepared = true
+        guard template.isValid else { callback(.configuration(MedtrumWriteError.contextChanged)); return }
+        arm(template.commandID, end.addingTimeInterval(15)) { [weak self] armed in
+            guard let self else { return }
+            guard armed, valid() else {
+                self.retireShortTempBasalAlarm?(template.commandID)
+                callback(.configuration(MedtrumWriteError.contextChanged)); return
+            }
+            self.enactTempBasal(decisionId: template.commandID, unitsPerHour: rate, duration: duration,
+                automatic: true, validation: valid, shortIntent: template) { error in
+                    if error != nil, self.deliveryLock.withLock({ self.state.shortTempBasal?.commandID != template.commandID }) {
+                        self.retireShortTempBasalAlarm?(template.commandID)
+                    }
+                    callback(error)
+                }
+        }
+    }
+
     static func pumpTempBasalDuration(requested: TimeInterval, automatic: Bool) -> TimeInterval {
         !automatic && requested > 0 && requested < .minutes(30) ? .minutes(30) : requested
     }
@@ -21,13 +191,14 @@ extension MedtrumPumpManager {
             return ShortTempBasalStatus(endDate: intent.targetEnd, rate: intent.rate, minutes: intent.minutes,
                 estimatedUnits: intent.estimatedUnits,
                 awaitingConfirmation: intent.confirmedStart == nil || state.basalDeliveryUncertain,
-                cancellationFailed: intent.cancellationFailed, accountingUnresolved: intent.accountingUnresolved)
+                cancellationFailed: intent.cancellationFailed, accountingUnresolved: intent.accountingUnresolved,
+                alarmPrepared: intent.alarmPrepared == true, automatic: intent.automaticPulse == true)
         }
     }
 
     public var hasManualTempBasal: Bool {
         deliveryLock.withLock {
-            state.shortTempBasal != nil || (state.basalDose.type == .tempBasal && !state.basalDose.automatic)
+            state.shortTempBasal.map { $0.automaticPulse != true } == true || (state.basalDose.type == .tempBasal && !state.basalDose.automatic)
         }
     }
 
@@ -59,6 +230,7 @@ extension MedtrumPumpManager {
 
     /// A timer is only an opportunity to run. The persisted deadline survives app suspension.
     func serviceShortTempBasalDeadline() {
+        servicePulseCompanion()
         let command: UUID? = deliveryLock.withLock {
             guard shortTempBasalMonitoringEnabled, !state.patchSessionEnded,
                   bluetooth != nil, let intent = state.shortTempBasal,
@@ -146,7 +318,7 @@ extension MedtrumPumpManager {
 
     /// Immediate user cancellation also revalidates the original dose after connecting and queueing.
     public func cancelCurrentManualTempBasal(completion: @escaping (PumpManagerError?) -> Void) {
-        let original = deliveryLock.withLock { (state.patchId, state.patchActivatedAt, state.basalDose.startDate, state.basalDose.decisionId, state.basalDose.value) }
+        let original = deliveryLock.withLock { (state.patchId, state.patchActivatedAt, state.basalDose.startDate, state.basalDose.decisionId, state.basalDose.value, state.basalDose.automatic) }
         let syncStarted = Date()
         syncPumpData { [weak self] syncedAt in
             guard let self else { return }
@@ -159,7 +331,7 @@ extension MedtrumPumpManager {
                 return self.deliveryLock.withLock {
                     self.shortTempBasalMonitoringEnabled && !self.state.patchSessionEnded && self.state.patchId == original.0 && self.state.patchActivatedAt == original.1 &&
                         !self.state.basalDeliveryUncertain && !self.state.bolusDeliveryUncertain && self.state.pumpState.isDelivering &&
-                        self.state.basalDose.type == .tempBasal && !self.state.basalDose.automatic &&
+                        self.state.basalDose.type == .tempBasal && self.state.basalDose.automatic == original.5 &&
                         self.state.basalDose.startDate == original.2 && self.state.basalDose.decisionId == original.3 &&
                         self.manualTempBasalMatchesObservedSegment(startDate: original.2, rate: original.4) &&
                         observed.map { self.shortTempBasalObservedSegment?.sameSegment(as: $0) == true } == true
@@ -191,6 +363,12 @@ extension MedtrumPumpManager {
 }
 
 extension StateSyncer {
+    static func rememberPulseCompanion(state: MedtrumPumpState, ended intent: MedtrumShortTempBasal, at end: Date) {
+        guard intent.automaticPulse == true, intent.pulseBudget != nil,
+              intent.sessionID == state.patchId, intent.sessionStartedAt == state.patchActivatedAt,
+              let deadline = intent.pulseCompanionEnd, deadline > end, intent.pulseCompanionRate != nil else { return }
+        state.basalPulseContinuation = intent
+    }
     static func retireShortTempBasal(state: MedtrumPumpState) {
         guard var intent = state.shortTempBasal else { return }
         if intent.accountingUnresolved || state.pendingTempBasal?.decisionId == intent.commandID {
@@ -222,6 +400,7 @@ extension StateSyncer {
             }
             state.shortTempBasalTransitionTime = transition
             state.basalDeliveryUncertain = false
+            rememberPulseCompanion(state: state, ended: intent, at: transition)
             state.shortTempBasal = nil
             return true
         }
@@ -249,8 +428,16 @@ extension StateSyncer {
             return false
         }
         state.shortTempBasal = confirmed
+        if confirmed.pulseBudget != nil {
+            state.lastBasalPulseAt = localStart
+            state.lastBasalPulseSessionID = confirmed.sessionID
+            state.lastBasalPulseSessionStart = confirmed.sessionStartedAt
+        }
+        if let parent = intent.pulseParentCommandID, state.basalPulseContinuation?.commandID == parent {
+            state.basalPulseContinuation = nil
+        }
         state.basalDose = UnfinalizedDose(decisionId: intent.commandID, tempRate: intent.rate, duration: .minutes(30),
-            insulinType: state.insulinType, automatic: false, startDate: localStart)
+            insulinType: state.insulinType, automatic: intent.automaticPulse == true, startDate: localStart)
         if state.pendingTempBasal?.decisionId == intent.commandID {
             state.pendingTempBasal = nil
             state.basalDeliveryUncertain = false
