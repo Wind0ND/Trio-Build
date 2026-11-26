@@ -1,8 +1,52 @@
 @testable import MedtrumKit
 import LoopKit
 import XCTest
+import MedtrumLifecycleKit
 
 final class DeliveryRecoveryTests: XCTestCase {
+    func testUnexecutedAutomaticShortConsumesNativeBaselineProofAndRestoresInterval() throws {
+        let (manager, _) = fixture(expired: false)
+        let request = try XCTUnwrap(manager.state.pendingTempBasal)
+        let prior = BasalData(type: .STANDARD, sequence: 907, patchId: 256,
+            startTime: request.startDate.addingTimeInterval(-300), rate: 0.8, delivery: 0)
+        let baseline = MedtrumBasalRecoveryBaseline(segment: prior, sessionID: manager.state.patchId,
+            sessionStartedAt: manager.state.patchActivatedAt!, observedAt: request.startDate.addingTimeInterval(-1))
+        manager.state.basalRecoveryCheckpoint = MedtrumBasalRecoveryCheckpoint(baseline: baseline,
+            requestID: request.decisionId, requestStart: request.startDate, requestEnd: request.estimatedEndDate,
+            requestRate: request.value)
+        var intent = try XCTUnwrap(MedtrumShortTempBasal(sessionID: manager.state.patchId,
+            sessionStartedAt: manager.state.patchActivatedAt!, commandID: request.decisionId!,
+            rate: request.value, minutes: 1, requestedAt: request.startDate, automatic: true))
+        intent.pulseBudget = 0.1
+        intent.previousPulseAt = request.startDate.addingTimeInterval(-600)
+        manager.state.shortTempBasal = intent
+        manager.state.lastBasalPulseAt = request.startDate
+        manager.state.lastBasalPulseSessionID = intent.sessionID
+        manager.state.lastBasalPulseSessionStart = intent.sessionStartedAt
+        sync(manager, response(manager, prior), logs: [])
+        XCTAssertNil(manager.state.pendingTempBasal)
+        XCTAssertNil(manager.state.shortTempBasal)
+        XCTAssertFalse(manager.state.basalDeliveryUncertain)
+        XCTAssertEqual(manager.lastBasalPulseAt, intent.previousPulseAt)
+    }
+
+    func testRebasedAutomaticSetCheckpointUsesPostCancelBaseline() throws {
+        let (manager, prior) = fixture(expired: false)
+        manager.state.pendingTempBasal = nil
+        manager.state.basalDeliveryUncertain = false
+        let created = Date().addingTimeInterval(-5)
+        let baselineAt = Date().addingTimeInterval(-1)
+        manager.verifiedBasalBaseline = MedtrumBasalRecoveryBaseline(segment: prior, sessionID: manager.state.patchId,
+            sessionStartedAt: manager.state.patchActivatedAt!, observedAt: baselineAt)
+        let template = try XCTUnwrap(MedtrumShortTempBasal(sessionID: manager.state.patchId,
+            sessionStartedAt: manager.state.patchActivatedAt!, commandID: UUID(), rate: 6,
+            minutes: 1, requestedAt: created, automatic: true))
+        let prepared = try XCTUnwrap(template.preparedForWrite(at: Date(), uptime: 100))
+        let request = UnfinalizedDose(decisionId: prepared.commandID, tempRate: prepared.rate, duration: 1800,
+            insulinType: nil, automatic: true, startDate: prepared.requestedAt)
+        XCTAssertNotNil(manager.captureBasalRecoveryCheckpoint(for: request))
+    }
+
     private func fixture(expired: Bool = true) -> (MedtrumPumpManager, BasalData) {
         let now = Date()
         let start = now.addingTimeInterval(expired ? -3600 : -60)

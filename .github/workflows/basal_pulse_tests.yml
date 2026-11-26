@@ -8,6 +8,9 @@ on:
       host_baseline_red:
         type: boolean
         default: false
+      driver_only:
+        type: boolean
+        default: false
 jobs:
   host-baseline-red:
     if: inputs.host_baseline_red == true
@@ -62,12 +65,13 @@ jobs:
           xcodebuild test -workspace Trio.xcworkspace -scheme MedtrumKitTests \
             -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
             -only-testing:MedtrumKitTests/ShortTempBasalTests \
+            -only-testing:MedtrumKitTests/DeliveryRecoveryTests \
             -resultBundlePath "$RUNNER_TEMP/pulse-driver.xcresult" \
             -parallel-testing-enabled NO -skipPackagePluginValidation -skipMacroValidation \
             CODE_SIGN_IDENTITY='-' CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM='' \
             PROVISIONING_PROFILE_SPECIFIER='' 2>&1 | tee pulse-driver.log
       - name: Pulse mode tests
-        if: always()
+        if: always() && inputs.driver_only != true
         run: |
           set -o pipefail
           xcodebuild test -workspace Trio.xcworkspace -scheme 'Trio Tests' \
