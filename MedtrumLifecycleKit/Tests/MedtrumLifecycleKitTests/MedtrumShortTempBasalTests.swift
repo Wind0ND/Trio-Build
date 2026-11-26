@@ -3,6 +3,17 @@ import XCTest
 @testable import MedtrumLifecycleKit
 
 final class MedtrumShortTempBasalTests: XCTestCase {
+    func testRestoredAutomaticPulseCanCancelOnlyItsAutomaticDoseAtDeadline() throws {
+        let confirmed = try XCTUnwrap(plan(minutes: 1).confirmed(startedAt: start, observedAt: start))
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(confirmed)) as? [String: Any])
+        json["automaticPulse"] = true
+        let restored = try JSONDecoder().decode(MedtrumShortTempBasal.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertTrue(restored.canCancel(sessionID: session, sessionStartedAt: start.addingTimeInterval(-3600),
+            commandID: command, startDate: start, rate: 6, automatic: true, now: start.addingTimeInterval(60)))
+        XCTAssertFalse(restored.canCancel(sessionID: session, sessionStartedAt: start.addingTimeInterval(-3600),
+            commandID: command, startDate: start, rate: 6, automatic: false, now: start.addingTimeInterval(60)))
+    }
+
     private let start = Date(timeIntervalSince1970: 1_790_000_000)
     private let session = Data([1, 2, 3, 4])
     private let command = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
