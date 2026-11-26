@@ -11,6 +11,23 @@ public struct MedtrumBasalPulsePlan: Codable, Equatable {
 
     public static func make(units: Double, companionRate: Double, companionMinutes: Int,
                             supportedRates: [Double], maximumRate: Double) -> Self? {
-        nil // Inert API seam: RED tests must prove absent transport mapping before implementation.
+        guard units.isFinite, units > 0, companionRate.isFinite, companionRate >= 0,
+              (0 ... 120).contains(companionMinutes), maximumRate.isFinite,
+              maximumRate > companionRate, maximumRate <= 30 else { return nil }
+        let rates = supportedRates.filter { $0.isFinite && $0 >= 0 && $0 <= maximumRate }.sorted()
+        guard !rates.isEmpty else { return nil }
+        for minutes in MedtrumShortTempBasal.supportedMinutes {
+            guard companionMinutes == 0 || minutes < companionMinutes else { continue }
+            let required = companionRate + units * 60 / Double(minutes)
+            guard required.isFinite, required <= maximumRate + 0.00000001 else { continue }
+            // A rate-table entry may have a binary rounding tail. Never exceed the insulin budget.
+            guard let rate = rates.last(where: {
+                $0 <= required + 0.000000001 &&
+                    ($0 - companionRate) * Double(minutes) / 60 <= units + 0.000000001
+            }), rate > companionRate else { continue }
+            return Self(requestedUnits: units, rate: rate, minutes: minutes,
+                        companionRate: companionRate, companionMinutes: companionMinutes)
+        }
+        return nil
     }
 }

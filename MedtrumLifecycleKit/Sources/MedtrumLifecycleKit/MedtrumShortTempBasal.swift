@@ -14,28 +14,42 @@ public struct MedtrumShortTempBasal: Codable, Equatable {
     public private(set) var segmentSequence: Double?
     public var cancellationFailed = false
     public var accountingUnresolved = false
+    // Optional additions preserve the old manual intent's Codable representation.
+    public var automaticPulse: Bool?
+    public var pulseBudget: Double?
+    public var pulseCompanionRate: Double?
+    public var pulseCompanionEnd: Date?
+    public var absoluteEnd: Date?
 
     public init?(sessionID: Data, sessionStartedAt: Date, commandID: UUID,
-                 rate: Double, minutes: Int, requestedAt: Date) {
+                 rate: Double, minutes: Int, requestedAt: Date, automatic: Bool = false) {
         self.sessionID = sessionID
         self.sessionStartedAt = sessionStartedAt
         self.commandID = commandID
         self.rate = rate
         self.minutes = minutes
         self.requestedAt = requestedAt
+        automaticPulse = automatic ? true : nil
         guard isValid else { return nil }
     }
 
     public var isValid: Bool {
-        !sessionID.isEmpty && rate.isFinite && rate > 0 && rate <= 30 &&
-            Self.supportedMinutes.contains(minutes) &&
+        !sessionID.isEmpty && rate.isFinite && rate >= 0 && (rate > 0 || automaticPulse == true) && rate <= 30 &&
+            (automaticPulse == true ? (1 ... 29).contains(minutes) : Self.supportedMinutes.contains(minutes)) &&
+            (pulseBudget.map { $0.isFinite && $0 > 0 } ?? true) &&
+            (pulseCompanionRate.map { $0.isFinite && (0 ... 30).contains($0) } ?? true) &&
+            (pulseCompanionEnd.map { $0.timeIntervalSince1970.isFinite && $0 >= requestedAt } ?? true) &&
+            (absoluteEnd.map { $0.timeIntervalSince1970.isFinite && $0 > requestedAt } ?? true) &&
             requestedAt.timeIntervalSince1970.isFinite && sessionStartedAt.timeIntervalSince1970.isFinite &&
             (pumpStart.map { $0.timeIntervalSince1970.isFinite } ?? true) &&
             (segmentSequence.map { $0.isFinite && (0 ... 65535).contains($0) } ?? true) &&
             (confirmedStart.map { $0.timeIntervalSince1970.isFinite && $0 >= requestedAt.addingTimeInterval(-2) } ?? true)
     }
 
-    public var targetEnd: Date { (confirmedStart ?? requestedAt).addingTimeInterval(Double(minutes) * 60) }
+    public var targetEnd: Date {
+        let relative = (confirmedStart ?? requestedAt).addingTimeInterval(Double(minutes) * 60)
+        return absoluteEnd.map { min($0, relative) } ?? relative
+    }
     public var estimatedUnits: Double { rate * Double(minutes) / 60 }
 
     public func confirmed(startedAt: Date, observedAt: Date, clockOffset: TimeInterval = 0,
@@ -55,7 +69,7 @@ public struct MedtrumShortTempBasal: Codable, Equatable {
 
     public func canCancel(sessionID: Data, sessionStartedAt: Date?, commandID: UUID?,
                           startDate: Date, rate: Double, automatic: Bool, now: Date) -> Bool {
-        guard isValid, !accountingUnresolved, let confirmedStart, !automatic, now >= targetEnd,
+        guard isValid, !accountingUnresolved, let confirmedStart, automatic == (automaticPulse == true), now >= targetEnd,
               self.sessionID == sessionID, self.sessionStartedAt == sessionStartedAt,
               self.commandID == commandID, abs(startDate.timeIntervalSince(confirmedStart)) < 1,
               rate.isFinite, abs(self.rate - rate) < 0.001 else { return false }
