@@ -24,7 +24,8 @@ jobs:
           xcodebuild test -workspace Trio.xcworkspace -scheme MedtrumKitTests \
             -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
             -only-testing:MedtrumKitTests/DeliveryRecoveryTests \
-            -only-testing:MedtrumKitTests/BaseResetDetectionTests \
+            -only-testing:MedtrumKitTests/GetBasalRecordPacketTests \
+            -only-testing:MedtrumKitTests/BasalHistoryRecoveryTests \
             -only-testing:MedtrumKitTests/ShortTempBasalTests \
             -resultBundlePath "$RUNNER_TEMP/delivery-recovery.xcresult" \
             -parallel-testing-enabled NO -skipPackagePluginValidation -skipMacroValidation \

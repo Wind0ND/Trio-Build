@@ -11,23 +11,34 @@ enum StateSyncer {
         duringReconnect: Bool,
         fullSync: Bool,
         recoveryQuery: MedtrumBasalSyncContext? = nil,
-        legacyEvidence: [MedtrumBasalRecoveryLogEntry] = []
+        legacyEvidence: [MedtrumBasalRecoveryLogEntry] = [],
+        historyResolution: MedtrumBasalHistoryResolution? = nil
     ) {
         pumpManager.deliveryLock.lock()
         var recovered: (MedtrumBasalSyncContext, String)?
         var recoveryEvents: [NewPumpEvent] = []
         var confirmedRecoveryDose: UnfinalizedDose?
+        var historyCommitRequired = false
         defer {
             pumpManager.deliveryLock.unlock()
             if let recovered {
-                pumpManager.completeBasalRecovery(query: recovered.0, events: recoveryEvents, reason: recovered.1,
-                    confirmedDose: confirmedRecoveryDose)
+                if historyCommitRequired {
+                    pumpManager.completeBasalHistoryRecovery(query: recovered.0, events: recoveryEvents,
+                        reason: recovered.1, scheduledDose: confirmedRecoveryDose)
+                } else {
+                    pumpManager.completeBasalRecovery(query: recovered.0, events: recoveryEvents, reason: recovered.1,
+                        confirmedDose: confirmedRecoveryDose)
+                }
             }
         }
         let syncDate = Date.now
         if let recoveryQuery, !recoveryQuery.matches(pumpManager) {
             logger.warning("Ignoring a status query superseded by a delivery command or session change")
             return
+        }
+        if syncResponse.invalidPayload || syncResponse.truncated || syncResponse.state == .none ||
+            syncResponse.basal?.type == .NONE {
+            pumpManager.invalidateBasalObservation()
         }
 
         // Checked on the payload as received: a rebooted base reports a new patch id, and validation
@@ -96,6 +107,7 @@ enum StateSyncer {
         // patch's payloads. The storage gate below decides which id to keep then.
         let expectedPatchId = state.patchSessionEnded ? 0 : state.patchId.toUInt64()
         let syncResponse = syncResponse.validated(expectedPatchId: expectedPatchId)
+        if syncResponse.invalidPayload { pumpManager.invalidateBasalObservation() }
 
         StateSyncer.updatePumpState(syncResponse: syncResponse, pumpManager: pumpManager)
 
@@ -148,7 +160,22 @@ enum StateSyncer {
            let query = recoveryQuery, verifiedQuery, query.canRecover, query.matches(pumpManager),
            !pumpManager.basalRecoveryInProgress {
             if let requested = state.pendingTempBasal {
-                if let confirmed = confirmedTempBasal(requested, basal: basal, observedAt: syncDate) {
+                if let history = historyResolution,
+                   history.pending == MedtrumPendingBasalSignature(requested),
+                   history.activation == state.patchActivatedAt,
+                   history.serial == Data(state.pumpSN.reversed()).toUInt64(),
+                   MedtrumBasalHistoryResolution.sameSegment(history.current, basal) {
+                    if history.executed != nil, let event = history.event(for: requested), let offset = history.clockOffset {
+                        events.append(event)
+                        let scheduled = UnfinalizedDose(basalRate: basal.rate, insulinType: state.insulinType,
+                            startDate: basal.startTime.addingTimeInterval(-offset))
+                        events.append(NewPumpEvent.basal(dose: scheduled.toDoseEntry()))
+                        confirmedRecoveryDose = scheduled
+                        historyCommitRequired = true
+                    }
+                    recovered = (query, history.executed == nil ? "native_history_no_new_temp" : "native_history_confirmed_temp")
+                    pumpManager.basalRecoveryInProgress = true
+                } else if let confirmed = confirmedTempBasal(requested, basal: basal, observedAt: syncDate) {
                     confirmedRecoveryDose = confirmed
                     events.append(NewPumpEvent.tempBasal(dose: confirmed.toDoseEntry(isMutable: true)))
                     recovered = (query, "confirmed_native_temp_segment")

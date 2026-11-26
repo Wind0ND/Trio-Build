@@ -46,6 +46,8 @@ public class MedtrumPumpManager: DeviceManager {
     var deliveryGeneration = UUID()
     var basalRecoveryInProgress = false
     var basalRecoveryBlockReported = false
+    var basalHistoryReadInFlight = false
+    var basalHistoryCache = MedtrumBasalHistoryCache()
     var submittingDelivery = false
     var shortTempBasalTimer: DispatchSourceTimer?
     var shortTempBasalCheckInFlight = false
@@ -369,9 +371,13 @@ public extension MedtrumPumpManager {
                 }
 
                 self.withLegacyBasalEvidence(for: query) { evidence in
-                    StateSyncer.sync(syncResponse: syncResponse, state: self.state, pumpManager: self,
-                        duringReconnect: false, fullSync: true, recoveryQuery: query, legacyEvidence: evidence)
-                    completion?(self.verifiedPumpDataDate(at: Date()))
+                    self.withBasalHistory(for: query, response: syncResponse, evidence: evidence) { finalStatus, history in
+                        StateSyncer.sync(syncResponse: finalStatus, state: self.state, pumpManager: self,
+                            duringReconnect: false, fullSync: true, recoveryQuery: query, legacyEvidence: evidence,
+                            historyResolution: history)
+                        // History acceptance can finish asynchronously. A protected result must stay nil.
+                        completion?(self.verifiedPumpDataDate(at: Date()))
+                    }
                 }
             }
         }
@@ -1624,7 +1630,8 @@ public extension MedtrumPumpManager {
         }
     }
 
-    func emitPumpEvents(_ events: [NewPumpEvent], replacePendingEvents: Bool = true) {
+    func emitPumpEvents(_ events: [NewPumpEvent], replacePendingEvents: Bool = true,
+                        completion: ((Error?) -> Void)? = nil) {
         var events = events
 
         // With `replacePendingEvents` the host drops every mutable dose it holds.
@@ -1643,6 +1650,7 @@ public extension MedtrumPumpManager {
         pumpDelegate.notify { delegate in
             guard let delegate = delegate else {
                 self.log.warning("No pump delegate, not notifying...")
+                completion?(CocoaError(.fileWriteUnknown))
                 return
             }
 
@@ -1655,6 +1663,7 @@ public extension MedtrumPumpManager {
                 if let error = error {
                     self.handlePumpDelegateError(method: "hasNewPumpEvents", error)
                 }
+                completion?(error)
             }
         }
     }
