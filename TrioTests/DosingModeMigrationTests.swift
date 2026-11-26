@@ -49,11 +49,13 @@ import Testing
         #expect(DosingMode.lowGlucoseSuspend.automation == .reductionsOnly)
         #expect(DosingMode.closed.automation == .full)
         #expect(DosingMode.basalOnly.automation == .full)
+        #expect(DosingMode.basalPulse.automation == .full)
     }
 
-    @Test("Both closed-loop modes may adjust above scheduled basal") func onlyClosedLoopCorrects() {
-        for mode in DosingMode.allCases where mode != .closed && mode != .basalOnly {
-            #expect(mode.automation != .full)
+    @Test("Only the three closed-loop modes may adjust above scheduled basal") func onlyClosedLoopModesCorrect() {
+        let correctingModes: [DosingMode] = [.closed, .basalOnly, .basalPulse]
+        for mode in DosingMode.allCases {
+            #expect((mode.automation == .full) == correctingModes.contains(mode))
         }
     }
 

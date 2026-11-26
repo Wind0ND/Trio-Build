@@ -11,6 +11,9 @@ on:
       driver_only:
         type: boolean
         default: false
+      full_app:
+        type: boolean
+        default: false
 jobs:
   host-baseline-red:
     if: inputs.host_baseline_red == true
@@ -55,11 +58,13 @@ jobs:
           path: ~/Library/Developer/Xcode/DerivedData
           key: macOS-basal-pulse-${{ github.sha }}
           restore-keys: |
-            macOS-delivery-recovery-
             macOS-loop-recovery-release-
+            macOS-basal-pulse-
+            macOS-delivery-recovery-
             macOS-dd-
       - run: python3 scripts/apply_zh_hans.py
       - name: Short-temp driver tests
+        if: inputs.full_app != true
         run: |
           set -o pipefail
           xcodebuild test -workspace Trio.xcworkspace -scheme MedtrumKitTests \
@@ -74,10 +79,13 @@ jobs:
         if: always() && inputs.driver_only != true
         run: |
           set -o pipefail
+          filters=()
+          if [ '${{ inputs.full_app }}' != 'true' ]; then
+            filters=(-only-testing:TrioTests/BasalOnlyDosingModeTests -only-testing:TrioTests/AlarmSoundCatalogTests -only-testing:TrioTests/DosingModeMigrationTests)
+          fi
           xcodebuild test -workspace Trio.xcworkspace -scheme 'Trio Tests' \
             -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
-            -only-testing:TrioTests/BasalOnlyDosingModeTests \
-            -only-testing:TrioTests/AlarmSoundCatalogTests \
+            "${filters[@]}" \
             -resultBundlePath "$RUNNER_TEMP/pulse-host.xcresult" \
             -parallel-testing-enabled NO -skipPackagePluginValidation -skipMacroValidation \
             CODE_SIGN_IDENTITY='-' CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM='' \
