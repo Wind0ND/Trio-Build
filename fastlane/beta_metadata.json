@@ -1,10 +1,10 @@
 {
   "en-US": {
     "description": "hiro is a personal test build with customizable on-screen presentation, viewing protection and device connectivity.",
-    "whats_new": "Improves recovery after interrupted requests and handling of recently updated device data. Adds recovery checks and diagnostics. Please check reconnection, progress and reminders."
+    "whats_new": "Adds on-demand device history checks and a permanent recovery section with a choice to keep protection or resume the current mode. Preserves the original incident and records manual recovery choices. Please check reconnection and recovery behavior."
   },
   "zh-Hans": {
     "description": "hiro 是用于个人测试的应用版本，提供可自定义的界面展示、查看保护和设备连接功能。",
-    "whats_new": "改进请求中断后的状态恢复及近期设备数据的处理，增加恢复核验和诊断记录。请检查重新连接、运行进度和提醒表现。"
+    "whats_new": "增加按需设备历史核验及固定的异常处理区，可选择继续保护或恢复当前模式，保留原始异常和手动处理记录。请检查重新连接与恢复表现。"
   }
 }

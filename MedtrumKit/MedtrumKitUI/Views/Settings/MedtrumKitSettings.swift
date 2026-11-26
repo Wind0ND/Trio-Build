@@ -5,6 +5,7 @@ import SwiftUI
 struct MedtrumKitSettings: View {
     @State private var showingTimeSyncConfirmation: Bool = false
     @State private var isSharePresented: Bool = false
+    @State private var showingUserRecoveryConfirmation = false
     @ObservedObject var viewModel: MedtrumKitSettingsViewModel
 
     @Environment(\.dismissAction) private var dismiss
@@ -55,6 +56,44 @@ struct MedtrumKitSettings: View {
 
     var body: some View {
         List {
+            Section {
+                if viewModel.needsBasalRecovery {
+                    Text(String(localized: "Basal delivery history is not verified.", bundle: Bundle(for: MedtrumPumpManager.self)))
+                        .foregroundStyle(.orange)
+                    if let summary = viewModel.basalRecoverySummary { Text(summary).font(.footnote) }
+                    Text(String(localized: "You can keep protection or choose to resume. Keeping protection does not remove this option.", bundle: Bundle(for: MedtrumPumpManager.self)))
+                        .font(.footnote)
+                    Button(String(localized: "Read pump status and history", bundle: Bundle(for: MedtrumPumpManager.self))) {
+                        viewModel.syncData()
+                    }.disabled(viewModel.isUpdatingPumpState || viewModel.isResumingUnverifiedBasal)
+                    Button(String(localized: "Choose how to resume", bundle: Bundle(for: MedtrumPumpManager.self))) {
+                        if viewModel.prepareUserBasalRecovery() { showingUserRecoveryConfirmation = true }
+                    }.disabled(!viewModel.canChooseBasalRecovery || viewModel.isUpdatingPumpState || viewModel.isResumingUnverifiedBasal)
+                    if !viewModel.canChooseBasalRecovery {
+                        Text(String(localized: "Another delivery is pending or unverified. This action only resolves an ordinary automatic basal error.", bundle: Bundle(for: MedtrumPumpManager.self)))
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    if viewModel.isResumingUnverifiedBasal || viewModel.isUpdatingPumpState { ProgressView() }
+                } else {
+                    Text(String(localized: "No unresolved basal delivery error", bundle: Bundle(for: MedtrumPumpManager.self)))
+                        .foregroundStyle(.secondary)
+                    if viewModel.hasAcknowledgedBasalHistory {
+                        Text(String(localized: "A manual resume with unverified history has been recorded.", bundle: Bundle(for: MedtrumPumpManager.self)))
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                }
+                if let error = viewModel.userRecoveryError { Text(error).font(.footnote).foregroundStyle(.red) }
+            } header: {
+                Text(String(localized: "Delivery recovery", bundle: Bundle(for: MedtrumPumpManager.self)))
+            }
+            .alert(String(localized: "Resume with unverified history?", bundle: Bundle(for: MedtrumPumpManager.self)), isPresented: $showingUserRecoveryConfirmation) {
+                Button(String(localized: "Keep protection", bundle: Bundle(for: MedtrumPumpManager.self)), role: .cancel) {}
+                Button(String(localized: "I understand. Resume current mode", bundle: Bundle(for: MedtrumPumpManager.self)), role: .destructive) {
+                    viewModel.resumeUnverifiedBasal()
+                }
+            } message: {
+                Text(String(localized: "History is still unverified and insulin-on-board estimates may be incomplete. This choice permits automatic insulin delivery if your current loop mode enables it. A running temporary basal will be ended first. The original error and your choice will be saved; the old dose command will not be resent.", bundle: Bundle(for: MedtrumPumpManager.self)))
+            }
             Section {
                 VStack {
                     PumpImage(is300u: viewModel.is300u)

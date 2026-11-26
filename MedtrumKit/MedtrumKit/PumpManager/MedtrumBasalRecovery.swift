@@ -73,6 +73,7 @@ struct MedtrumBasalRecoveryCheckpoint: Codable {
     let requestStart: Date
     let requestEnd: Date
     let requestRate: Double
+    var clockMapping: MedtrumFrozenClockMapping? = nil
 
     func matches(_ request: UnfinalizedDose) -> Bool {
         requestID == request.decisionId && requestStart == request.startDate &&
@@ -159,7 +160,12 @@ extension MedtrumPumpManager {
               baseline.observedAt <= request.startDate,
               request.startDate.timeIntervalSince(baseline.observedAt) <= Self.loopSyncFreshnessInterval else { return nil }
         return MedtrumBasalRecoveryCheckpoint(baseline: baseline, requestID: request.decisionId,
-            requestStart: request.startDate, requestEnd: request.estimatedEndDate, requestRate: request.value)
+            requestStart: request.startDate, requestEnd: request.estimatedEndDate, requestRate: request.value,
+            clockMapping: verifiedClockMapping.flatMap {
+                $0.sessionID == state.patchId && $0.activation == state.patchActivatedAt &&
+                    request.startDate.timeIntervalSince($0.sampledAt) >= 0 &&
+                    request.startDate.timeIntervalSince($0.sampledAt) <= Self.loopSyncFreshnessInterval ? $0 : nil
+            })
     }
 
     /// The host owns the serial storage queue, then this transaction locks the driver.

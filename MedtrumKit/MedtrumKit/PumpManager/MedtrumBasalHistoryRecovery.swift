@@ -2,6 +2,13 @@ import CryptoKit
 import Foundation
 import LoopKit
 
+struct MedtrumFrozenClockMapping: Codable {
+    let sessionID: Data
+    let activation: Date
+    let sampledAt: Date
+    let offset: TimeInterval
+}
+
 struct MedtrumBasalHistoryResolution {
     let pending: MedtrumPendingBasalSignature
     let current: BasalData
@@ -169,14 +176,12 @@ extension MedtrumPumpManager {
               let current = status.basal else { return }
         latest = status
         let records = deliveryLock.withLock { (Int(anchor.sequence)..<Int(tip.sequence)).compactMap { basalHistoryCache.records[$0] } }
-        if records.dropFirst().contains(where: { $0.type == .ABSOLUTE_TEMP }),
-           Date().timeIntervalSince(state.pumpTimeSyncedAt) > Self.loopSyncFreshnessInterval {
-            StateSyncer.fetchPatchTime(pumpManager: self)
-        }
         let offset: TimeInterval? = deliveryLock.withLock {
-            let age = Date().timeIntervalSince(state.pumpTimeSyncedAt)
-            let value = state.pumpTime.timeIntervalSince(state.pumpTimeSyncedAt)
-            return age >= 0 && age <= Self.loopSyncFreshnessInterval && abs(value) <= 120 ? value.rounded() : nil
+            guard let checkpoint = state.basalRecoveryCheckpoint, checkpoint.matches(request),
+                  let mapping = checkpoint.clockMapping, mapping.sessionID == key.patch,
+                  mapping.activation == key.activation, mapping.sampledAt <= request.startDate,
+                  request.startDate.timeIntervalSince(mapping.sampledAt) <= Self.loopSyncFreshnessInterval else { return nil }
+            return mapping.offset
         }
         resolution = deliveryLock.withLock {
             guard query.matches(self) else { return nil }

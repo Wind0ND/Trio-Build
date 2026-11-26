@@ -48,6 +48,8 @@ public class MedtrumPumpManager: DeviceManager {
     var basalRecoveryBlockReported = false
     var basalHistoryReadInFlight = false
     var basalHistoryCache = MedtrumBasalHistoryCache()
+    var verifiedClockMapping: MedtrumFrozenClockMapping?
+    var userBasalRecoveryOwner: UUID?
     var submittingDelivery = false
     var shortTempBasalTimer: DispatchSourceTimer?
     var shortTempBasalCheckInFlight = false
@@ -1558,7 +1560,7 @@ public extension MedtrumPumpManager {
         return [NewPumpEvent.bolus(dose: dose)]
     }
 
-    private func ensureConnectedAndActive(_ completion: @escaping (MedtrumConnectError?) -> Void) {
+    func ensureConnectedAndActive(_ completion: @escaping (MedtrumConnectError?) -> Void) {
         guard !state.pumpState.isSetup else {
             log.warning("No active patch, failing immediately")
             completion(.failedToFindDevice)

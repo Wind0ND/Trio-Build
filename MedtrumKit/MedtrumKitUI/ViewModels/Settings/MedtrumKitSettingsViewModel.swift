@@ -49,6 +49,13 @@ class MedtrumKitSettingsViewModel: PatchLifetimeFormatting, ObservableObject, Pu
     @Published var showingSuspendPicker = false
     @Published var hasPreviousPatch = false
     @Published var isClearingAlert = false
+    @Published var needsBasalRecovery = false
+    @Published var basalRecoverySummary: String?
+    @Published var hasAcknowledgedBasalHistory = false
+    @Published var canChooseBasalRecovery = false
+    @Published var isResumingUnverifiedBasal = false
+    @Published var userRecoveryError: String?
+    private var userRecoveryToken: String?
 
     @Published var useSilentTones = false {
         didSet {
@@ -217,6 +224,31 @@ class MedtrumKitSettingsViewModel: PatchLifetimeFormatting, ObservableObject, Pu
         pumpManager.syncPumpData { _ in
             DispatchQueue.main.async {
                 self.isUpdatingPumpState = false
+            }
+        }
+    }
+
+    func prepareUserBasalRecovery() -> Bool {
+        userRecoveryToken = pumpManager?.basalRecoveryDecisionToken
+        return userRecoveryToken != nil
+    }
+
+    func resumeUnverifiedBasal() {
+        guard let pumpManager, let token = userRecoveryToken else { return }
+        isResumingUnverifiedBasal = true
+        userRecoveryError = nil
+        AuthorizeBiometrics.authenticate { allowed in
+            guard allowed else {
+                DispatchQueue.main.async { self.isResumingUnverifiedBasal = false }
+                return
+            }
+            pumpManager.userResumeUnverifiedBasal(expectedToken: token) { error in
+                DispatchQueue.main.async {
+                    self.isResumingUnverifiedBasal = false
+                    self.userRecoveryError = error?.localizedDescription
+                    self.needsBasalRecovery = pumpManager.basalRecoveryNeedsAttention
+                    self.canChooseBasalRecovery = pumpManager.basalRecoveryDecisionToken != nil
+                }
             }
         }
     }
@@ -392,6 +424,10 @@ extension MedtrumKitSettingsViewModel {
     }
 
     private func updateState(_ state: MedtrumPumpState) {
+        needsBasalRecovery = pumpManager?.basalRecoveryNeedsAttention ?? false
+        basalRecoverySummary = pumpManager?.basalRecoveryPendingSummary
+        hasAcknowledgedBasalHistory = pumpManager?.hasUserAcknowledgedBasalHistory ?? false
+        canChooseBasalRecovery = pumpManager?.basalRecoveryDecisionToken != nil
         model = state.model
         switch model {
         case "MD8301":

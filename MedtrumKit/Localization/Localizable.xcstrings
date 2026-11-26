@@ -1,6 +1,146 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Delivery recovery" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "输注异常处理"
+          }
+        }
+      }
+    },
+    "Basal delivery history is not verified." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "基础率给药历史尚未核实。"
+          }
+        }
+      }
+    },
+    "You can keep protection or choose to resume. Keeping protection does not remove this option." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你可以保持保护，也可以选择恢复。误选保持保护后，仍可随时在这里重新选择。"
+          }
+        }
+      }
+    },
+    "Read pump status and history" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新核对泵状态与历史"
+          }
+        }
+      }
+    },
+    "Choose how to resume" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择异常处理方式"
+          }
+        }
+      }
+    },
+    "Another delivery is pending or unverified. This action only resolves an ordinary automatic basal error." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "另有给药正在处理或尚未核实。此入口仅解除普通自动基础率异常。"
+          }
+        }
+      }
+    },
+    "No unresolved basal delivery error" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前没有待处理的基础率异常"
+          }
+        }
+      }
+    },
+    "Resume with unverified history?" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "历史未核实，是否仍恢复？"
+          }
+        }
+      }
+    },
+    "Keep protection" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保持保护，暂不恢复"
+          }
+        }
+      }
+    },
+    "I understand. Resume current mode" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我已了解，恢复当前模式"
+          }
+        }
+      }
+    },
+    "History is still unverified and insulin-on-board estimates may be incomplete. This choice permits automatic insulin delivery if your current loop mode enables it. A running temporary basal will be ended first. The original error and your choice will be saved; the old dose command will not be resent." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "历史仍未核实，体内剩余胰岛素的估算可能不完整。确认后将恢复当前模式；若当前已启用闭环，应用可能自动给药。如泵上仍有临时基础率，将先结束它。原始异常和本次选择会保留，旧给药指令不会重发。"
+          }
+        }
+      }
+    },
+    "Pump state changed or could not be confirmed. Protection remains active. Refresh and try again." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "泵状态已变化或无法确认，保护仍保留。请刷新后重试。"
+          }
+        }
+      }
+    },
+    "Original request: %@, %.2f U/h, %.0f min" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原请求：%@，%.2f U/小时，%.0f 分钟"
+          }
+        }
+      }
+    },
+    "A manual resume with unverified history has been recorded." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "存在手动恢复记录，其中的给药历史仍未核实。"
+          }
+        }
+      }
+    },
     "Configured maximum" : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "当前配置上限"}}}},
     "The selected rate exceeds the configured maximum. Change the rate before applying." : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "所选基础率超过当前配置上限，请先调整基础率。"}}}},
     "Waiting for the configured delivery limit. Applying is unavailable." : {"extractionState": "manual", "localizations": {"zh-Hans": {"stringUnit": {"state": "translated", "value": "正在等待读取输注上限，暂时无法应用。"}}}},

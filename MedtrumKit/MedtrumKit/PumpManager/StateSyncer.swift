@@ -418,6 +418,8 @@ enum StateSyncer {
     }
 
     public static func fetchPatchTime(pumpManager: MedtrumPumpManager) {
+        let started = Date()
+        let session = pumpManager.deliveryLock.withLock { (pumpManager.state.patchId, pumpManager.state.patchActivatedAt) }
         let timeData = pumpManager.bluetooth.write(GetTimePacket())
 
         switch timeData {
@@ -432,11 +434,22 @@ enum StateSyncer {
 
             pumpManager.state.pumpTime = timeResponse.time
             pumpManager.state.pumpTimeSyncedAt = Date.now
+            pumpManager.deliveryLock.withLock {
+                let ended = Date()
+                if let activation = session.1, !pumpManager.state.patchSessionEnded,
+                   session.0 == pumpManager.state.patchId, activation == pumpManager.state.patchActivatedAt,
+                   ended.timeIntervalSince(started) >= 0, ended.timeIntervalSince(started) <= 1 {
+                    let offset = timeResponse.time.timeIntervalSince(ended).rounded()
+                    pumpManager.verifiedClockMapping = abs(offset) <= 120 ? MedtrumFrozenClockMapping(
+                        sessionID: session.0, activation: activation, sampledAt: ended, offset: offset) : nil
+                } else { pumpManager.verifiedClockMapping = nil }
+            }
             pumpManager.notifyStateDidChange()
         }
     }
 
     public static func syncTime(pumpManager: MedtrumPumpManager) {
+        pumpManager.deliveryLock.withLock { pumpManager.verifiedClockMapping = nil }
         let timeData = pumpManager.bluetooth.write(SetTimePacket(date: Date.now))
         switch timeData {
         case let .failure(error: error):

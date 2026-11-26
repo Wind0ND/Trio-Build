@@ -26,6 +26,7 @@ jobs:
             -only-testing:MedtrumKitTests/DeliveryRecoveryTests \
             -only-testing:MedtrumKitTests/GetBasalRecordPacketTests \
             -only-testing:MedtrumKitTests/BasalHistoryRecoveryTests \
+            -only-testing:MedtrumKitTests/UserBasalRecoveryTests \
             -only-testing:MedtrumKitTests/ShortTempBasalTests \
             -resultBundlePath "$RUNNER_TEMP/delivery-recovery.xcresult" \
             -parallel-testing-enabled NO -skipPackagePluginValidation -skipMacroValidation \

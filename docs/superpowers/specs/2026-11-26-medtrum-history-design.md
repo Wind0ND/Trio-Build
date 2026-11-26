@@ -14,3 +14,12 @@ Use existing driver, adding on-demand GET_RECORD for ordinary automatic pending 
 
 ## Minimal verification/release
 Golden primary-reference packet, malformed/foreign/index cases; incident-shaped906→907→908→909, multiple schedule boundaries, missing/reordered/wrong-session/extra-temp cases; successful/failed event persistence and stale query protection. Focused CI plus signed host compile only before TestFlight. One fresh source review can run in parallel. Do not start full tests after upload. Device firmware history compatibility and actual restoration remain unverified until user tests. Exclude log-volume cleanup from this trial.
+
+## Approved explicit user choice (latest steering)
+User selected restoring the current loop mode, which can permit automatic insulin delivery, and approved a permanent pump-settings section. Keeping protection only dismisses confirmation; it never consumes the choice, disables its future entry or sends a pump suspend command. Do not repeatedly force a modal.
+
+If native history remains unverified, ordinary automatic basal uncertainty can be acknowledged explicitly through device-owner authentication and an incident-bound confirmation. Save the original pending/checkpoint record before any action. Read current native state; if a temp is active, the confirmation permits one cancellation followed by a fresh native read. Only a same-session active STANDARD result permits durable clearing of this incident. A failed read or persistence keeps protection. Never replay the old request, mark history verified, manufacture a loop success time or clear independent bolus/short-history gates. Retain a permanent audit note and original evidence. The unchanged current loop mode makes subsequent fresh decisions.
+
+Completed-temp automatic reconciliation requires an actual, verified pre-request same-session clock sample frozen in the durable checkpoint. Restored default clock dates do not count; legacy incidents without this provenance remain protected for this path. Batches start at most 12 record reads and stop starting new record reads after 20 seconds; transport/status overhead is additional.
+
+User wants this trial delivered first; joint multi-platform code review is their later decision and is not part of this release task. Preserve the incident evidence regardless of trial outcome; do not assert the basal-only algorithm caused the initial BLE failure.
