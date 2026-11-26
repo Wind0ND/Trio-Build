@@ -1099,7 +1099,7 @@ final class BaseAPSManager: APSManager, Injectable {
                    MedtrumBasalPulsePlan.permitsProtectiveInterruption(rate: rate.doubleValue, duration: duration,
                        scheduledRate: medtrum.basalPulseScheduledRate, pulseRate: medtrum.basalPulseCurrentRate) {
                     try await performBasal(pump: pump, rate: rate, duration: duration, validation: commandStillValid)
-                    return true
+                    return (smbToDeliver?.doubleValue ?? 0) <= 0 // A protective interruption does not execute a new SMB.
                 }
                 return false // Supervise the owned pulse; never label a second SMB suggestion as delivered.
             }

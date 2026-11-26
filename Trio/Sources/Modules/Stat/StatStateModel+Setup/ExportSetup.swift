@@ -228,7 +228,8 @@ extension Stat.StateModel {
             ),
             importantSettings: ReportMetadata.ImportantSettings(
                 dynamicISFEnabled: preferences.useNewFormula,
-                smbEnabled: smbEnabled && settingsManager.settings.dosingMode.effectiveForPump(apsManager.pumpManager).allowsAutomaticSMB,
+                smbEnabled: smbEnabled && settingsManager.settings.dosingMode.effectiveForPump(apsManager.pumpManager)
+                    .allowsSMBDecision(automaticBolusAllowed: true),
                 uamEnabled: preferences.enableUAM,
                 closedLoopActive: settingsManager.settings.dosingMode.automation == .full
             )

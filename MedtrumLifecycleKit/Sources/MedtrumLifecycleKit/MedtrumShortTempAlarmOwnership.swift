@@ -71,7 +71,11 @@ public struct MedtrumShortTempAlarmOwnership: Codable {
     public func activeTickets(_ commandID: UUID) -> [Ticket] {
         records.filter { $0.commandID == commandID && !$0.resolved }.flatMap(\.tickets).filter(\.accepted)
     }
-    public func supersededElapsedTickets(_ commandID: UUID, at date: Date) -> [Ticket] { [] }
+    public func supersededElapsedTickets(_ commandID: UUID, at date: Date) -> [Ticket] {
+        let elapsed = activeTickets(commandID).filter { $0.deadline <= date }
+        guard let newest = elapsed.max(by: { $0.deadline < $1.deadline }) else { return [] }
+        return elapsed.filter { $0.id != newest.id }
+    }
     public var cleanupTickets: [Ticket] { records.filter(\.resolved).flatMap(\.tickets) }
     public var commandIDs: [UUID] { Array(Set(records.map(\.commandID))) }
     public func owner(of ticketID: UUID) -> UUID? { records.first { $0.tickets.contains { $0.id == ticketID } }?.commandID }

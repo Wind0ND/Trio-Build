@@ -163,6 +163,8 @@ import UIKit
             let backupAt = max(boundary, future.map(\.deadline).max() ?? boundary).addingTimeInterval(60)
             guard await schedule(command, at: backupAt) != nil else { return false }
         }
+        // Retain the newest sounding ticket and future guards; a long incident must not exhaust the OS quota.
+        for older in saved.ownership.supersededElapsedTickets(command, at: Date()) { remove(older) }
         refreshReadiness()
         return readiness.permits(command)
     }
@@ -187,7 +189,7 @@ import UIKit
         if let urgent {
             let backups = actualTickets(command, futureOnly: true).filter { $0.id != urgent.id && $0.deadline >= Date().addingTimeInterval(45) }
             if !backups.isEmpty {
-                for old in actualTickets(command, futureOnly: true) where old.id != urgent.id && !backups.contains(where: { $0.id == old.id }) { remove(old) }
+                for old in actualTickets(command, futureOnly: false) where old.id != urgent.id && !backups.contains(where: { $0.id == old.id }) { remove(old) }
             }
         }
         _ = await ensureGuards(command, firstDeadline: Date().addingTimeInterval(2))
