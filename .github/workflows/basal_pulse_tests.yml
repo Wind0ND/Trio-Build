@@ -1,0 +1,54 @@
+name: Basal pulse focused checks
+on:
+  workflow_dispatch:
+jobs:
+  pulse:
+    runs-on: macos-26
+    steps:
+      - run: sudo xcode-select -s /Applications/Xcode_26.5.app/Contents/Developer
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - uses: actions/cache/restore@v5
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: macOS-basal-pulse-${{ github.sha }}
+          restore-keys: |
+            macOS-delivery-recovery-
+            macOS-loop-recovery-release-
+            macOS-dd-
+      - run: python3 scripts/apply_zh_hans.py
+      - name: Short-temp driver tests
+        run: |
+          set -o pipefail
+          xcodebuild test -workspace Trio.xcworkspace -scheme MedtrumKitTests \
+            -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
+            -only-testing:MedtrumKitTests/ShortTempBasalTests \
+            -resultBundlePath "$RUNNER_TEMP/pulse-driver.xcresult" \
+            -parallel-testing-enabled NO -skipPackagePluginValidation -skipMacroValidation \
+            CODE_SIGN_IDENTITY='-' CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM='' \
+            PROVISIONING_PROFILE_SPECIFIER='' 2>&1 | tee pulse-driver.log
+      - name: Pulse mode tests
+        if: always()
+        run: |
+          set -o pipefail
+          xcodebuild test -workspace Trio.xcworkspace -scheme Trio \
+            -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
+            -only-testing:TrioTests/BasalOnlyDosingModeTests \
+            -resultBundlePath "$RUNNER_TEMP/pulse-host.xcresult" \
+            -parallel-testing-enabled NO -skipPackagePluginValidation -skipMacroValidation \
+            CODE_SIGN_IDENTITY='-' CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM='' \
+            PROVISIONING_PROFILE_SPECIFIER='' 2>&1 | tee pulse-host.log
+      - name: Native lifecycle policy tests
+        if: always()
+        run: swift test --package-path MedtrumLifecycleKit 2>&1 | tee pulse-policy.log
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: basal-pulse-focused-log
+          path: pulse-*.log
+      - uses: actions/cache/save@v5
+        if: always()
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: macOS-basal-pulse-${{ github.sha }}

@@ -3,6 +3,12 @@ import LoopKit
 import XCTest
 
 final class ShortTempBasalTests: XCTestCase {
+    func testCancellationFailureAlwaysRequestsCriticalAudibleAlert() {
+        let alert = MedtrumAlert.shortTempBasalCancellationFailed.alert
+        XCTAssertEqual(alert.interruptionLevel, .critical)
+        XCTAssertNotNil(alert.sound?.filename)
+    }
+
     private let start = Date(timeIntervalSince1970: 1_790_000_000)
     private let command = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
 

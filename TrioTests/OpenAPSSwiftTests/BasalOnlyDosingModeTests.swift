@@ -3,6 +3,17 @@ import Testing
 @testable import Trio
 
 @Suite("Basal-only closed-loop mode") struct BasalOnlyDosingModeTests {
+    @Test("Pulse mode is opt-in full automation but cannot send physical SMB")
+    func pulseModeCannotSendBolus() throws {
+        let mode = try #require(DosingMode(rawValue: "basalPulse"))
+        #expect(mode.automation == .full)
+        #expect(!mode.allowsAutomaticSMB)
+        #expect(DosingMode.userSelectable.contains(mode))
+        #expect(mode.effectiveForDevice(basalOnly: true) == mode)
+        let preferences = Preferences()
+        #expect(preferences.clamped(for: mode) == preferences)
+    }
+
     @Test("Basal-only mode is an automated mode and preserves basal, IOB and sensitivity limits")
     func manualModeIsAvailable() throws {
         let mode = try #require(DosingMode(rawValue: "basalOnly"))
