@@ -406,4 +406,61 @@ final class DeliveryRecoveryTests: XCTestCase {
         manager.withLegacyBasalEvidence(for: manager.captureBasalSyncContext()) { _ in count += 1 }
         XCTAssertEqual(count, 1)
     }
+
+    func testConfirmedNativeTempCommitsHistoryOnlyAfterDurableSave() throws {
+        for fails in [false, true] {
+            let (manager, _) = fixture(expired: false)
+            let request = try XCTUnwrap(manager.state.pendingTempBasal)
+            let originalStart = manager.state.basalDose.startDate
+            let nativeStart = request.startDate.addingTimeInterval(2)
+            let temp = BasalData(type: .ABSOLUTE_TEMP, sequence: 908, patchId: 256,
+                startTime: nativeStart, rate: request.value, delivery: 0.1)
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            defer { try? FileManager.default.removeItem(at: url) }
+            func store(_ raw: PumpManager.RawStateValue) throws {
+                let bytes = try PropertyListSerialization.data(fromPropertyList: raw, format: .binary, options: 0)
+                try bytes.write(to: url, options: .atomic)
+            }
+            try store(manager.rawState)
+            manager.persistBasalRecovery = { transaction in
+                try transaction { candidate in
+                    XCTAssertTrue(manager.state.basalDeliveryUncertain)
+                    XCTAssertEqual(manager.state.basalDose.startDate, originalStart)
+                    if fails { throw CocoaError(.fileWriteUnknown) }
+                    try store(candidate)
+                }
+            }
+            sync(manager, response(manager, temp))
+            let bytes = try Data(contentsOf: url)
+            let raw = try XCTUnwrap(try PropertyListSerialization.propertyList(from: bytes, options: [], format: nil)
+                as? PumpManager.RawStateValue)
+            let restarted = MedtrumPumpState(rawValue: raw)
+            XCTAssertEqual(manager.state.basalDeliveryUncertain, fails)
+            XCTAssertEqual(restarted.basalDeliveryUncertain, fails)
+            XCTAssertEqual(manager.state.pendingTempBasal == nil, !fails)
+            XCTAssertEqual(restarted.pendingTempBasal == nil, !fails)
+            XCTAssertEqual(manager.state.basalDose.startDate, fails ? originalStart : nativeStart)
+            XCTAssertEqual(restarted.basalDose.startDate, fails ? originalStart : nativeStart)
+            if !fails {
+                XCTAssertEqual(restarted.basalDose.type, .tempBasal)
+                XCTAssertEqual(restarted.basalDose.value, request.value)
+            }
+        }
+    }
+
+    func testStateChangeWhileHostQueueWaitsCannotCommitRecovery() {
+        let (manager, basal) = fixture()
+        var saves = 0
+        manager.persistBasalRecovery = { transaction in
+            // A command/session invalidation while waiting to enter the host serial queue.
+            manager.invalidateBasalObservation()
+            try transaction { _ in saves += 1 }
+        }
+        sync(manager, response(manager, basal))
+        XCTAssertEqual(saves, 0)
+        XCTAssertTrue(manager.state.basalDeliveryUncertain)
+        XCTAssertNotNil(manager.state.pendingTempBasal)
+        XCTAssertTrue(MedtrumPumpState(rawValue: manager.rawState).basalDeliveryUncertain)
+        XCTAssertFalse(manager.basalRecoveryInProgress)
+    }
 }
