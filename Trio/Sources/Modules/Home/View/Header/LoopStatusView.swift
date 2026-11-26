@@ -153,6 +153,8 @@ struct LoopStatusView: View {
             return nil
         case .basalOnly:
             return String(localized: "Automatically adjusts basal insulin without SMB.")
+        case .basalPulse:
+            return String(localized: "Uses native SMB decisions through short temporary basal delivery.")
         case .open:
             return String(localized: "Trio worked this out but did not send anything to your pump.")
         case .lowGlucoseSuspend:

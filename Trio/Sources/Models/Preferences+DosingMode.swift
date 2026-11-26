@@ -9,6 +9,7 @@ extension Preferences {
         switch mode {
         case .closed,
              .basalOnly,
+             .basalPulse,
              .open:
             return self
 

@@ -101,7 +101,8 @@ extension MedtrumPumpManager {
                           completion: @escaping (SynchronizePacketResponse, MedtrumBasalHistoryResolution?) -> Void) {
         let anchor: BasalData? = deliveryLock.withLock {
             guard query.matches(self), query.canRecover, !basalHistoryReadInFlight,
-                  state.shortTempBasal == nil, let request = state.pendingTempBasal, request.automatic,
+                  state.shortTempBasal == nil || (state.shortTempBasal?.automaticPulse == true && state.shortTempBasal?.commandID == state.pendingTempBasal?.decisionId),
+                  let request = state.pendingTempBasal, request.automatic,
                   StateSyncer.basalRecoverySessionIsCurrent(response, state: state),
                   response.basal?.type == .STANDARD,
                   StateSyncer.unstartedAutomaticBasalReason(state: state, response: response, now: Date(),
@@ -209,7 +210,9 @@ extension MedtrumPumpManager {
                 self.historyRecoveryDiagnostic("history_store_failed", index: 0)
                 return
             }
-            self.completeBasalRecovery(query: query, events: [], reason: reason, confirmedDose: scheduledDose)
+            let actual = events.first(where: { $0.type == .tempBasal })?.dose
+            self.completeBasalRecovery(query: query, events: [], reason: reason, confirmedDose: scheduledDose,
+                resolvedPulseStart: actual?.startDate, resolvedPulseEnd: actual?.endDate)
         }
     }
 }

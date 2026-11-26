@@ -1,10 +1,19 @@
 import Foundation
 import Testing
 import LoopKit
+import MedtrumLifecycleKit
 
 @testable import Trio
 
 @Suite("Trio Alerts: alarm sound catalog") struct AlarmSoundCatalogTests {
+    @Test("Only a proven pulse preflight refusal permits native basal-only fallback")
+    func onlyPreflightCanFallback() {
+        #expect(BaseAPSManager.isPulsePreflightFailure(MedtrumBasalPulseError.cannotRepresent))
+        #expect(BaseAPSManager.isPulsePreflightFailure(PumpManagerError.configuration(MedtrumBasalPulseError.alarmUnavailable)))
+        #expect(!BaseAPSManager.isPulsePreflightFailure(PumpManagerError.uncertainDelivery))
+        #expect(!BaseAPSManager.isPulsePreflightFailure(PumpManagerError.configuration(NSError(domain: "test", code: 1))))
+    }
+
     @Test("Short-temp alarm ownership is command-scoped and cannot collide with ordinary alarms")
     func protectedShortTempIdentity() {
         let a = Alert.Identifier(managerIdentifier: "Medtrum", alertIdentifier: "com.nightscout.medtrumkit.short-temp-cancel.A")

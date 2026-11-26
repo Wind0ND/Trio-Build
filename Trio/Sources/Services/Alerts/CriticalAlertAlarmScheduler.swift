@@ -209,19 +209,19 @@ final class CriticalAlertAlarmScheduler {
     }
 
     /// Cancel/stop the AlarmKit alarm scheduled for the given alert, if any.
-    func cancelAlarm(for identifier: Alert.Identifier) {
+    @discardableResult func cancelAlarm(for identifier: Alert.Identifier) -> Bool {
         let id = Self.alarmID(for: identifier)
         pendingSchedules[id]?.task.cancel()
         burstStops.removeValue(forKey: id)?.cancel()
-        cancelSystemAlarm(for: identifier)
+        return cancelSystemAlarm(for: identifier)
     }
 
-    private func cancelSystemAlarm(for identifier: Alert.Identifier) {
-        guard #available(iOS 26, *) else { return }
+    @discardableResult private func cancelSystemAlarm(for identifier: Alert.Identifier) -> Bool {
+        guard #available(iOS 26, *) else { return true }
         #if canImport(AlarmKit)
             let id = Self.alarmID(for: identifier)
             do {
-                guard let alarm = try AlarmManager.shared.alarms.first(where: { $0.id == id }) else { return }
+                guard let alarm = try AlarmManager.shared.alarms.first(where: { $0.id == id }) else { return true }
                 // stop() ends a ringing alarm; cancel() removes a scheduled one
                 if alarm.state == .alerting {
                     try AlarmManager.shared.stop(id: id)
@@ -230,10 +230,14 @@ final class CriticalAlertAlarmScheduler {
                 }
                 debug(.alerts, "AlarmKit alarm cancelled for \(identifier.value)")
                 DiagnosticEventStore.shared.record(feature: "alerts", stage: "alarm", outcome: "cancelled")
+                return true
             } catch let cancelError {
                 DiagnosticEventStore.shared.record(feature: "alerts", stage: "alarm", outcome: "failed")
                 warning(.alerts, "Cancelling AlarmKit alarm for \(identifier.value) failed", error: cancelError)
+                return false
             }
+        #else
+            return true
         #endif
     }
 }

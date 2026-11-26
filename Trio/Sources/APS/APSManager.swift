@@ -574,7 +574,7 @@ final class BaseAPSManager: APSManager, Injectable {
         let settings = settingsManager.settings
         let capability = (pump as? MedtrumPumpManager)?.automaticBolusContext()
         return AutomaticDeliveryContext(
-            mode: settings.dosingMode.effectiveForDevice(basalOnly: capability?.restrictionReason == "basal_only"),
+            mode: settings.dosingMode.effectiveForPump(pump),
             modeRevision: settingsManager.dosingModeRevision,
             sourceRevision: deviceDataManager.glucoseSourceRevision,
             pumpID: pump.map { ObjectIdentifier($0) },
@@ -1094,12 +1094,26 @@ final class BaseAPSManager: APSManager, Injectable {
             guard let medtrum = pump as? MedtrumPumpManager else {
                 throw APSError.invalidPumpState(message: String(localized: "Basal pulse requires a supported Medtrum pump"))
             }
+            if medtrum.hasActiveBasalPulse {
+                if let rate = rateDecimal, let duration = durationInSeconds,
+                   MedtrumBasalPulsePlan.permitsProtectiveInterruption(rate: rate.doubleValue, duration: duration,
+                       scheduledRate: medtrum.basalPulseScheduledRate, pulseRate: medtrum.basalPulseCurrentRate) {
+                    try await performBasal(pump: pump, rate: rate, duration: duration, validation: commandStillValid)
+                    return true
+                }
+                return false // Supervise the owned pulse; never label a second SMB suggestion as delivered.
+            }
             if let smb = smbToDeliver, smb.doubleValue > 0 {
                 guard let maximum = medtrum.manualTempBasalMaximum,
-                      let plan = MedtrumBasalPulsePlan.make(units: smb.doubleValue,
+                      let initialPlan = MedtrumBasalPulsePlan.make(units: smb.doubleValue,
                           companionRate: rateDecimal?.doubleValue ?? medtrum.basalPulseCurrentRate,
                           companionMinutes: durationInSeconds.map { Int($0 / 60) } ?? medtrum.basalPulseCurrentMinutes,
                           supportedRates: medtrum.supportedBasalRates, maximumRate: maximum) else {
+                    throw MedtrumBasalPulseError.cannotRepresent
+                }
+                var plan = initialPlan
+                plan.companionEnd = durationInSeconds.map { deliverAt.addingTimeInterval($0) } ?? medtrum.basalPulseCurrentEnd
+                guard plan.companionEnd.map({ $0 > Date().addingTimeInterval(Double(plan.minutes) * 60) }) ?? true else {
                     throw MedtrumBasalPulseError.cannotRepresent
                 }
                 try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in

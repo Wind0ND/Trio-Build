@@ -3,6 +3,13 @@ import Testing
 @testable import Trio
 
 @Suite("Basal-only closed-loop mode") struct BasalOnlyDosingModeTests {
+    #if !TRIO_ALGORITHM_PACKAGE
+        @Test("Unsupported actuator selection falls back to native basal-only, never physical SMB")
+        func unsupportedPumpKeepsBasalPath() {
+            #expect(DosingMode.basalPulse.effectiveForPump(nil) == .basalOnly)
+            #expect(!DosingMode.basalPulse.effectiveForPump(nil).allowsAutomaticSMB)
+        }
+    #endif
     @Test("Pulse mode is opt-in full automation but cannot send physical SMB")
     func pulseModeCannotSendBolus() throws {
         let mode = try #require(DosingMode(rawValue: "basalPulse"))

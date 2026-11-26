@@ -4,6 +4,20 @@ import MedtrumLifecycleKit
 import XCTest
 
 final class ShortTempBasalTests: XCTestCase {
+    func testPulseCapabilityRequiresKnownModelAndNonProvisionalActiveSession() {
+        let state = makeState()
+        state.pumpSN = Data([18, 187, 192, 52])
+        state.shortTempBasal = nil
+        state.patchActivationIsProvisional = false
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        XCTAssertTrue(manager.supportsAutomaticBasalPulse)
+        state.patchActivationIsProvisional = true
+        XCTAssertFalse(manager.supportsAutomaticBasalPulse)
+        state.patchActivationIsProvisional = false
+        state.patchSessionEnded = true
+        XCTAssertFalse(manager.supportsAutomaticBasalPulse)
+    }
+
     func testAutomaticPulseRestoresAsActualAutomaticBasalWithoutManualFlag() throws {
         let state = makeState()
         var intent = try XCTUnwrap(MedtrumShortTempBasal(sessionID: state.patchId, sessionStartedAt: state.patchActivatedAt!,

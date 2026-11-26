@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Automatic follow-up basal" : {"extractionState":"manual","localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"自动配套基础率"}}}},
+    "Temporary delivery needs attention" : {"extractionState":"manual","localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"临时输注状态需检查"}}}},
+    "Pulse delivery is unavailable for the current pump session. Running basal-only closed loop." : {"extractionState":"manual","localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"当前泵或药贴会话暂不支持脉冲执行，正在使用纯基础率闭环。"}}}},
     "Basal Pulse Closed Loop" : {"extractionState":"manual","localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"脉冲模拟SMB闭环"}}}},
     "Uses native SMB decisions through short temporary basal delivery." : {"extractionState":"manual","localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"沿用原生SMB决策，通过短时临时基础率执行。"}}}},
     "Uses the existing SMB algorithm for all eligible automatic corrections, delivered only through temporary basal commands. A system alarm must be authorized and armed before a pulse starts. Short delivery depends on the phone cancelling the pump's native temporary basal. Existing safety limits remain in effect." : {"extractionState":"manual","localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"所有符合原有SMB条件的自动纠正，均通过临时基础率指令执行。开始脉冲前须授权并成功预排系统闹钟。短时输注依靠手机到时取消泵内原生临时基础率，现有安全上限继续生效。"}}}},

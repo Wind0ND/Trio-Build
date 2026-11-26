@@ -13,12 +13,14 @@ public struct MedtrumShortTempAlarmOwnership: Codable {
         let generation: UUID
         var resolved = false
         var tickets: [Ticket] = []
+        var stoppedUntil: Date?
     }
     private var records: [Record] = []
     private var closed: [UUID] = []
     public init() {}
     public mutating func reserve(commandID: UUID, deadline: Date) -> Ticket? {
-        guard !closed.contains(commandID), deadline.timeIntervalSince1970.isFinite else { return nil }
+        guard !closed.contains(commandID), deadline.timeIntervalSince1970.isFinite,
+              cleanupTickets.count < 32, records.count < 64 else { return nil }
         if !records.contains(where: { $0.commandID == commandID && !$0.resolved }) {
             records.append(Record(commandID: commandID, generation: UUID()))
         }
@@ -45,11 +47,26 @@ public struct MedtrumShortTempAlarmOwnership: Codable {
         if !closed.contains(commandID) { closed.append(commandID) }
         closed = Array(closed.suffix(128))
         for index in records.indices where records[index].commandID == commandID { records[index].resolved = true }
-        return records.filter { $0.commandID == commandID }.flatMap(\.tickets)
+        let tickets = records.filter { $0.commandID == commandID }.flatMap(\.tickets)
+        records.removeAll { $0.resolved && $0.tickets.isEmpty }
+        return tickets
     }
     public mutating func cancelled(_ ticket: Ticket) {
         for index in records.indices { records[index].tickets.removeAll { $0.id == ticket.id } }
         records.removeAll { $0.resolved && $0.tickets.isEmpty }
+    }
+    public mutating func requestCleanup(_ ticket: Ticket) {
+        for index in records.indices { records[index].tickets.removeAll { $0.id == ticket.id } }
+        records.removeAll { $0.resolved && $0.tickets.isEmpty }
+        records.append(Record(commandID: ticket.commandID, generation: ticket.generation, resolved: true, tickets: [ticket]))
+    }
+    public mutating func recordStop(_ commandID: UUID, until: Date) {
+        for index in records.indices where records[index].commandID == commandID && !records[index].resolved {
+            records[index].stoppedUntil = until
+        }
+    }
+    public func nextWarningNotBefore(_ commandID: UUID) -> Date? {
+        records.filter { $0.commandID == commandID && !$0.resolved }.compactMap(\.stoppedUntil).max()
     }
     public func activeTickets(_ commandID: UUID) -> [Ticket] {
         records.filter { $0.commandID == commandID && !$0.resolved }.flatMap(\.tickets).filter(\.accepted)

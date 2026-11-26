@@ -310,8 +310,9 @@ final class OpenAPS {
         )
 
         // Interval bookkeeping only: insulin remains actual basal history, never a second bolus.
-        if dosingMode.usesBasalPulse, let lastBasalPulseAt,
-           lastBasalPulseAt.timeIntervalSince1970.isFinite, lastBasalPulseAt.timeIntervalSince1970 > 0, !iob.isEmpty {
+        if let lastBasalPulseAt,
+           lastBasalPulseAt.timeIntervalSince1970.isFinite, lastBasalPulseAt.timeIntervalSince1970 > 0,
+           lastBasalPulseAt.timeIntervalSince1970 < Double(UInt64.max) / 1000, !iob.isEmpty {
             let pulseMilliseconds = UInt64(lastBasalPulseAt.timeIntervalSince1970 * 1000)
             iob[0].lastBolusTime = max(iob[0].lastBolusTime ?? 0, pulseMilliseconds)
         }

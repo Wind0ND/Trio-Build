@@ -2,6 +2,32 @@ import XCTest
 @testable import MedtrumLifecycleKit
 
 final class MedtrumShortTempAlarmOwnershipTests: XCTestCase {
+    func testStoppingSoundPreservesOwnershipAndAbsoluteRepeatWindow() throws {
+        var ledger = MedtrumShortTempAlarmOwnership()
+        let command = UUID()
+        let ticket = try XCTUnwrap(ledger.reserve(commandID: command, deadline: Date().addingTimeInterval(75)))
+        XCTAssertTrue(ledger.accept(ticket))
+        let repeatAt = Date().addingTimeInterval(60)
+        ledger.recordStop(command, until: repeatAt)
+        let restored = try JSONDecoder().decode(MedtrumShortTempAlarmOwnership.self, from: JSONEncoder().encode(ledger))
+        XCTAssertFalse(restored.isResolved(command))
+        XCTAssertEqual(restored.activeTickets(command).count, 1)
+        XCTAssertEqual(restored.nextWarningNotBefore(command), repeatAt)
+    }
+
+    func testAuthorizationAndTicketExpiryAreCheckedByFinalWriteGate() {
+        let gate = MedtrumShortTempAlarmReadiness()
+        let command = UUID()
+        let now = Date()
+        gate.replace(authorized: true, deadlines: [command: now.addingTimeInterval(75)])
+        XCTAssertTrue(gate.permits(command, at: now))
+        XCTAssertFalse(gate.permits(UUID(), at: now))
+        gate.replace(authorized: false, deadlines: [command: now.addingTimeInterval(75)])
+        XCTAssertFalse(gate.permits(command, at: now))
+        gate.replace(authorized: true, deadlines: [command: now.addingTimeInterval(-1)])
+        XCTAssertFalse(gate.permits(command, at: now))
+    }
+
     func testLateSystemAcceptanceAfterResolveIsCleanupOnlyNotResurrection() throws {
         var ledger = MedtrumShortTempAlarmOwnership()
         let command = UUID()

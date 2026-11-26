@@ -105,17 +105,18 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
                 pumpManager.delegateQueue = processQueue
                 pumpManager.pumpManagerDelegate = self
                 if let medtrum = pumpManager as? MedtrumPumpManager {
+                    medtrum.isCurrentBasalPulsePump = { [weak self, weak medtrum] in
+                        guard let self, let medtrum else { return false }
+                        return self.pumpManager === medtrum
+                    }
                     medtrum.automaticBasalPulseEnabled = { [weak self, weak medtrum] in
                         guard let self, let medtrum else { return false }
                         return self.pumpManager === medtrum && self.settingsManager.settings.dosingMode.usesBasalPulse
                     }
                     Task { @MainActor [weak self] in
-                        HiroBasalPulseAlarms.shared.attach(medtrum) {
-                            for suffix in ["", ".companion"] {
-                                self?.trioAlertManager?.retractAlert(identifier: Alert.Identifier(managerIdentifier: "Medtrum",
-                                    alertIdentifier: "com.nightscout.medtrumkit.short-temp-cancel" + suffix))
-                            }
-                        }
+                        HiroBasalPulseAlarms.shared.attach(medtrum,
+                            issueAlert: { [weak self] alert in self?.trioAlertManager?.issueAlert(alert) },
+                            retractAlert: { [weak self] identifier in self?.trioAlertManager?.retractAlert(identifier: identifier) })
                     }
                     medtrum.persistPendingDelivery = { [weak self, weak medtrum] in
                         guard let self, let medtrum else { throw CocoaError(.fileWriteUnknown) }

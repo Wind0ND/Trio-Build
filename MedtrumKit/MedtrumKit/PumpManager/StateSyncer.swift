@@ -188,6 +188,7 @@ enum StateSyncer {
                 } else if let confirmed = confirmedTempBasal(requested, basal: basal, observedAt: syncDate) {
                     confirmedRecoveryDose = confirmed
                     events.append(NewPumpEvent.tempBasal(dose: confirmed.toDoseEntry(isMutable: true)))
+                    historyCommitRequired = state.shortTempBasal?.automaticPulse == true
                     recovered = (query, "confirmed_native_temp_segment")
                     pumpManager.basalRecoveryInProgress = true
                 } else if let reason = unstartedAutomaticBasalReason(state: state, response: syncResponse, now: syncDate,

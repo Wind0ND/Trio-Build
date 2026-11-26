@@ -79,7 +79,7 @@ public struct MedtrumShortTempBasal: Codable, Equatable {
         let relative = (confirmedStart ?? requestedAt).addingTimeInterval(Double(minutes) * 60)
         return absoluteEnd.map { min($0, relative) } ?? relative
     }
-    public var estimatedUnits: Double { rate * Double(minutes) / 60 }
+    public var estimatedUnits: Double { rate * max(0, targetEnd.timeIntervalSince(confirmedStart ?? requestedAt)) / 3600 }
 
     public func confirmed(startedAt: Date, observedAt: Date, clockOffset: TimeInterval = 0,
                           sequence: Double? = nil, acknowledged: Bool = false) -> Self? {

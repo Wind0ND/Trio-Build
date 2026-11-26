@@ -1,5 +1,6 @@
 import Foundation
 import LoopKit
+import MedtrumLifecycleKit
 
 public struct MedtrumBasalRecoveryLogEntry: Sendable {
     public let timestamp: Date
@@ -171,8 +172,9 @@ extension MedtrumPumpManager {
     /// The host owns the serial storage queue, then this transaction locks the driver.
     /// Normal raw snapshots stay conservative until the candidate is durably saved.
     func completeBasalRecovery(query: MedtrumBasalSyncContext, events: [NewPumpEvent], reason: String,
-                              confirmedDose: UnfinalizedDose? = nil) {
+                              confirmedDose: UnfinalizedDose? = nil, resolvedPulseStart: Date? = nil, resolvedPulseEnd: Date? = nil) {
         var saved = true
+        var completedShort: MedtrumShortTempBasal?
         do {
             guard let persistBasalRecovery else { throw CocoaError(.fileWriteUnknown) }
             try persistBasalRecovery { save in
@@ -187,12 +189,26 @@ extension MedtrumPumpManager {
                     candidate["awaitingBasalReply"] = false
                     candidate["legacyBasalRecoveryAllowed"] = false
                     if let confirmedDose { candidate["basalDose"] = confirmedDose.rawValue }
+                    let pulseCandidate = MedtrumPumpState(rawValue: candidate)
+                    completedShort = StateSyncer.resolveAutomaticShortCandidate(state: pulseCandidate,
+                        request: self.state.pendingTempBasal, activeDose: confirmedDose,
+                        executed: reason != "unchanged_native_segment" && reason != "native_history_no_new_temp",
+                        actualStart: resolvedPulseStart ?? (confirmedDose?.type == .tempBasal ? confirmedDose?.startDate : nil),
+                        actualEnd: resolvedPulseEnd ?? (confirmedDose?.type == .basal ? confirmedDose?.startDate : nil))
+                    for key in ["shortTempBasal", "basalPulseContinuation", "lastBasalPulseAt", "lastBasalPulseSessionID", "lastBasalPulseSessionStart"] {
+                        candidate[key] = pulseCandidate.rawValue[key]
+                    }
                     try save(candidate)
                     if let confirmedDose { self.state.basalDose = confirmedDose }
                     self.state.pendingTempBasal = nil
                     self.state.basalRecoveryCheckpoint = nil
                     self.state.basalDeliveryUncertain = false
                     self.state.legacyBasalRecoveryAllowed = false
+                    self.state.shortTempBasal = pulseCandidate.shortTempBasal
+                    self.state.basalPulseContinuation = pulseCandidate.basalPulseContinuation
+                    self.state.lastBasalPulseAt = pulseCandidate.lastBasalPulseAt
+                    self.state.lastBasalPulseSessionID = pulseCandidate.lastBasalPulseSessionID
+                    self.state.lastBasalPulseSessionStart = pulseCandidate.lastBasalPulseSessionStart
                     self.deliveryGeneration = UUID()
                 }
             }
@@ -211,6 +227,7 @@ extension MedtrumPumpManager {
                            "outcome": saved ? "recovered" : "checkpoint_failed"])
             notifyStateDidChange()
         }
+        if saved, let completedShort { finishEndedShortTempBasal(completedShort) }
     }
 }
 
@@ -232,7 +249,8 @@ extension StateSyncer {
 
     static func unstartedAutomaticBasalReason(state: MedtrumPumpState, response: SynchronizePacketResponse,
                                               now: Date, evidence: [MedtrumBasalRecoveryLogEntry], deviceIdentifier: String) -> String? {
-        guard state.basalDeliveryUncertain, !state.awaitingBasalReply, state.shortTempBasal == nil,
+        guard state.basalDeliveryUncertain, !state.awaitingBasalReply,
+              state.shortTempBasal == nil || (state.shortTempBasal?.automaticPulse == true && state.shortTempBasal?.commandID == state.pendingTempBasal?.decisionId),
               let request = state.pendingTempBasal,
               request.automatic, request.type == .tempBasal, request.startDate <= now,
               request.value.isFinite, request.estimatedEndDate > request.startDate,

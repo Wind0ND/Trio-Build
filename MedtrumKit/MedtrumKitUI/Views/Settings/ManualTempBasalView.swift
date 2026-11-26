@@ -9,7 +9,7 @@ struct ManualTempBasalView: View {
         VStack {
             List {
                 if let active = viewModel.activeShortTemp {
-                    Section(LocalizedStringKey(active.automatic ? "Automatic basal pulse" : "Manual Temp Basal")) {
+                    Section(LocalizedStringKey(active.automatic ? (active.correctionPulse ? "Automatic basal pulse" : "Automatic follow-up basal") : "Manual Temp Basal")) {
                         if active.accountingUnresolved {
                             Text("Delivery history is uncertain. Automatic delivery is blocked until the records can be verified.")
                                 .foregroundStyle(.orange)
