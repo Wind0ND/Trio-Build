@@ -65,7 +65,11 @@ Files: DosingMode.swift; OpenAPS.swift; APSManager.swift; HiroExtensions/BasalOn
 
 ### Task 5: Verify, one review, deliver one trial
 
-- [ ] Run targeted pulse/short-temp/mode tests and project regression through existing unit_tests.yml release runner; inspect actual logs and counts.
+- [x] Run targeted pulse/short-temp/mode tests and project regression through existing unit_tests.yml release runner; inspect actual logs and counts.
 - [x] One fresh whole-branch review per executing-plans; resolve material findings in one test-backed fix pass; no repeated reviews.
-- [ ] Freeze final source SHA; verify remote ref and Apple latest version; dispatch one signed upload. Validate actual IPA source/version/brand/localization/hash plus Apple VALID/internal group and bilingual neutral notes.
-- [ ] Update project handoff and user-facing test instructions in current chat outputs. Report exactly what is verified vs pending device trial; do not call therapy or fault safety proven by software tests.
+- [x] Freeze final source SHA; verify remote ref and Apple latest version; dispatch one signed upload. Validate actual IPA source/version/brand/localization/hash plus Apple VALID/internal group and bilingual neutral notes.
+- [x] Update project handoff and user-facing test instructions in current chat outputs. Report exactly what is verified vs pending device trial; do not call therapy or fault safety proven by software tests.
+
+## Completion — 2026-11-26
+
+Delivered hiro1.0.2(38) to Trio Internal, app source ede254fd4af61bc4b1a065ca2afc42abc69c19b8. One source review and combined material fix pass completed. Actual final run45757445347 / artifact15089795353: host1092, Medtrum153, lifecycle39, all0 failures. Earlier identical production code algorithm229 and5 standalone packages passed; last changes only test/workflow. One signed upload45759626879 SUCCESS; actual artifact15090616879 and embedded ede254f/version38/min17.6/Chinese pulse mode/alarm audio/branding/extensions verified. IPA SHA256 bd74a9922785f5827f96f5f8f86304663669555f5f3c0efd1cb11fd3ee1f62e5; artifact digest sha256:8a32e9affa17f939d051e598b56909c4be889492577f933fb0f21bf5015838a5. Apple VALID / IN_BETA_TESTING, internal group and en-US/zh-Hans neutral copy read back. Normal checkout and feature branch preserved; no local merge/PR/worktree cleanup requested. Current user guide and project handoff saved. Device timing, sound/Focus, physical stop and therapy remain pending the user's trial; no automatic second build or repeated review/test.
