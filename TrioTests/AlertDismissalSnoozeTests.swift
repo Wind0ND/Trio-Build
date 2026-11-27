@@ -9,6 +9,20 @@ import Swinject
 @testable import Trio
 
 @MainActor @Suite("Alert notification history navigation") struct HiroAlertNotificationNavigationTests {
+    @Test("Responses arriving before services initialize are replayed exactly once") func serviceHandoff() {
+        let handoff = HiroNotificationResponseHandoff<String>()
+        var delivered: [String] = []
+        handoff.receive("default tap")
+        handoff.receive("snooze action")
+        #expect(delivered.isEmpty)
+        handoff.attach { delivered.append($0) }
+        #expect(delivered == ["default tap", "snooze action"])
+        handoff.attach { delivered.append($0) }
+        #expect(delivered.count == 2)
+        handoff.receive("dismiss action")
+        #expect(delivered == ["default tap", "snooze action", "dismiss action"])
+    }
+
     @Test("Only a normal recognized alert tap opens history") func recognizeTap() {
         let payload: [AnyHashable: Any] = [AlertUserInfoKey.managerIdentifier.rawValue: "Medtrum",
                                           AlertUserInfoKey.alertIdentifier.rawValue: "shortTempBasalCancellationFailed"]

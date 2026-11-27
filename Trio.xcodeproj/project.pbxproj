@@ -12,6 +12,7 @@
 		AA2311230000000000000021 /* BasalOnlyDosingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2311230000000000000022 /* BasalOnlyDosingMode.swift */; };
 		AA2611260000000000000051 /* BasalPulseAlarms.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2611260000000000000052 /* BasalPulseAlarms.swift */; };
 		AA2611270000000000000053 /* AlertHistoryNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2611270000000000000054 /* AlertHistoryNavigation.swift */; };
+		AA2611270000000000000055 /* NotificationResponseHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2611270000000000000056 /* NotificationResponseHandoff.swift */; };
 		AA2311230000000000000011 /* LoopTimeoutReminderPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2311230000000000000012 /* LoopTimeoutReminderPreferences.swift */; };
 		AA9300000000000000000011 /* ExtensionsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9300000000000000000001 /* ExtensionsSettingsView.swift */; };
 		AA9300000000000000000012 /* AlertJournalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9300000000000000000002 /* AlertJournalStore.swift */; };
@@ -1301,6 +1302,7 @@
 		AA2311230000000000000022 /* BasalOnlyDosingMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasalOnlyDosingMode.swift; sourceTree = "<group>"; };
 		AA2611260000000000000052 /* BasalPulseAlarms.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasalPulseAlarms.swift; sourceTree = "<group>"; };
 		AA2611270000000000000054 /* AlertHistoryNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertHistoryNavigation.swift; sourceTree = "<group>"; };
+		AA2611270000000000000056 /* NotificationResponseHandoff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationResponseHandoff.swift; sourceTree = "<group>"; };
 		AA2311230000000000000012 /* LoopTimeoutReminderPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopTimeoutReminderPreferences.swift; sourceTree = "<group>"; };
 		AA9300000000000000000001 /* ExtensionsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionsSettingsView.swift; sourceTree = "<group>"; };
 		AA9300000000000000000002 /* AlertJournalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertJournalStore.swift; sourceTree = "<group>"; };
@@ -2553,6 +2555,7 @@
 				AA2311230000000000000022 /* BasalOnlyDosingMode.swift */,
 				AA2611260000000000000052 /* BasalPulseAlarms.swift */,
 				AA2611270000000000000054 /* AlertHistoryNavigation.swift */,
+				AA2611270000000000000056 /* NotificationResponseHandoff.swift */,
 				AA2311230000000000000012 /* LoopTimeoutReminderPreferences.swift */,
 				AA9300000000000000000002 /* AlertJournalStore.swift */,
 				AA9300000000000000000003 /* AlertJournalView.swift */,
@@ -5909,6 +5912,7 @@
 				AA2311230000000000000021 /* BasalOnlyDosingMode.swift in Sources */,
 				AA2611260000000000000051 /* BasalPulseAlarms.swift in Sources */,
 				AA2611270000000000000053 /* AlertHistoryNavigation.swift in Sources */,
+				AA2611270000000000000055 /* NotificationResponseHandoff.swift in Sources */,
 				AA2311230000000000000011 /* LoopTimeoutReminderPreferences.swift in Sources */,
 				AA9300000000000000000012 /* AlertJournalStore.swift in Sources */,
 				AA9300000000000000000013 /* AlertJournalView.swift in Sources */,
