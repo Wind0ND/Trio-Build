@@ -74,14 +74,14 @@ jobs:
             -resultBundlePath "$RUNNER_TEMP/pulse-driver.xcresult" \
             -parallel-testing-enabled NO -skipPackagePluginValidation -skipMacroValidation \
             CODE_SIGN_IDENTITY='-' CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM='' \
-            PROVISIONING_PROFILE_SPECIFIER='' 2>&1 | tee pulse-driver.log
+            PROVISIONING_PROFILE_SPECIFIER='' COMPILATION_CACHE_ENABLE_CACHING=YES COMPILER_INDEX_STORE_ENABLE=NO 2>&1 | tee pulse-driver.log
       - name: Pulse mode tests
         if: always() && inputs.driver_only != true
         run: |
           set -o pipefail
           filters=()
           if [ '${{ inputs.full_app }}' != 'true' ]; then
-            filters=(-only-testing:TrioTests/BasalOnlyDosingModeTests -only-testing:TrioTests/AlarmSoundCatalogTests -only-testing:TrioTests/DosingModeMigrationTests)
+            filters=(-only-testing:TrioTests/BasalOnlyDosingModeTests -only-testing:TrioTests/AlarmSoundCatalogTests -only-testing:TrioTests/DosingModeMigrationTests -only-testing:TrioTests/HiroAlertNotificationNavigationTests -only-testing:TrioTests/AlertDismissalSnoozeTests)
           fi
           xcodebuild test -workspace Trio.xcworkspace -scheme 'Trio Tests' \
             -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
@@ -89,7 +89,7 @@ jobs:
             -resultBundlePath "$RUNNER_TEMP/pulse-host.xcresult" \
             -parallel-testing-enabled NO -skipPackagePluginValidation -skipMacroValidation \
             CODE_SIGN_IDENTITY='-' CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM='' \
-            PROVISIONING_PROFILE_SPECIFIER='' 2>&1 | tee pulse-host.log
+            PROVISIONING_PROFILE_SPECIFIER='' COMPILATION_CACHE_ENABLE_CACHING=YES COMPILER_INDEX_STORE_ENABLE=NO 2>&1 | tee pulse-host.log
       - name: Native lifecycle policy tests
         if: always()
         run: |

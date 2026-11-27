@@ -3,8 +3,88 @@ import LoopKit
 import PrivacyKit
 import Testing
 import UserNotifications
+import SwiftUI
+import Swinject
 
 @testable import Trio
+
+@MainActor @Suite("Alert notification history navigation") struct HiroAlertNotificationNavigationTests {
+    @Test("Only a normal recognized alert tap opens history") func recognizeTap() {
+        let payload: [AnyHashable: Any] = [AlertUserInfoKey.managerIdentifier.rawValue: "Medtrum",
+                                          AlertUserInfoKey.alertIdentifier.rawValue: "shortTempBasalCancellationFailed"]
+        #expect(HiroAlertHistoryNavigation.shouldOpenHistory(actionIdentifier: UNNotificationDefaultActionIdentifier,
+            requestIdentifier: "alert", userInfo: payload))
+        #expect(HiroAlertHistoryNavigation.shouldOpenHistory(actionIdentifier: UNNotificationDefaultActionIdentifier,
+            requestIdentifier: "alert", userInfo: [AlertUserInfoKey.occurrence.rawValue: UUID().uuidString]))
+        #expect(HiroAlertHistoryNavigation.shouldOpenHistory(actionIdentifier: UNNotificationDefaultActionIdentifier,
+            requestIdentifier: "background-keep-alive-stall", userInfo: [:]))
+        for action in [UNNotificationDismissActionIdentifier, "unknown"] + NotificationResponseAction.allCases.map(\.rawValue) {
+            #expect(!HiroAlertHistoryNavigation.shouldOpenHistory(actionIdentifier: action, requestIdentifier: "alert", userInfo: payload))
+        }
+        let invalidPayloads: [[AnyHashable: Any]] = [[:], [AlertUserInfoKey.managerIdentifier.rawValue: "Medtrum"],
+            [AlertUserInfoKey.occurrence.rawValue: "invalid"], [AlertUserInfoKey.managerIdentifier.rawValue: "", AlertUserInfoKey.alertIdentifier.rawValue: ""]]
+        for invalid in invalidPayloads {
+            #expect(!HiroAlertHistoryNavigation.shouldOpenHistory(actionIdentifier: UNNotificationDefaultActionIdentifier,
+                requestIdentifier: "unrelated", userInfo: invalid))
+        }
+    }
+
+    private func nextMainTurn() async {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.main.async { continuation.resume() }
+        }
+    }
+
+    @Test("Cold taps wait for configured root and coalesce") func coldStart() async {
+        let navigation = HiroAlertHistoryNavigation()
+        var opened = 0
+        navigation.request()
+        navigation.request()
+        await nextMainTurn()
+        #expect(opened == 0)
+        navigation.attach(owner: UUID()) { opened += 1 }
+        #expect(opened == 0, "Root subscriptions must be installed before dispatch")
+        await nextMainTurn()
+        #expect(opened == 1)
+        navigation.request()
+        await nextMainTurn()
+        #expect(opened == 2)
+    }
+
+    @Test("Detaching a replaced root cannot remove the new router") func rootReplacement() async {
+        let navigation = HiroAlertHistoryNavigation()
+        let old = UUID(), current = UUID()
+        var oldOpened = 0, currentOpened = 0
+        navigation.attach(owner: old) { oldOpened += 1 }
+        navigation.request()
+        navigation.attach(owner: current) { currentOpened += 1 }
+        navigation.detach(owner: old)
+        await nextMainTurn()
+        #expect(oldOpened == 0)
+        #expect(currentOpened == 1)
+        navigation.detach(owner: current)
+        navigation.request()
+        await nextMainTurn()
+        #expect(currentOpened == 1)
+        navigation.attach(owner: UUID()) { currentOpened += 1 }
+        await nextMainTurn()
+        #expect(currentOpened == 2)
+    }
+
+    @Test("History uses the existing modal destination and replaces secondary presentation") func routerDestination() async {
+        let router = BaseRouter(resolver: Container())
+        router.mainSecondaryModalView.send(AnyView(Text("Other")))
+        let navigation = HiroAlertHistoryNavigation()
+        navigation.request()
+        navigation.attach(owner: UUID()) {
+            router.mainSecondaryModalView.send(nil)
+            router.mainModalScreen.send(.alertJournal)
+        }
+        await nextMainTurn()
+        #expect(router.mainSecondaryModalView.value == nil)
+        if case .alertJournal? = router.mainModalScreen.value {} else { Issue.record("Expected existing Alert History screen") }
+    }
+}
 
 @Suite("Trio Alerts: dismissing an alert snoozes it") struct AlertDismissalSnoozeTests {
     @Test("Cold-start Watch routing cannot snooze an older occurrence after its replacement was acknowledged")

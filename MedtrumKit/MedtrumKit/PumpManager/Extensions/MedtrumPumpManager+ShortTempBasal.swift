@@ -16,6 +16,12 @@ public struct ShortTempBasalStatus {
 }
 
 extension MedtrumPumpManager {
+    func preparePulseContinuationForWrite(protectiveInterrupt: Bool, continuationOf: UUID?) {
+        if protectiveInterrupt {
+            deliveryLock.withLock { state.basalPulseContinuation = nil }
+        }
+    }
+
     public var hasActiveBasalPulse: Bool {
         deliveryLock.withLock { state.shortTempBasal?.pulseBudget != nil || state.basalPulseContinuation != nil }
     }

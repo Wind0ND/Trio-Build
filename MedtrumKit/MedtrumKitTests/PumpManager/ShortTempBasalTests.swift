@@ -4,6 +4,47 @@ import MedtrumLifecycleKit
 import XCTest
 
 final class ShortTempBasalTests: XCTestCase {
+    func testOriginalCompanionKeepsParentThroughPreWritePreparation() throws {
+        for rate in [0.0, 0.4, 1.0, 1.2] {
+            let state = makeState()
+            var parent = try XCTUnwrap(MedtrumShortTempBasal(sessionID: state.patchId,
+                sessionStartedAt: state.patchActivatedAt!, commandID: command, rate: 6,
+                minutes: 1, requestedAt: start, automatic: true))
+            parent.pulseBudget = 0.1
+            parent.pulseCompanionRate = rate
+            parent.pulseCompanionEnd = start.addingTimeInterval(1800)
+            state.shortTempBasal = nil
+            state.basalPulseContinuation = parent
+            let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+            let protective = MedtrumBasalPulsePlan.permitsProtectiveInterruption(
+                rate: rate, duration: 1740, scheduledRate: 1, pulseRate: 6)
+            manager.preparePulseContinuationForWrite(protectiveInterrupt: protective, continuationOf: command)
+            XCTAssertEqual(state.basalPulseContinuation, parent, "Companion rate \(rate) must retain its write-validation owner")
+            XCTAssertTrue(manager.hasActiveBasalPulse)
+        }
+    }
+
+    func testStaleCompanionCannotEraseCurrentParent() throws {
+        let state = makeState()
+        var parent = try XCTUnwrap(state.shortTempBasal)
+        parent.pulseBudget = 0.1
+        state.basalPulseContinuation = parent
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        manager.preparePulseContinuationForWrite(protectiveInterrupt: true, continuationOf: UUID())
+        XCTAssertEqual(state.basalPulseContinuation, parent)
+    }
+
+    func testExternalProtectiveRequestDiscardsContinuationButOrdinaryRequestDoesNot() throws {
+        let state = makeState()
+        let parent = try XCTUnwrap(state.shortTempBasal)
+        state.basalPulseContinuation = parent
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        manager.preparePulseContinuationForWrite(protectiveInterrupt: false, continuationOf: nil)
+        XCTAssertEqual(state.basalPulseContinuation, parent)
+        manager.preparePulseContinuationForWrite(protectiveInterrupt: true, continuationOf: nil)
+        XCTAssertNil(state.basalPulseContinuation)
+    }
+
     func testPulseCapabilityRequiresKnownModelAndNonProvisionalActiveSession() {
         let state = makeState()
         state.pumpSN = Data([18, 187, 192, 52])

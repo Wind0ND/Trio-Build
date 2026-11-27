@@ -803,9 +803,7 @@ public extension MedtrumPumpManager {
                 return
             }
 
-            if protectiveInterrupt {
-                self.deliveryLock.withLock { self.state.basalPulseContinuation = nil }
-            }
+            self.preparePulseContinuationForWrite(protectiveInterrupt: protectiveInterrupt, continuationOf: continuationOf)
 
             if automatic, !self.ensureAutomaticBasalBaseline() {
                 finish(.communication(MedtrumWriteError.noData))
