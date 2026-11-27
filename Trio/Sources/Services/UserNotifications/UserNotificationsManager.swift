@@ -58,6 +58,12 @@ final class BaseUserNotificationsManager: NSObject, UserNotificationsManager, In
         clearLegacyCarbsRequiredNotification()
         clearLegacyLoopNotifications()
         subscribeGlucoseUpdates()
+        Task { @MainActor [weak self] in
+            HiroAlertHistoryNavigation.earlyResponses.attach { [weak self] response in
+                guard let self else { return }
+                self.userNotificationCenter(.current(), didReceive: response, withCompletionHandler: {})
+            }
+        }
     }
 
     private func configureNotificationCategories() {

@@ -13,6 +13,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, UNUserNoti
         _: UIApplication,
         didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
+        // A launching notification may arrive before Core Data and services
+        // are ready. Capture it without resolving the application graph.
+        let notifications = UNUserNotificationCenter.current()
+        if notifications.delegate == nil { notifications.delegate = self }
+
         // Default to `true` if the key doesn't exist — Trio is opt-out, not opt-in.
         // Read before touching Firebase: an explicit opt-out means we never
         // configure it, so no component can queue or upload anything.
@@ -20,6 +25,26 @@ class AppDelegate: NSObject, UIApplicationDelegate, ObservableObject, UNUserNoti
         CrashReportingGate.configureAtLaunch(enabled: crashReportingEnabled)
 
         return true
+    }
+
+    func userNotificationCenter(
+        _: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        Task { @MainActor in
+            HiroAlertHistoryNavigation.earlyResponses.receive(response)
+            completionHandler()
+        }
+    }
+
+    func userNotificationCenter(
+        _: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        HiroAlertJournal.shared.observedNotification(notification)
+        completionHandler([.banner, .badge, .sound, .list])
     }
 
     /// Foreground-transition entry point for telemetry cadence. Re-evaluates

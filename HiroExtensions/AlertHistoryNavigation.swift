@@ -4,6 +4,7 @@ import UserNotifications
 /// Retains a notification destination until the main UI has installed its router.
 @MainActor final class HiroAlertHistoryNavigation {
     static let shared = HiroAlertHistoryNavigation()
+    static let earlyResponses = HiroNotificationResponseHandoff<UNNotificationResponse>()
     private var pending = false
     private var owner: UUID?
     private var handler: (() -> Void)?
