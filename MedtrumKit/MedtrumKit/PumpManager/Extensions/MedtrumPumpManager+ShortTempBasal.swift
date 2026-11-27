@@ -17,7 +17,10 @@ public struct ShortTempBasalStatus {
 
 extension MedtrumPumpManager {
     func preparePulseContinuationForWrite(protectiveInterrupt: Bool, continuationOf: UUID?) {
-        if protectiveInterrupt {
+        // A companion can itself be below the scheduled basal. It still needs
+        // its parent for the final write validation; only an external request
+        // supersedes that plan. Stale companion IDs are rejected by validation.
+        if protectiveInterrupt, continuationOf == nil {
             deliveryLock.withLock { state.basalPulseContinuation = nil }
         }
     }

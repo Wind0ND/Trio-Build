@@ -5,6 +5,7 @@ extension Main {
     struct RootView: BaseView {
         let resolver: Resolver
         @StateObject var state = StateModel()
+        @State private var alertHistoryOwner = UUID()
 
         @Environment(\.colorScheme) var colorScheme
         @Environment(AppState.self) var appState
@@ -23,7 +24,15 @@ extension Main {
                     wrapper.view
                 }
                 .trioAlerts(modalScheduler)
-                .onAppear(perform: configureView)
+                .onAppear {
+                    configureView()
+                    let destinationRouter = router
+                    HiroAlertHistoryNavigation.shared.attach(owner: alertHistoryOwner) {
+                        destinationRouter.mainSecondaryModalView.send(nil)
+                        destinationRouter.mainModalScreen.send(.alertJournal)
+                    }
+                }
+                .onDisappear { HiroAlertHistoryNavigation.shared.detach(owner: alertHistoryOwner) }
                 .scrollContentBackground(.hidden).background(appState.trioBackgroundColor(for: colorScheme))
         }
     }

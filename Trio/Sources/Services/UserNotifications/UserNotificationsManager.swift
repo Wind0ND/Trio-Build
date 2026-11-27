@@ -235,6 +235,10 @@ extension BaseUserNotificationsManager: UNUserNotificationCenterDelegate {
             guard let self else { return }
             HiroAlertJournal.shared.observedNotification(response.notification)
             let userInfo = response.notification.request.content.userInfo
+            if HiroAlertHistoryNavigation.shouldOpenHistory(actionIdentifier: response.actionIdentifier,
+                requestIdentifier: response.notification.request.identifier, userInfo: userInfo) {
+                HiroAlertHistoryNavigation.shared.request()
+            }
             if userInfo[AlertUserInfoKey.managerIdentifier.rawValue] is String {
                 trioAlertManager.handleNotificationResponse(response)
             } else if let quickAction = NotificationResponseAction(rawValue: response.actionIdentifier) {
