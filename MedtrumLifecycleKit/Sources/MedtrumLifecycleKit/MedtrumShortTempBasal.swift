@@ -16,6 +16,7 @@ public struct MedtrumShortTempBasal: Codable, Equatable {
     public var accountingUnresolved = false
     // Optional additions preserve the old manual intent's Codable representation.
     public var nativeTiming: Bool?
+    public var nativeCompanionRoundsUp: Bool?
     public var automaticPulse: Bool?
     public var pulseBudget: Double?
     public var pulseCompanionRate: Double?

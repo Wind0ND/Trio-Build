@@ -3,6 +3,26 @@ import XCTest
 @testable import MedtrumLifecycleKit
 
 final class MedtrumShortTempBasalTests: XCTestCase {
+    func testNativeCompanionRecomputesMinutesAfterDelayedConnection() throws {
+        var intent = try XCTUnwrap(MedtrumShortTempBasal(sessionID: session, sessionStartedAt: start.addingTimeInterval(-3600),
+            commandID: command, rate: 6, minutes: 2, requestedAt: start, automatic: true))
+        intent.nativeTiming = true
+        intent.nativeCompanionRoundsUp = false
+        intent.pulseParentCommandID = UUID()
+        intent.absoluteEnd = start.addingTimeInterval(120)
+        let prepared = try XCTUnwrap(intent.preparedForWrite(at: start.addingTimeInterval(10), uptime: 100))
+        XCTAssertEqual(prepared.minutes, 1)
+        XCTAssertEqual(prepared.nativeDuration, 60)
+        XCTAssertEqual(prepared.targetEnd, start.addingTimeInterval(70))
+        XCTAssertEqual(prepared.deadlineUptime, 160)
+        XCTAssertNil(intent.preparedForWrite(at: start.addingTimeInterval(61), uptime: 151))
+        intent.nativeCompanionRoundsUp = true
+        let protective = try XCTUnwrap(intent.preparedForWrite(at: start.addingTimeInterval(10), uptime: 100))
+        XCTAssertEqual(protective.nativeDuration, 120)
+        XCTAssertEqual(protective.targetEnd, start.addingTimeInterval(130))
+        XCTAssertFalse(protective.deadlineHasPassed(at: start.addingTimeInterval(121), uptime: 211))
+    }
+
     func testNativeTimingPersistsAndUsesRequestedMinutes() throws {
         var intent = plan(minutes: 1)
         intent.nativeTiming = true

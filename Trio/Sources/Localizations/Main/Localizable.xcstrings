@@ -360136,8 +360136,7 @@
           }
         }
       }
-    }
-,
+    },
   "Uses the existing SMB algorithm for all eligible automatic corrections, delivered only through temporary basal commands. With native short timing enabled, the pump receives the requested minutes directly. Otherwise a system alarm must be armed before starting and the phone cancels the longer temporary basal. Existing safety limits remain in effect.": {
     "localizations": {
       "zh-Hans": {
@@ -360147,8 +360146,7 @@
         }
       }
     }
-  }
-,
+  },
   "Native short temporary basal (experimental)": {
     "localizations": {
       "zh-Hans": {
