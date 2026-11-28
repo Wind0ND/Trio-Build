@@ -32,3 +32,7 @@ algorithm, safety caps, three-minute interval and actual-basal IOB accounting.
 
 No local Swift/Xcode/Bash: use existing Windows Python release tools and macOS CI.
 Already-authorized TestFlight publication needs no additional approval.
+
+## Binding user amendment: six-day observation window
+
+User confirmed total lifetime144h and closed-only pulse fallback120–144h. Hour128 is an observation point, with no software mode transition there. Extended lifespan144h with zero added grace (normal72+8 unchanged), so both displayed extended endpoints are144h; do not accidentally produce152h. Existing firmware faults still stop/guard delivery. This supersedes all 128h/final-eight-hour scope above.

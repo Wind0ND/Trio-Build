@@ -203,7 +203,7 @@ struct PatchSettingsView: View {
                                     .padding(.bottom, 10)
 
                                 Text(
-                                    "Normal lifetime is 3 days and 8 hours. Extended lifetime is shown as 5 days plus an 8-hour grace period (128 hours total). Closed Loop uses basal pulses during the final 8 hours. Other selected modes stay unchanged. Pump faults may stop delivery; this setting cannot extend the pump firmware limit.",
+                                    "Normal lifetime is 3 days and 8 hours. Extended lifetime is shown as 6 days total (144 hours) for observation. Only Closed Loop uses basal pulses from hour 120 through hour 144. Other selected modes stay unchanged. Hour 128 remains an observation point. Pump faults may stop delivery; this setting cannot extend the pump firmware limit.",
                                     comment: "warning body"
                                 )
                             }

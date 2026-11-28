@@ -360167,12 +360167,12 @@
       }
     }
   },
-  "Normal lifetime is 3 days and 8 hours. Extended lifetime is shown as 5 days plus an 8-hour grace period (128 hours total). Closed Loop uses basal pulses during the final 8 hours. Other selected modes stay unchanged. Pump faults may stop delivery; this setting cannot extend the pump firmware limit.": {
+  "Normal lifetime is 3 days and 8 hours. Extended lifetime is shown as 6 days total (144 hours) for observation. Only Closed Loop uses basal pulses from hour 120 through hour 144. Other selected modes stay unchanged. Hour 128 remains an observation point. Pump faults may stop delivery; this setting cannot extend the pump firmware limit.": {
     "localizations": {
       "zh-Hans": {
         "stringUnit": {
           "state": "translated",
-          "value": "标准期限为 3 天 8 小时。延长期限按 5 天加 8 小时宽限期显示，共 128 小时。仅“闭环模式”在最后 8 小时使用脉冲闭环，其他所选模式保持原样。泵故障可能导致停输；此设置不能延长泵固件的时限。"
+          "value": "标准期限为 3 天 8 小时。延长期限暂按总计 6 天（144 小时）显示，用于继续观察。仅“闭环模式”在第 120～144 小时使用脉冲闭环，其他所选模式保持原样。128 小时保留为观察节点。泵故障可能导致停输；此设置不能延长泵固件的时限。"
         }
       }
     }

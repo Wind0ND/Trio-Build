@@ -4,11 +4,11 @@ import MedtrumLifecycleKit
 import XCTest
 
 final class ShortTempBasalTests: XCTestCase {
-    func testExtendedLifetimeDatesTotal128HoursAndNormalDatesStay80Hours() {
+    func testExtendedLifetimeDatesTotal144HoursAndNormalDatesStay80Hours() {
         let state = makeState()
         state.expiryMode = .extended
-        XCTAssertEqual(state.patchGracePeriodFrom, state.patchActivatedAt!.addingTimeInterval(120 * 3600))
-        XCTAssertEqual(state.patchExpiresAt, state.patchActivatedAt!.addingTimeInterval(128 * 3600))
+        XCTAssertEqual(state.patchGracePeriodFrom, state.patchActivatedAt!.addingTimeInterval(144 * 3600))
+        XCTAssertEqual(state.patchExpiresAt, state.patchActivatedAt!.addingTimeInterval(144 * 3600))
         XCTAssertEqual(state.expiryMode.timer, 0)
         state.expiryMode = .default
         XCTAssertEqual(state.patchExpiresAt, state.patchActivatedAt!.addingTimeInterval(80 * 3600))
@@ -94,7 +94,7 @@ final class ShortTempBasalTests: XCTestCase {
         XCTAssertTrue(manager.shortTempAlarmRequests.isEmpty)
     }
 
-    func testFinalEightHoursRequiresExtendedKnownActiveSessionAndWindow() {
+    func testDayFiveToSixRequiresExtendedKnownActiveSessionAndWindow() {
         let state = makeState()
         state.pumpSN = Data([18, 187, 192, 52])
         state.expiryMode = .extended
@@ -102,8 +102,9 @@ final class ShortTempBasalTests: XCTestCase {
         let activation = state.patchActivatedAt!
         XCTAssertFalse(manager.isExtendedPulseWindow(at: activation.addingTimeInterval(120 * 3600 - 1)))
         XCTAssertTrue(manager.isExtendedPulseWindow(at: activation.addingTimeInterval(120 * 3600)))
-        XCTAssertTrue(manager.isExtendedPulseWindow(at: activation.addingTimeInterval(128 * 3600 - 1)))
-        XCTAssertFalse(manager.isExtendedPulseWindow(at: activation.addingTimeInterval(128 * 3600)))
+        XCTAssertTrue(manager.isExtendedPulseWindow(at: activation.addingTimeInterval(144 * 3600 - 1)))
+        XCTAssertTrue(manager.isExtendedPulseWindow(at: activation.addingTimeInterval(128 * 3600)))
+        XCTAssertFalse(manager.isExtendedPulseWindow(at: activation.addingTimeInterval(144 * 3600)))
         state.patchSessionEnded = true
         XCTAssertFalse(manager.isExtendedPulseWindow(at: activation.addingTimeInterval(121 * 3600)))
         state.patchSessionEnded = false

@@ -22,12 +22,13 @@ public enum ExpiryMode: Int {
         case .default:
             return .hours(72)
         case .extended:
-            return .hours(120)
+            return .hours(144)
         }
     }
 
     var gracePeriod: TimeInterval {
-        .hours(8)
+        // Extended mode is a total six-day observation window, not six days plus eight hours.
+        self == .default ? .hours(8) : 0
     }
 
     var timer: UInt8 {

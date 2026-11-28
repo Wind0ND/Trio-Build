@@ -4,7 +4,7 @@ import Testing
 
 @Suite("Basal-only closed-loop mode") struct BasalOnlyDosingModeTests {
     @Test("Only Closed Loop switches to pulse when the extended patch allows it")
-    func finalEightHoursOnlyChangesClosedSelection() {
+    func extendedWindowOnlyChangesClosedSelection() {
         #expect(DosingMode.closed.effectiveForDevice(basalOnly: true, pulseAvailable: true) == .basalPulse)
         #expect(DosingMode.closed.effectiveForDevice(basalOnly: false, pulseAvailable: true) == .closed)
         #expect(DosingMode.closed.effectiveForDevice(basalOnly: true, pulseAvailable: false) == .basalOnly)
