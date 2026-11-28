@@ -12,6 +12,12 @@ is the observation period. Extended lifetime is a total of144h, with no added
 8h grace; normal lifetime remains72+8h. A suspended, failed, provisional or
 ended session cannot gain pulse capability from its age.
 
+Use the existing policy's older of valid activation-derived and same-session
+verified pump ages for both120h and144h. Persist a session-scoped144h closure
+once observed/evaluated, so clock rollback or restart cannot reopen that patch.
+Old persisted policy data must still decode; a different patch cannot inherit
+the old patch's age or closure.
+
 Keep all build39 alarm code, prearming requirements, phone cancellation,
 watchdogs, companion ownership fix, notification routing and unknown/fault
 protections. Failed alarm preparation must still prevent automatic pulses.

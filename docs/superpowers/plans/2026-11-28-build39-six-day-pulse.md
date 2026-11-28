@@ -25,22 +25,23 @@
 
 ## Task1: regression tests and runtime RED
 
-- [ ] Add driver lifetime/window tests to `MedtrumKitTests/PumpManager/ShortTempBasalTests.swift`.
-- [ ] Add closed-only mode tests to `TrioTests/OpenAPSSwiftTests/BasalOnlyDosingModeTests.swift`.
-- [ ] Add inert signatures only for compilation: `effectiveForDevice(basalOnly:pulseAvailable:)` and `isExtendedPulseWindow(at:)` returning existing behavior/false.
-- [ ] Run focused macOS CI and retain runtime assertion failures.
+- [x] Add driver lifetime/window tests to `MedtrumKitTests/PumpManager/ShortTempBasalTests.swift`.
+- [x] Add closed-only mode tests to `TrioTests/OpenAPSSwiftTests/BasalOnlyDosingModeTests.swift`.
+- [x] Add inert signatures only for compilation: `effectiveForDevice(basalOnly:pulseAvailable:)` and `isExtendedPulseWindow(at:)` returning existing behavior/false.
+- [x] Run focused macOS CI and retain runtime assertion failures.
 
 ## Task2: implementation and GREEN
 
-- [ ] Set extended lifespan144h/grace0 in `MedtrumPumpState.swift`.
-- [ ] Implement confirmed active MD8301 window in `Extensions/MedtrumPumpManager+ExtendedLife.swift`.
-- [ ] Route only closed via `DosingMode.swift` and `HiroExtensions/BasalOnlyDosingMode.swift`; use effective mode in `DeviceDataManager.swift` pulse ownership closure.
-- [ ] Update only lifetime copy and Simplified Chinese localization; keep the build39 pulse description and all alarm settings.
+- [x] Set extended lifespan144h/grace0 in `MedtrumPumpState.swift`.
+- [x] Implement confirmed active MD8301 window in `Extensions/MedtrumPumpManager+ExtendedLife.swift`.
+- [x] Route only closed via `DosingMode.swift` and `HiroExtensions/BasalOnlyDosingMode.swift`; use effective mode in `DeviceDataManager.swift` pulse ownership closure.
+- [x] Update only lifetime copy and Simplified Chinese localization; keep the build39 pulse description and all alarm settings.
 - [ ] Run focused/new tests and the full existing manual macOS unit suite, inspect actual results.
 
 ## Task3: review and handoff
 
-- [ ] One fresh branch review; fix material findings with regression evidence if needed.
+- [x] One fresh branch review (one Important time-authority finding).
+- [ ] One fix pass: share `MedtrumExtendedLifePolicy` effective age, latch144h closure through existing persistence, verify disagreements/rollback/restoration/replacement and legacy data.
 - [ ] Verify changed-file list against build39, especially exact alarm/transport identity.
 - [ ] Mark build40 superseded in current handoff; preserve original release proof.
 - [ ] Commit source and save implementation/validation notes; no signed upload.

@@ -14,14 +14,15 @@ public struct MedtrumExtendedLifePolicy: Codable, Equatable {
     private var observedAt: Date?
     private var extendedSessionID: Data?
     private var restrictedSessionID: Data?
+    private var pulseWindowClosedSessionID: Data?
 
     public init() {}
 
-    // Compile-only extraction of the current driver's activation-clock window for the regression.
+    /// Age eligibility only. The driver validates model/session state and calls evaluate before this query.
     public func isWithinPulseWindow(sessionID: Data, activatedAt: Date?, now: Date) -> Bool {
-        guard let activatedAt else { return false }
-        let age = now.timeIntervalSince(activatedAt)
-        return age.isFinite && age >= 432_000 && age < 518_400
+        guard !sessionID.isEmpty, pulseWindowClosedSessionID != sessionID,
+              let age = effectiveAge(sessionID: sessionID, activatedAt: activatedAt, now: now) else { return false }
+        return age.isFinite && age >= 120 * 60 * 60 && age < 144 * 60 * 60
     }
 
     public mutating func observe(age: TimeInterval, sessionID: Data, at: Date) {
@@ -38,7 +39,12 @@ public struct MedtrumExtendedLifePolicy: Codable, Equatable {
         if activeSession, !sessionID.isEmpty, extended { extendedSessionID = sessionID }
         let result = restriction(extended: extended, activeSession: activeSession, sessionID: sessionID,
                                  activatedAt: activatedAt, now: now)
-        if result == .extendedAgeLimit { restrictedSessionID = sessionID }
+        if result == .extendedAgeLimit {
+            restrictedSessionID = sessionID
+            if let age = effectiveAge(sessionID: sessionID, activatedAt: activatedAt, now: now), age >= 144 * 60 * 60 {
+                pulseWindowClosedSessionID = sessionID
+            }
+        }
         return result
     }
 
@@ -49,6 +55,11 @@ public struct MedtrumExtendedLifePolicy: Codable, Equatable {
         guard activeSession, !sessionID.isEmpty else { return .noActiveSession }
         if restrictedSessionID == sessionID { return .extendedAgeLimit }
         guard extended || extendedSessionID == sessionID else { return .none }
+        guard let age = effectiveAge(sessionID: sessionID, activatedAt: activatedAt, now: now) else { return .ageUnknown }
+        return age >= 120 * 60 * 60 ? .extendedAgeLimit : .none
+    }
+
+    private func effectiveAge(sessionID: Data, activatedAt: Date?, now: Date) -> TimeInterval? {
         var ages: [TimeInterval] = []
         if let activatedAt {
             let elapsed = now.timeIntervalSince(activatedAt)
@@ -59,7 +70,6 @@ public struct MedtrumExtendedLifePolicy: Codable, Equatable {
             let elapsed = now.timeIntervalSince(observedAt)
             if elapsed.isFinite { ages.append(observedAge + max(0, elapsed)) }
         }
-        guard let age = ages.max() else { return .ageUnknown }
-        return age >= 120 * 60 * 60 ? .extendedAgeLimit : .none
+        return ages.max()
     }
 }
