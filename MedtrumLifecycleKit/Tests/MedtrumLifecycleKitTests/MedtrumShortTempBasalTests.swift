@@ -3,6 +3,19 @@ import XCTest
 @testable import MedtrumLifecycleKit
 
 final class MedtrumShortTempBasalTests: XCTestCase {
+    func testNativeTimingPersistsAndUsesRequestedMinutes() throws {
+        var intent = plan(minutes: 1)
+        intent.nativeTiming = true
+        let restored = try JSONDecoder().decode(MedtrumShortTempBasal.self, from: JSONEncoder().encode(intent))
+        XCTAssertEqual(restored.nativeTiming, true)
+        XCTAssertEqual(restored.nativeDuration, 60)
+        var legacyJSON = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(intent)) as? [String: Any])
+        legacyJSON.removeValue(forKey: "nativeTiming")
+        let legacy = try JSONDecoder().decode(MedtrumShortTempBasal.self, from: JSONSerialization.data(withJSONObject: legacyJSON))
+        XCTAssertNil(legacy.nativeTiming)
+        XCTAssertEqual(legacy.nativeDuration, 1800)
+    }
+
     func testLongAutomaticCompanionKeepsIdentityAndAbsoluteEnd() throws {
         var intent = try XCTUnwrap(MedtrumShortTempBasal(sessionID: session, sessionStartedAt: start.addingTimeInterval(-3600),
             commandID: command, rate: 0, minutes: 60, requestedAt: start, automatic: true))

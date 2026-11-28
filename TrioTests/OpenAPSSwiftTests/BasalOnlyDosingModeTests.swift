@@ -3,6 +3,17 @@ import Testing
 @testable import Trio
 
 @Suite("Basal-only closed-loop mode") struct BasalOnlyDosingModeTests {
+    @Test("Only Closed Loop switches to pulse when the extended patch allows it")
+    func finalEightHoursOnlyChangesClosedSelection() {
+        #expect(DosingMode.closed.effectiveForDevice(basalOnly: true, pulseAvailable: true) == .basalPulse)
+        #expect(DosingMode.closed.effectiveForDevice(basalOnly: false, pulseAvailable: true) == .closed)
+        #expect(DosingMode.closed.effectiveForDevice(basalOnly: true, pulseAvailable: false) == .basalOnly)
+        for mode in DosingMode.allCases where mode != .closed {
+            #expect(mode.effectiveForDevice(basalOnly: true, pulseAvailable: true) == mode)
+            #expect(mode.effectiveForDevice(basalOnly: false, pulseAvailable: true) == mode)
+        }
+    }
+
     #if !TRIO_ALGORITHM_PACKAGE
         @Test("Unsupported actuator selection falls back to native basal-only, never physical SMB")
         func unsupportedPumpKeepsBasalPath() {
