@@ -35,3 +35,18 @@ the existing effective-mode mechanism preserves the user's choice per patch.
 Software checks cannot demonstrate that firmware continues delivery to144h.
 The previous128h stop remains a real observation. No signed upload is included
 in this implementation request; a later build must use a new build number.
+A later release must preserve shared-dev history when integrating this39-based
+branch; do not force-push over the historical40 release. Recheck the final tree
+and running request/session compatibility before a separately authorized release.
+
+## Candidate acceptance record
+
+Implemented on the39 baseline. Full software regression46135041548 and focused
+regression46135041680 passed on production source941b8a0ea; app1097, driver161,
+algorithm230, lifecycle44, all0failures. The existing mode tests were subsequently
+registered in the app test target at1330804d9; supplemental run46137289935 proves
+5passed/0failed/0skipped, including actual pump-adapter routing and replacement.
+Production Swift/localization did not change after the full run, so it was not repeated.
+All10 selected core alarm/delivery sources retain their build39 Git content identity.
+No signed build, shared-dev rewrite, native-minute validation or144h device acceptance
+was performed. Current task proof is outside the repo in work/build39-six-day-pulse-20261128.
