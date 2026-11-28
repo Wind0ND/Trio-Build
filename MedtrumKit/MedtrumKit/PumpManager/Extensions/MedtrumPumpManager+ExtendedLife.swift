@@ -28,7 +28,16 @@ extension MedtrumPumpState {
 }
 
 extension MedtrumPumpManager {
-    public func isExtendedPulseWindow(at now: Date = Date()) -> Bool { false }
+    /// Closed Loop may use the existing protected pulse actuator from day five through day six.
+    public func isExtendedPulseWindow(at now: Date = Date()) -> Bool {
+        deliveryLock.withLock {
+            guard state.expiryMode == .extended, state.model == "MD8301", !state.patchId.isEmpty,
+                  !state.patchActivationIsProvisional, !state.patchSessionEnded, state.pumpState.isDelivering,
+                  let activated = state.patchActivatedAt else { return false }
+            let age = now.timeIntervalSince(activated)
+            return age.isFinite && age >= .hours(120) && age < .hours(144)
+        }
+    }
 
     public func automaticBolusContext(at now: Date = Date()) -> MedtrumAutomaticBolusContext {
         deliveryLock.withLock {

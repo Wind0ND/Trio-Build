@@ -112,7 +112,7 @@ struct PatchSettingsView: View {
                             formatter: { value in
                                 switch value {
                                 case 0:
-                                    return String(localized: "Use extended lifetime", comment: "Label for extended lifetime")
+                                    return String(localized: "Use extended lifetime (6 days / 144h)", comment: "Label for extended lifetime")
                                 default:
                                     return String(
                                         localized: "Use normal lifetime (3d 8h)",
@@ -193,7 +193,7 @@ struct PatchSettingsView: View {
                                     .padding(.bottom, 10)
 
                                 Text(
-                                    "The patch is intended to be used for only 3 days and 8 hours. Exceeding this time may cause the patch to become unreliable. This is NOT recommended. Consider using normal lifetime. Please be aware that new firmware in the latest generation of pump bases may block bolus commands after 10 days (240 hours).",
+                                    "Normal lifetime is 3 days and 8 hours. Extended lifetime is 6 days total (144 hours). At hour 120, Closed Loop automatically uses Basal Pulse Closed Loop through hour 144. Your saved mode and other selected modes stay unchanged. Hours 128–144 are for observation. Pump faults may stop delivery before 144 hours; this setting cannot extend the pump firmware limit.",
                                     comment: "warning body"
                                 )
                             }

@@ -1,6 +1,9 @@
 import Foundation
 import Testing
 @testable import Trio
+#if !TRIO_ALGORITHM_PACKAGE
+    @testable import MedtrumKit
+#endif
 
 @Suite("Basal-only closed-loop mode") struct BasalOnlyDosingModeTests {
     @Test("Only Closed Loop uses pulses when the extended patch window is available")
@@ -19,6 +22,31 @@ import Testing
     }
 
     #if !TRIO_ALGORITHM_PACKAGE
+        @Test("The actual pump adapter routes day-five Closed Loop and resets for a new patch")
+        func extendedPumpRoutesOnlyClosedAndResetsOnReplacement() throws {
+            for (hours, expected) in [(119.0, DosingMode.closed), (120.01, .basalPulse),
+                                      (128, .basalPulse), (143.99, .basalPulse), (144.01, .basalOnly)] {
+                let state = MedtrumPumpState(nil)
+                state.pumpSN = Data([18, 187, 192, 52])
+                state.patchId = Data([1, 0, 0, 0])
+                state.patchActivatedAt = Date().addingTimeInterval(-hours * 3600)
+                state.patchActivationIsProvisional = false
+                state.patchSessionEnded = false
+                state.pumpState = .active
+                state.expiryMode = .extended
+                let pump = MedtrumPumpManager(state: state, bluetooth: nil)
+                let selection = DosingMode.closed
+                #expect(selection.effectiveForPump(pump) == expected)
+                #expect(selection == .closed)
+                for mode in DosingMode.allCases where mode != .closed {
+                    #expect(mode.effectiveForPump(pump) == mode)
+                }
+                state.patchId = Data([2, 0, 0, 0])
+                state.patchActivatedAt = Date()
+                #expect(selection.effectiveForPump(pump) == .closed)
+            }
+        }
+
         @Test("Unsupported actuator selection falls back to native basal-only, never physical SMB")
         func unsupportedPumpKeepsBasalPath() {
             #expect(DosingMode.basalPulse.effectiveForPump(nil) == .basalOnly)

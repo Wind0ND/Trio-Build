@@ -111,7 +111,7 @@ final class BaseDeviceDataManager: DeviceDataManager, Injectable {
                     }
                     medtrum.automaticBasalPulseEnabled = { [weak self, weak medtrum] in
                         guard let self, let medtrum else { return false }
-                        return self.pumpManager === medtrum && self.settingsManager.settings.dosingMode.usesBasalPulse
+                        return self.pumpManager === medtrum && self.settingsManager.settings.dosingMode.effectiveForPump(medtrum).usesBasalPulse
                     }
                     Task { @MainActor [weak self] in
                         HiroBasalPulseAlarms.shared.attach(medtrum,

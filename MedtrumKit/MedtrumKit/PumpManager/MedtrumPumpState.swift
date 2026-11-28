@@ -22,12 +22,13 @@ public enum ExpiryMode: Int {
         case .default:
             return .hours(72)
         case .extended:
-            return .hours(240)
+            return .hours(144)
         }
     }
 
     var gracePeriod: TimeInterval {
-        .hours(8)
+        // Extended lifetime is the total observation limit, not a nominal period plus eight hours.
+        self == .default ? .hours(8) : 0
     }
 
     var timer: UInt8 {

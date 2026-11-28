@@ -39225,6 +39225,28 @@
         }
       }
     },
+    "Use extended lifetime (6 days / 144h)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用延长期限（6天／144小时）"
+          }
+        }
+      }
+    },
+    "Normal lifetime is 3 days and 8 hours. Extended lifetime is 6 days total (144 hours). At hour 120, Closed Loop automatically uses Basal Pulse Closed Loop through hour 144. Your saved mode and other selected modes stay unchanged. Hours 128–144 are for observation. Pump faults may stop delivery before 144 hours; this setting cannot extend the pump firmware limit." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标准期限为3天8小时，延长期限总计6天（144小时）。达到120小时时，若选中“闭环模式”，实际执行会自动转为“脉冲模拟SMB闭环”，持续至144小时；保存的模式及其他已选模式保持不变。128～144小时为观察时间。泵端故障可能导致144小时前停输，此设置不能延长泵的固件时限。"
+          }
+        }
+      }
+    },
     "Could not connect to the pump base" : {
       "extractionState" : "manual",
       "localizations" : {
