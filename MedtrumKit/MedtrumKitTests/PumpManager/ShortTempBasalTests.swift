@@ -4,6 +4,58 @@ import MedtrumLifecycleKit
 import XCTest
 
 final class ShortTempBasalTests: XCTestCase {
+    func testExtendedLifetimeEndsAt144HoursWithoutExtraGrace() throws {
+        let state = makeState()
+        let activated = try XCTUnwrap(state.patchActivatedAt)
+        state.expiryMode = .extended
+        XCTAssertEqual(state.patchGracePeriodFrom, activated.addingTimeInterval(518_400))
+        XCTAssertEqual(state.patchExpiresAt, activated.addingTimeInterval(518_400))
+        let restored = MedtrumPumpState(rawValue: state.rawValue)
+        XCTAssertEqual(restored.patchExpiresAt, activated.addingTimeInterval(518_400))
+        state.expiryMode = .default
+        XCTAssertEqual(state.patchGracePeriodFrom, activated.addingTimeInterval(259_200))
+        XCTAssertEqual(state.patchExpiresAt, activated.addingTimeInterval(288_000))
+    }
+
+    func testExtendedPulseWindowIncludes120And128ButEndsAt144() throws {
+        let state = makeState()
+        state.pumpSN = Data([18, 187, 192, 52])
+        state.expiryMode = .extended
+        state.patchActivationIsProvisional = false
+        let activated = try XCTUnwrap(state.patchActivatedAt)
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        for (seconds, expected) in [(431_999.0, false), (432_000, true),
+                                    (460_799, true), (460_800, true),
+                                    (518_399, true), (518_400, false), (518_401, false)] {
+            XCTAssertEqual(manager.isExtendedPulseWindow(at: activated.addingTimeInterval(seconds)), expected,
+                "patch age seconds: \(seconds)")
+        }
+        state.patchId = Data([2, 0, 0, 0])
+        state.patchActivatedAt = activated.addingTimeInterval(460_800)
+        XCTAssertFalse(manager.isExtendedPulseWindow(at: activated.addingTimeInterval(460_801)))
+    }
+
+    func testExtendedPulseWindowDoesNotGrantCapabilityToUnavailableSessions() throws {
+        for condition in 0 ... 7 {
+            let state = makeState()
+            state.pumpSN = Data([18, 187, 192, 52])
+            state.expiryMode = .extended
+            state.patchActivationIsProvisional = false
+            let now = try XCTUnwrap(state.patchActivatedAt).addingTimeInterval(460_800)
+            switch condition {
+            case 0: state.expiryMode = .default
+            case 1: state.pumpSN = Data()
+            case 2: state.patchActivationIsProvisional = true
+            case 3: state.patchSessionEnded = true
+            case 4: state.pumpState = .suspended
+            case 5: state.pumpState = .batteryOut
+            case 6: state.patchActivatedAt = nil
+            default: state.patchId = Data()
+            }
+            XCTAssertFalse(MedtrumPumpManager(state: state, bluetooth: nil).isExtendedPulseWindow(at: now))
+        }
+    }
+
     func testOriginalCompanionKeepsParentThroughPreWritePreparation() throws {
         for rate in [0.0, 0.4, 1.0, 1.2] {
             let state = makeState()

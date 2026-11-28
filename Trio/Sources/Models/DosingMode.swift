@@ -44,7 +44,7 @@ enum DosingMode: String, JSON, CaseIterable, Identifiable, Codable, Hashable {
     }
 
     /// A device restriction changes the effective mode, not the user's stored selection.
-    func effectiveForDevice(basalOnly: Bool) -> Self {
+    func effectiveForDevice(basalOnly: Bool, pulseAvailable: Bool = false) -> Self {
         self == .closed && basalOnly ? .basalOnly : self
     }
 

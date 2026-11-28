@@ -1,0 +1,31 @@
+# Build39 baseline: six-day observation with pulse routing
+
+The user's current instruction supersedes build40. Start from the delivered
+build39 app source `7df56fdc1b2609dcdd29ebe6ab5cf9f2cc1091bd`. Preserve build40
+and its release evidence as history; do not include native short timing.
+
+For a confirmed, active extended MD8301 patch, the selected `closed` mode uses
+the existing build39 `basalPulse` actuator from age >=120h to age <144h. Keep
+the stored selection so a new patch resumes its normal interpretation. Other
+selected modes remain unchanged. Hour128 has no mode transition: [128h,144h)
+is the observation period. Extended lifetime is a total of144h, with no added
+8h grace; normal lifetime remains72+8h. A suspended, failed, provisional or
+ended session cannot gain pulse capability from its age.
+
+Keep all build39 alarm code, prearming requirements, phone cancellation,
+watchdogs, companion ownership fix, notification routing and unknown/fault
+protections. Failed alarm preparation must still prevent automatic pulses.
+Do not send automatic physical boluses as a fallback, change insulin limits,
+rewrite the pump clock, suppress102 or reactivate a session automatically.
+
+## Approaches
+
+Use a new branch directly from the exact build39 app source with only lifetime,
+effective-mode routing, related copy and tests. This directly follows the
+requested baseline. Reverting selected build40 files risks retaining native
+timing dependencies and is unnecessary. Do not mutate saved settings at120h:
+the existing effective-mode mechanism preserves the user's choice per patch.
+
+Software checks cannot demonstrate that firmware continues delivery to144h.
+The previous128h stop remains a real observation. No signed upload is included
+in this implementation request; a later build must use a new build number.

@@ -28,6 +28,8 @@ extension MedtrumPumpState {
 }
 
 extension MedtrumPumpManager {
+    public func isExtendedPulseWindow(at now: Date = Date()) -> Bool { false }
+
     public func automaticBolusContext(at now: Date = Date()) -> MedtrumAutomaticBolusContext {
         deliveryLock.withLock {
             let previousPolicy = state.extendedLifePolicy
