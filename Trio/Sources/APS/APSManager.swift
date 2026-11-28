@@ -1840,7 +1840,8 @@ extension BaseAPSManager: SettingsObserver {
     func settingsDidChange(_ settings: TrioSettings) {
         let previous = lastDosingMode
         lastDosingMode = settings.dosingMode
-        if settings.dosingMode.usesBasalPulse, previous != settings.dosingMode {
+        if settings.dosingMode.usesBasalPulse, previous != settings.dosingMode,
+           (pumpManager as? MedtrumPumpManager)?.state.nativeShortTempBasalEnabled != true {
             Task { @MainActor in await CriticalAlertAlarmScheduler.requestAuthorization() }
         }
         if settings.dosingMode.automation == .off { Task { await loopGuard.cancelPendingRetry() } }

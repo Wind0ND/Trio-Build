@@ -675,6 +675,7 @@ public extension MedtrumPumpManager {
                           commandID: UUID(), rate: unitsPerHour, minutes: shortMinutes, requestedAt: Date()) else {
                     completion(.configuration(MedtrumWriteError.contextChanged)); return
                 }
+                intent.nativeTiming = self.deliveryLock.withLock { self.state.nativeShortTempBasalEnabled }
                 let start: (Bool) -> Void = { armed in
                     intent.alarmPrepared = armed
                     self.enactTempBasal(decisionId: intent.commandID, unitsPerHour: unitsPerHour,
@@ -686,7 +687,8 @@ public extension MedtrumPumpManager {
                             completion(error)
                         }
                 }
-                if let arm = self.armShortTempBasalAlarm { arm(intent.commandID, intent.targetEnd.addingTimeInterval(15), start) }
+                if intent.nativeTiming == true { start(false) }
+                else if let arm = self.armShortTempBasalAlarm { arm(intent.commandID, intent.targetEnd.addingTimeInterval(15), start) }
                 else { start(false) }
             }
             return
@@ -714,7 +716,7 @@ public extension MedtrumPumpManager {
                     shortIntentTemplate?.sessionID == self.state.patchId && shortIntentTemplate?.sessionStartedAt == self.state.patchActivatedAt &&
                     shortIntentTemplate.map { $0.targetEnd > Date() } == true) else { return false }
                 guard !isShort || self.shortTempRateAllowed(unitsPerHour, automatic: automatic) else { return false }
-                if automatic, let shortIntentTemplate {
+                if automatic, let shortIntentTemplate, shortIntentTemplate.nativeTiming != true {
                     guard self.shortTempBasalAlarmIsValid?(shortIntentTemplate.commandID) == true else { return false }
                 }
                 guard automatic || duration == 0 || self.manualTempBasalRateAllowed(unitsPerHour) else { return false }
@@ -734,7 +736,7 @@ public extension MedtrumPumpManager {
                 finish(.deviceState(MedtrumConnectError.isSuspended))
                 return
             }
-            if automatic, let shortIntentTemplate, self.shortTempBasalAlarmIsValid?(shortIntentTemplate.commandID) != true {
+            if automatic, let shortIntentTemplate, shortIntentTemplate.nativeTiming != true, self.shortTempBasalAlarmIsValid?(shortIntentTemplate.commandID) != true {
                 finish(.configuration(MedtrumBasalPulseError.alarmUnavailable)); return
             }
             guard writeValidation() else { finish(.configuration(MedtrumWriteError.contextChanged)); return }
@@ -809,7 +811,8 @@ public extension MedtrumPumpManager {
                 finish(.communication(MedtrumWriteError.noData))
                 return
             }
-            let actualDuration = Self.pumpTempBasalDuration(requested: duration, automatic: isShort ? false : automatic)
+            let actualDuration = Self.pumpTempBasalDuration(requested: duration, automatic: isShort ? false : automatic,
+                nativeTiming: shortIntentTemplate?.nativeTiming == true)
             let commandID = shortIntentTemplate?.commandID ?? (isShort ? UUID() : decisionId)
             let preparedTemplate = shortIntentTemplate?.preparedForWrite(at: Date(), uptime: ProcessInfo.processInfo.systemUptime)
             guard shortIntentTemplate == nil || preparedTemplate != nil else {
@@ -845,7 +848,7 @@ public extension MedtrumPumpManager {
                 finish(.configuration(MedtrumWriteError.persistenceFailed))
                 return
             }
-            if let shortIntent { self.shortTempBasalAlarmDidEnterDriver?(shortIntent.commandID) }
+            if let shortIntent, shortIntent.nativeTiming != true { self.shortTempBasalAlarmDidEnterDriver?(shortIntent.commandID) }
             let result = self.bluetooth.write(SetTempBasalPacket(rate: unitsPerHour, duration: actualDuration), validation: {
                 writeValidation() && self.deliveryLock.withLock {
                     guard !self.state.basalDeliveryUncertain, !self.state.bolusDeliveryUncertain,

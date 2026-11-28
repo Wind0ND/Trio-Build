@@ -1,6 +1,6 @@
 import Foundation
 
-/// A phone-side deadline. The actual pump dose always retains its native duration.
+/// A persisted short temporary-basal request, including its latched pump/phone timing strategy.
 public struct MedtrumShortTempBasal: Codable, Equatable {
     public static let supportedMinutes = Array(1 ... 10) + [15, 20, 25]
     public let sessionID: Data
@@ -49,7 +49,7 @@ public struct MedtrumShortTempBasal: Codable, Equatable {
         guard let requestedUptime else { return false }
         return uptime < requestedUptime || abs(date.timeIntervalSince(requestedAt) - (uptime - requestedUptime)) > 5
     }
-    public var nativeDuration: TimeInterval { Double(max(30, minutes)) * 60 }
+    public var nativeDuration: TimeInterval { Double(nativeTiming == true ? minutes : max(30, minutes)) * 60 }
 
     public init?(sessionID: Data, sessionStartedAt: Date, commandID: UUID,
                  rate: Double, minutes: Int, requestedAt: Date, automatic: Bool = false) {

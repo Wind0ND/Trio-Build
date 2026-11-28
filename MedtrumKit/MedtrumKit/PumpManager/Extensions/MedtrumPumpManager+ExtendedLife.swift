@@ -28,6 +28,17 @@ extension MedtrumPumpState {
 }
 
 extension MedtrumPumpManager {
+    /// Only the final eight hours of a confirmed extended patch offer pulse fallback.
+    public func isExtendedPulseWindow(at now: Date = Date()) -> Bool {
+        deliveryLock.withLock {
+            guard state.expiryMode == .extended, state.model == "MD8301",
+                  !state.patchActivationIsProvisional, !state.patchSessionEnded, state.pumpState.isDelivering,
+                  let activated = state.patchActivatedAt else { return false }
+            let age = now.timeIntervalSince(activated)
+            return age.isFinite && age >= .hours(120) && age < .hours(128)
+        }
+    }
+
     public func automaticBolusContext(at now: Date = Date()) -> MedtrumAutomaticBolusContext {
         deliveryLock.withLock {
             let previousPolicy = state.extendedLifePolicy

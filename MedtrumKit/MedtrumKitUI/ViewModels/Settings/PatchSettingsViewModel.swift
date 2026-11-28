@@ -13,6 +13,10 @@ class PatchSettingsViewModel: ObservableObject {
         didSet { checkDirtyState() }
     }
 
+    @Published var nativeShortTempBasalEnabled = false {
+        didSet { checkDirtyState() }
+    }
+
     @Published var expirationTimer: Double = 1 {
         didSet { checkDirtyState() }
     }
@@ -115,6 +119,7 @@ class PatchSettingsViewModel: ObservableObject {
 
         DispatchQueue.main.async {
             self.isDirty = (
+                pumpManager.state.nativeShortTempBasalEnabled != self.nativeShortTempBasalEnabled ||
                 pumpManager.state.maxDailyInsulin != self.maxDailyInsulin ||
                     pumpManager.state.maxHourlyInsulin != self.maxHourlyInsulin ||
                     pumpManager.state.alarmSetting.rawValue != UInt8(self.alarmSettings) ||
@@ -126,6 +131,7 @@ class PatchSettingsViewModel: ObservableObject {
     }
 
     private func updateState(pumpManager: MedtrumPumpManager) {
+        pumpManager.state.nativeShortTempBasalEnabled = nativeShortTempBasalEnabled
         pumpManager.state.maxHourlyInsulin = maxHourlyInsulin
         pumpManager.state.maxDailyInsulin = maxDailyInsulin
         pumpManager.state.alarmSetting = AlarmSettings(rawValue: UInt8(alarmSettings)) ?? .None
@@ -174,6 +180,7 @@ extension PatchSettingsViewModel: PumpManagerStatusObserver {
 
     private func loadSettings(_ state: MedtrumPumpState) {
         DispatchQueue.main.async {
+            self.nativeShortTempBasalEnabled = state.nativeShortTempBasalEnabled
             self.maxHourlyInsulin = state.maxHourlyInsulin
             self.maxDailyInsulin = state.maxDailyInsulin
             self.alarmSettings = Double(state.alarmSetting.rawValue)

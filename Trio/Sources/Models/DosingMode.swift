@@ -45,7 +45,7 @@ enum DosingMode: String, JSON, CaseIterable, Identifiable, Codable, Hashable {
 
     /// A device restriction changes the effective mode, not the user's stored selection.
     func effectiveForDevice(basalOnly: Bool, pulseAvailable: Bool = false) -> Self {
-        self == .closed && basalOnly ? .basalOnly : self
+        self == .closed && basalOnly ? (pulseAvailable ? .basalPulse : .basalOnly) : self
     }
 
     /// Modes offered in Settings.
@@ -108,7 +108,7 @@ enum DosingMode: String, JSON, CaseIterable, Identifiable, Codable, Hashable {
         case .basalOnly:
             return String(localized: "Trio automatically raises or lowers basal insulin using its existing algorithm. Automatic SMB is off. Your saved SMB preferences and safety limits stay unchanged. Manual boluses remain available.")
         case .basalPulse:
-            return String(localized: "Uses the existing SMB algorithm for all eligible automatic corrections, delivered only through temporary basal commands. A system alarm must be authorized and armed before a pulse starts. Short delivery depends on the phone cancelling the pump's native temporary basal. Existing safety limits remain in effect.")
+            return String(localized: "Uses the existing SMB algorithm for all eligible automatic corrections, delivered only through temporary basal commands. With native short timing enabled, the pump receives the requested minutes directly. Otherwise a system alarm must be armed before starting and the phone cancels the longer temporary basal. Existing safety limits remain in effect.")
         case .open:
             return String(
                 localized: "Trio still shows what it would do, but it never changes your insulin. Your pump keeps running the basal rates you set, and every dose is your choice. Trio is running in manual mode. It will not stop a low or fix a high for you."

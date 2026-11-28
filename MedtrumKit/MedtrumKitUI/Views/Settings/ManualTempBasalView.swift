@@ -24,12 +24,12 @@ struct ManualTempBasalView: View {
                                     Text(active.endDate, style: .timer).monospacedDigit()
                                 }
                             } else {
-                                Text("Cancellation pending. The temporary basal may still be running.")
+                                Text(LocalizedStringKey(active.nativeTiming ? "Waiting to confirm the pump ended delivery." : "Cancellation pending. The temporary basal may still be running."))
                                     .foregroundStyle(.orange)
                             }
                         }
-                        LabeledContent("Planned cancellation", value: active.endDate.formatted(date: .omitted, time: .standard))
-                        if !active.alarmPrepared {
+                        LabeledContent(LocalizedStringKey(active.nativeTiming ? "Planned end" : "Planned cancellation"), value: active.endDate.formatted(date: .omitted, time: .standard))
+                        if !active.nativeTiming && !active.alarmPrepared {
                             Text("System alarm protection is unavailable for this temporary delivery.")
                                 .foregroundStyle(.orange)
                         }
@@ -99,7 +99,9 @@ struct ManualTempBasalView: View {
                     }
                 } footer: {
                     Text("Estimated total = rate × minutes ÷ 60. Actual delivery depends on the pump history.")
-                    if viewModel.selectedDuration < .minutes(30) {
+                    if viewModel.nativeTimingEnabled {
+                        Text("The selected minutes are sent directly to the pump. The pump ends the temporary basal without a phone cancellation. Device support is experimental and must be verified.")
+                    } else if viewModel.selectedDuration < .minutes(30) {
                         Text("The pump is set for 30 minutes. hiro sends a cancellation at your selected time. Disconnection or background restrictions may delay cancellation, so delivery may continue for up to 30 minutes.")
                     }
                     Text(

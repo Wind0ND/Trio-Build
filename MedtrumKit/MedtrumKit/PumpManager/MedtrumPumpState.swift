@@ -22,7 +22,7 @@ public enum ExpiryMode: Int {
         case .default:
             return .hours(72)
         case .extended:
-            return .hours(240)
+            return .hours(120)
         }
     }
 
@@ -54,6 +54,7 @@ public class MedtrumPumpState: RawRepresentable {
         lastSync = rawValue["lastSync"] as? Date ?? Date.distantPast
         pumpSN = rawValue["pumpSN"] as? Data ?? Data()
         useSilentTones = rawValue["useSilentTones"] as? Bool ?? false
+        nativeShortTempBasalEnabled = rawValue["nativeShortTempBasalEnabled"] as? Bool ?? false
         lowReservoirWarning = rawValue["lowReservoirWarning"] as? Double
         sessionToken = rawValue["sessionToken"] as? Data ?? Data()
         backupSessionToken = rawValue["backupSessionToken"] as? Data ?? Data()
@@ -255,6 +256,7 @@ public class MedtrumPumpState: RawRepresentable {
         value["basalState"] = basalState.rawValue
         value["alarmSetting"] = alarmSetting.rawValue
         value["expiryMode"] = expiryMode.rawValue
+        value["nativeShortTempBasalEnabled"] = nativeShortTempBasalEnabled
         value["notificationAfterActivation"] = notificationAfterActivation
         value["useSilentTones"] = useSilentTones
 
@@ -334,6 +336,7 @@ public class MedtrumPumpState: RawRepresentable {
     public var maxHourlyInsulin: Double
     public var maxDailyInsulin: Double
     public var alarmSetting: AlarmSettings
+    public var nativeShortTempBasalEnabled = false
     public var expiryMode: ExpiryMode
     public var notificationAfterActivation: TimeInterval
 

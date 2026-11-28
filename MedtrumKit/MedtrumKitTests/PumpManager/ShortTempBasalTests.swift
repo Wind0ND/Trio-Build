@@ -4,6 +4,116 @@ import MedtrumLifecycleKit
 import XCTest
 
 final class ShortTempBasalTests: XCTestCase {
+    func testExtendedLifetimeDatesTotal128HoursAndNormalDatesStay80Hours() {
+        let state = makeState()
+        state.expiryMode = .extended
+        XCTAssertEqual(state.patchGracePeriodFrom, state.patchActivatedAt!.addingTimeInterval(120 * 3600))
+        XCTAssertEqual(state.patchExpiresAt, state.patchActivatedAt!.addingTimeInterval(128 * 3600))
+        XCTAssertEqual(state.expiryMode.timer, 0)
+        state.expiryMode = .default
+        XCTAssertEqual(state.patchExpiresAt, state.patchActivatedAt!.addingTimeInterval(80 * 3600))
+    }
+
+    func testNativeChoiceSurvivesRestartButDoesNotChangeExistingIntent() throws {
+        let state = makeState()
+        XCTAssertFalse(state.nativeShortTempBasalEnabled)
+        state.nativeShortTempBasalEnabled = true
+        let restored = MedtrumPumpState(rawValue: state.rawValue)
+        XCTAssertTrue(restored.nativeShortTempBasalEnabled)
+        XCTAssertEqual(restored.shortTempBasal?.nativeDuration, 1800)
+        var native = try XCTUnwrap(restored.shortTempBasal)
+        native.nativeTiming = true
+        restored.shortTempBasal = native
+        restored.nativeShortTempBasalEnabled = false
+        XCTAssertEqual(MedtrumPumpState(rawValue: restored.rawValue).shortTempBasal?.nativeDuration, 300)
+    }
+
+    func testNativeMinutePacketAndAlarmEnumerationKeepLegacyProtectionSeparate() throws {
+        let state = makeState()
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        var native = try XCTUnwrap(state.shortTempBasal)
+        native.nativeTiming = true
+        state.shortTempBasal = native
+        state.basalPulseContinuation = native
+        state.unresolvedShortTempBasals = [native]
+        XCTAssertTrue(manager.shortTempAlarmRequests.isEmpty)
+        for automatic in [true, false] {
+            let duration = MedtrumPumpManager.pumpTempBasalDuration(requested: 60, automatic: automatic, nativeTiming: true)
+            XCTAssertEqual(duration, 60)
+            XCTAssertEqual(SetTempBasalPacket(rate: 19.6, duration: duration).getRequestBytes(), Data([6, 136, 1, 1, 0]))
+        }
+        native.nativeTiming = nil
+        state.unresolvedShortTempBasals = [native]
+        XCTAssertEqual(manager.shortTempAlarmRequests.count, 1)
+    }
+
+    func testNativeTimerNeverAuthorizesDeadlineCancelButAllowsExplicitInterruption() throws {
+        let state = makeState()
+        var native = try XCTUnwrap(state.shortTempBasal)
+        native.nativeTiming = true
+        native = try XCTUnwrap(native.confirmed(startedAt: start, observedAt: start.addingTimeInterval(1), sequence: 5))
+        state.shortTempBasal = native
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        manager.shortTempBasalMonitoringEnabled = true
+        manager.shortTempBasalObservedSegment = basal()
+        XCTAssertFalse(manager.shortTempBasalCanCancel(command: command, at: start.addingTimeInterval(301)))
+        XCTAssertTrue(manager.shortTempBasalCanCancel(command: command, at: start.addingTimeInterval(301), requiresDeadline: false))
+    }
+
+    func testNativeNaturalCompletionKeepsCompanionAndActualBasalAccounting() throws {
+        let state = makeState()
+        var native = try XCTUnwrap(MedtrumShortTempBasal(sessionID: state.patchId,
+            sessionStartedAt: state.patchActivatedAt!, commandID: command, rate: 6,
+            minutes: 1, requestedAt: start, automatic: true))
+        native.nativeTiming = true
+        native.pulseBudget = 0.1
+        native.pulseCompanionRate = 0.4
+        native.pulseCompanionEnd = start.addingTimeInterval(1800)
+        state.shortTempBasal = native
+        XCTAssertTrue(StateSyncer.reconcileShortTempBasal(state: state, basal: basal(), observedAt: start.addingTimeInterval(1), fullSync: true))
+        XCTAssertEqual(state.basalDose.estimatedEndDate, start.addingTimeInterval(60))
+        XCTAssertFalse(StateSyncer.reconcileShortTempBasal(state: state, basal: basal(.STANDARD, at: start.addingTimeInterval(60), rate: 1), observedAt: start.addingTimeInterval(61), fullSync: false))
+        XCTAssertNotNil(state.shortTempBasal)
+        XCTAssertTrue(StateSyncer.reconcileShortTempBasal(state: state, basal: basal(.STANDARD, at: start.addingTimeInterval(60), rate: 1), observedAt: start.addingTimeInterval(61), fullSync: true))
+        XCTAssertNil(state.shortTempBasal)
+        XCTAssertEqual(state.shortTempBasalTransitionTime, start.addingTimeInterval(60))
+        XCTAssertEqual(state.basalPulseContinuation?.nativeTiming, true)
+        XCTAssertFalse(state.basalDeliveryUncertain)
+    }
+
+    func testNativeObservationFailureKeepsProtectionWithoutCancellationAlarm() throws {
+        let state = makeState()
+        state.shortTempBasal?.nativeTiming = true
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        manager.reportShortTempBasalFailure = { _ in XCTFail("Native timing must not start a cancellation alarm") }
+        manager.reportBasalPulseCompanionFailure = { _ in XCTFail("Native timing must not start a companion AlarmKit ticket") }
+        manager.reportNativeTempBasalFailure(command: command)
+        XCTAssertTrue(state.basalDeliveryUncertain)
+        XCTAssertTrue(state.shortTempBasal?.accountingUnresolved == true)
+        XCTAssertFalse(state.shortTempBasal?.cancellationFailed ?? true)
+        XCTAssertTrue(manager.shortTempAlarmRequests.isEmpty)
+    }
+
+    func testFinalEightHoursRequiresExtendedKnownActiveSessionAndWindow() {
+        let state = makeState()
+        state.pumpSN = Data([18, 187, 192, 52])
+        state.expiryMode = .extended
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        let activation = state.patchActivatedAt!
+        XCTAssertFalse(manager.isExtendedPulseWindow(at: activation.addingTimeInterval(120 * 3600 - 1)))
+        XCTAssertTrue(manager.isExtendedPulseWindow(at: activation.addingTimeInterval(120 * 3600)))
+        XCTAssertTrue(manager.isExtendedPulseWindow(at: activation.addingTimeInterval(128 * 3600 - 1)))
+        XCTAssertFalse(manager.isExtendedPulseWindow(at: activation.addingTimeInterval(128 * 3600)))
+        state.patchSessionEnded = true
+        XCTAssertFalse(manager.isExtendedPulseWindow(at: activation.addingTimeInterval(121 * 3600)))
+        state.patchSessionEnded = false
+        state.expiryMode = .default
+        XCTAssertFalse(manager.isExtendedPulseWindow(at: activation.addingTimeInterval(121 * 3600)))
+        state.expiryMode = .extended
+        state.patchActivatedAt = activation.addingTimeInterval(121 * 3600)
+        XCTAssertFalse(manager.isExtendedPulseWindow(at: activation.addingTimeInterval(121 * 3600)))
+    }
+
     func testOriginalCompanionKeepsParentThroughPreWritePreparation() throws {
         for rate in [0.0, 0.4, 1.0, 1.2] {
             let state = makeState()

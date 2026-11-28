@@ -8,6 +8,7 @@ class ManualTempBasalViewModel: ObservableObject {
     @Published var enactingBolus: Bool = false
     @Published var error: String? = nil
     @Published var activeShortTemp: ShortTempBasalStatus?
+    @Published var nativeTimingEnabled = false
     @Published var hasManualTemp = false
     @Published var maximumRate: Double?
     @Published var historyNeedsReview = false
@@ -27,6 +28,7 @@ class ManualTempBasalViewModel: ObservableObject {
     }
 
     func refreshStatus() {
+        nativeTimingEnabled = pumpManager?.state.nativeShortTempBasalEnabled ?? false
         activeShortTemp = pumpManager?.shortTempBasalStatus
         hasManualTemp = pumpManager?.hasManualTempBasal ?? false
         enactingBolus = pumpManager?.state.bolusDose != nil

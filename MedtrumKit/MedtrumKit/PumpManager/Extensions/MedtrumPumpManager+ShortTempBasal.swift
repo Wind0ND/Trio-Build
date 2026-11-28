@@ -10,6 +10,7 @@ public struct ShortTempBasalStatus {
     public let awaitingConfirmation: Bool
     public let cancellationFailed: Bool
     public let accountingUnresolved: Bool
+    public let nativeTiming: Bool
     public let alarmPrepared: Bool
     public let automatic: Bool
     public let correctionPulse: Bool
@@ -81,7 +82,7 @@ extension MedtrumPumpManager {
             var intents = state.unresolvedShortTempBasals
             if let active = state.shortTempBasal { intents.append(active) }
             if let continuation = state.basalPulseContinuation { intents.append(continuation) }
-            return intents.map { ($0.commandID, $0.targetEnd.addingTimeInterval(15)) }
+            return intents.filter { $0.nativeTiming != true }.map { ($0.commandID, $0.targetEnd.addingTimeInterval(15)) }
         }
     }
 
@@ -107,8 +108,9 @@ extension MedtrumPumpManager {
                       isValid(), self.automaticBasalPulseEnabled?() == true,
                       var intent = MedtrumShortTempBasal(sessionID: self.state.patchId, sessionStartedAt: sessionStart,
                           commandID: UUID(), rate: plan.rate, minutes: plan.minutes, requestedAt: Date(), automatic: true) else { return nil }
+                intent.nativeTiming = self.state.nativeShortTempBasalEnabled
                 intent.pulseBudget = plan.extraUnits
-                intent.alarmPrepared = true
+                intent.alarmPrepared = intent.nativeTiming != true
                 if plan.companionMinutes > 0 {
                     intent.pulseCompanionRate = plan.companionRate
                     intent.pulseCompanionEnd = plan.companionEnd ?? intent.requestedAt.addingTimeInterval(Double(plan.companionMinutes) * 60)
@@ -117,6 +119,12 @@ extension MedtrumPumpManager {
             }
             guard let template else {
                 completion(.configuration(MedtrumWriteError.contextChanged)); return
+            }
+            if template.nativeTiming == true {
+                self.enactTempBasal(decisionId: template.commandID, unitsPerHour: plan.rate,
+                    duration: Double(plan.minutes) * 60, automatic: true, validation: isValid, shortIntent: template,
+                    completion: completion)
+                return
             }
             guard let arm = self.armShortTempBasalAlarm else {
                 completion(.configuration(MedtrumBasalPulseError.alarmUnavailable)); return
@@ -148,8 +156,13 @@ extension MedtrumPumpManager {
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self else { return }
             do { try self.checkpointDelivery() }
-            catch { self.emitAlert(alertType: .shortTempBasalCancellationFailed); return }
-            if self.deliveryLock.withLock({ self.state.basalPulseContinuation?.commandID != intent.commandID }) {
+            catch {
+                if intent.nativeTiming == true {
+                    self.pumpDelegate.notify { $0?.pumpManager(self, didError: .configuration(MedtrumWriteError.persistenceFailed)) }
+                } else { self.emitAlert(alertType: .shortTempBasalCancellationFailed) }
+                return
+            }
+            if intent.nativeTiming != true, self.deliveryLock.withLock({ self.state.basalPulseContinuation?.commandID != intent.commandID }) {
                 self.retireShortTempBasalAlarm?(intent.commandID)
             }
             self.servicePulseCompanion()
@@ -169,7 +182,8 @@ extension MedtrumPumpManager {
         guard let pending else { return }
         guard let maximum = manualTempBasalMaximum else {
             deliveryLock.withLock { pulseContinuationInFlight = false }
-            reportBasalPulseCompanionFailure?(pending.commandID)
+            if pending.nativeTiming == true { reportNativeTempBasalFailure(command: pending.commandID) }
+            else { reportBasalPulseCompanionFailure?(pending.commandID) }
             return
         }
         let companionRate = pending.pulseCompanionRate.flatMap { proposed in
@@ -193,7 +207,15 @@ extension MedtrumPumpManager {
             return
         }
         let remaining = end.timeIntervalSinceNow
-        let duration = ceil(remaining / 60) * 60
+        // Never extend an above-profile companion when converting to whole pump minutes.
+        // A protective reduction may last the rounded-up minute instead of ending early.
+        let duration = pending.nativeTiming == true && rate > basalPulseScheduledRate
+            ? floor(remaining / 60) * 60 : ceil(remaining / 60) * 60
+        guard duration >= 60 else {
+            deliveryLock.withLock { state.basalPulseContinuation = nil; pulseContinuationInFlight = false }
+            finishEndedShortTempBasal(pending)
+            return
+        }
         let callback: (PumpManagerError?) -> Void = { [weak self] error in
             guard let self else { return }
             self.deliveryLock.withLock {
@@ -203,16 +225,26 @@ extension MedtrumPumpManager {
                 }
             }
             if error == nil { self.finishEndedShortTempBasal(pending) }
+            else if pending.nativeTiming == true { self.reportNativeTempBasalFailure(command: pending.commandID) }
             else if let report = self.reportBasalPulseCompanionFailure { report(pending.commandID) }
             else { self.emitAlert(alertType: .basalPulseContinuationFailed) }
         }
         guard var template = MedtrumShortTempBasal(sessionID: pending.sessionID, sessionStartedAt: pending.sessionStartedAt,
-            commandID: UUID(), rate: rate, minutes: Int(duration / 60), requestedAt: Date(), automatic: true),
-            let arm = armShortTempBasalAlarm else { callback(.configuration(MedtrumWriteError.contextChanged)); return }
-        template.absoluteEnd = end
+            commandID: UUID(), rate: rate, minutes: Int(duration / 60), requestedAt: Date(), automatic: true) else {
+            callback(.configuration(MedtrumWriteError.contextChanged)); return
+        }
+        template.nativeTiming = pending.nativeTiming
+        template.absoluteEnd = pending.nativeTiming == true ? template.requestedAt.addingTimeInterval(duration) : end
         template.pulseParentCommandID = pending.commandID
-        template.alarmPrepared = true
+        template.alarmPrepared = template.nativeTiming != true
         guard template.isValid else { callback(.configuration(MedtrumWriteError.contextChanged)); return }
+        if template.nativeTiming == true {
+            enactTempBasal(decisionId: template.commandID, unitsPerHour: rate, duration: duration,
+                automatic: true, validation: valid, shortIntent: template, continuationOf: pending.commandID,
+                completion: callback)
+            return
+        }
+        guard let arm = armShortTempBasalAlarm else { callback(.configuration(MedtrumWriteError.contextChanged)); return }
         arm(template.commandID, end.addingTimeInterval(15)) { [weak self] armed in
             guard let self else { return }
             guard armed, valid() else {
@@ -229,8 +261,22 @@ extension MedtrumPumpManager {
         }
     }
 
-    static func pumpTempBasalDuration(requested: TimeInterval, automatic: Bool) -> TimeInterval {
-        !automatic && requested > 0 && requested < .minutes(30) ? .minutes(30) : requested
+    static func pumpTempBasalDuration(requested: TimeInterval, automatic: Bool, nativeTiming: Bool = false) -> TimeInterval {
+        !nativeTiming && !automatic && requested > 0 && requested < .minutes(30) ? .minutes(30) : requested
+    }
+
+    /// Ordinary unknown-delivery reporting, never the legacy cancellation AlarmKit callback.
+    func reportNativeTempBasalFailure(command: UUID) {
+        let current = deliveryLock.withLock {
+            guard state.shortTempBasal?.commandID == command || state.basalPulseContinuation?.commandID == command else { return false }
+            state.basalDeliveryUncertain = true
+            if state.shortTempBasal?.commandID == command { state.shortTempBasal?.accountingUnresolved = true }
+            notifyStateDidChange()
+            return true
+        }
+        guard current else { return }
+        emitShortTempBasalDiagnostic("failed")
+        pumpDelegate.notify { $0?.pumpManager(self, didError: .uncertainDelivery) }
     }
     public var shortTempBasalStatus: ShortTempBasalStatus? {
         deliveryLock.withLock {
@@ -239,7 +285,7 @@ extension MedtrumPumpManager {
                 estimatedUnits: intent.estimatedUnits,
                 awaitingConfirmation: intent.confirmedStart == nil || state.basalDeliveryUncertain,
                 cancellationFailed: intent.cancellationFailed, accountingUnresolved: intent.accountingUnresolved,
-                alarmPrepared: intent.alarmPrepared == true, automatic: intent.automaticPulse == true,
+                nativeTiming: intent.nativeTiming == true, alarmPrepared: intent.alarmPrepared == true, automatic: intent.automaticPulse == true,
                 correctionPulse: intent.pulseBudget != nil)
         }
     }
@@ -280,7 +326,7 @@ extension MedtrumPumpManager {
     func serviceShortTempBasalDeadline() {
         servicePulseCompanion()
         let shifted: UUID? = deliveryLock.withLock {
-            guard let intent = state.shortTempBasal, intent.clockMappingChanged(at: Date()),
+            guard let intent = state.shortTempBasal, intent.nativeTiming != true, intent.clockMappingChanged(at: Date()),
                   !shortTempClockAlerted.contains(intent.commandID) else { return nil }
             shortTempClockAlerted = [intent.commandID]
             return intent.commandID
@@ -289,7 +335,8 @@ extension MedtrumPumpManager {
         let command: UUID? = deliveryLock.withLock {
             guard persistPendingDelivery != nil, shortTempBasalMonitoringEnabled, !state.patchSessionEnded,
                   bluetooth != nil, let intent = state.shortTempBasal,
-                  intent.deadlineHasPassed(at: Date()) || intent.clockMappingChanged(at: Date()),
+                  (intent.nativeTiming == true ? Date() >= intent.targetEnd.addingTimeInterval(5) :
+                    intent.deadlineHasPassed(at: Date()) || intent.clockMappingChanged(at: Date())),
                   ProcessInfo.processInfo.systemUptime >= shortTempBasalNextAttemptUptime,
                   !shortTempBasalCheckInFlight else { return nil }
             shortTempBasalCheckInFlight = true
@@ -311,6 +358,11 @@ extension MedtrumPumpManager {
             }
             if self.deferShortTempBasalUntilDeadline(command: command, now: Date()) {
                 self.finishShortTempBasalAttempt(command: command, error: false); return
+            }
+            if self.deliveryLock.withLock({ self.state.shortTempBasal?.nativeTiming == true }) {
+                // A native timer is observed, never cancelled by the phone deadline.
+                self.finishShortTempBasalAttempt(command: command, error: true)
+                return
             }
             let canCancel = self.deliveryLock.withLock { self.shortTempBasalCanCancel(command: command, at: Date()) }
             guard canCancel else { self.finishShortTempBasalAttempt(command: command, error: true); return }
@@ -340,6 +392,7 @@ extension MedtrumPumpManager {
 
     func shortTempBasalCanCancel(command: UUID, at now: Date, requiresDeadline: Bool = true) -> Bool {
         guard let intent = state.shortTempBasal, intent.commandID == command,
+              (!requiresDeadline || intent.nativeTiming != true),
               !state.patchSessionEnded, state.basalState == .tempBasal,
               !state.basalDeliveryUncertain, !state.bolusDeliveryUncertain,
               shortTempBasalMonitoringEnabled, state.pumpState.isDelivering, state.bolusState == .noBolus,
@@ -355,6 +408,12 @@ extension MedtrumPumpManager {
     }
 
     private func finishShortTempBasalAttempt(command: UUID, error: Bool) {
+        if deliveryLock.withLock({ state.shortTempBasal?.commandID == command && state.shortTempBasal?.nativeTiming == true }) {
+            deliveryLock.withLock { shortTempBasalCheckInFlight = false }
+            if error { reportNativeTempBasalFailure(command: command) }
+            DispatchQueue.global(qos: .utility).async { [weak self] in try? self?.checkpointDelivery() }
+            return
+        }
         let shouldAlert = deliveryLock.withLock {
             shortTempBasalCheckInFlight = false
             guard error, state.shortTempBasal?.commandID == command,

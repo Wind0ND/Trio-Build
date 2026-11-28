@@ -1,10 +1,10 @@
 {
   "en-US": {
     "description": "hiro is a personal test build with customizable on-screen presentation, viewing protection and device connectivity.",
-    "whats_new": "Fixed follow-up execution after a pulse. Tapping an alert notification now opens Alert History."
+    "whats_new": "Added an optional native short timer for supported devices, updated the lifetime display, and refined automatic mode handling near the end of a session."
   },
   "zh-Hans": {
     "description": "hiro 是用于个人测试的应用版本，提供可自定义的界面展示、查看保护和设备连接功能。",
-    "whats_new": "修复脉冲结束后的配套段接续问题；点击警报通知可直接打开警报记录。"
+    "whats_new": "新增可选的设备原生短时定时，更新使用期限显示，调整会话末段的自动模式处理。"
   }
 }

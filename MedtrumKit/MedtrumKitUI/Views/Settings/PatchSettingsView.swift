@@ -21,6 +21,11 @@ struct PatchSettingsView: View {
             ScrollViewReader { proxy in
                 List {
                     Section {
+                        Toggle(String(localized: "Native short temporary basal (experimental)"),
+                            isOn: $viewModel.nativeShortTempBasalEnabled)
+                        Text(String(localized: "For manual short delivery and automatic pulses, send the selected minutes directly to the pump. No phone deadline cancellation or cancellation alarm is used. Verify that your pump accepts the duration and ends delivery itself."))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                         sectionItem(
                             title: String(localized: "Max hourly insulin", comment: "Label for maximum hourly insulin delivery"),
                             isEditing: isEditingMaxHourly,
@@ -186,6 +191,11 @@ struct PatchSettingsView: View {
 
                     if viewModel.expirationTimer == 0 {
                         Section {
+                        Toggle(String(localized: "Native short temporary basal (experimental)"),
+                            isOn: $viewModel.nativeShortTempBasalEnabled)
+                        Text(String(localized: "For manual short delivery and automatic pulses, send the selected minutes directly to the pump. No phone deadline cancellation or cancellation alarm is used. Verify that your pump accepts the duration and ends delivery itself."))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                             VStack {
                                 Text("Use at your own risk!", comment: "warning title")
                                     .font(.headline)
@@ -193,7 +203,7 @@ struct PatchSettingsView: View {
                                     .padding(.bottom, 10)
 
                                 Text(
-                                    "The patch is intended to be used for only 3 days and 8 hours. Exceeding this time may cause the patch to become unreliable. This is NOT recommended. Consider using normal lifetime. Please be aware that new firmware in the latest generation of pump bases may block bolus commands after 10 days (240 hours).",
+                                    "Normal lifetime is 3 days and 8 hours. Extended lifetime is shown as 5 days plus an 8-hour grace period (128 hours total). Closed Loop uses basal pulses during the final 8 hours. Other selected modes stay unchanged. Pump faults may stop delivery; this setting cannot extend the pump firmware limit.",
                                     comment: "warning body"
                                 )
                             }

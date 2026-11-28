@@ -39236,6 +39236,67 @@
         }
       }
     }
+,
+  "Native short temporary basal (experimental)": {
+    "localizations": {
+      "zh-Hans": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "泵端原生短时定时（实验）"
+        }
+      }
+    }
+  },
+  "For manual short delivery and automatic pulses, send the selected minutes directly to the pump. No phone deadline cancellation or cancellation alarm is used. Verify that your pump accepts the duration and ends delivery itself.": {
+    "localizations": {
+      "zh-Hans": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "手动短时输注和自动脉冲直接向泵发送所选分钟数，不依赖手机到点取消及取消专用闹钟。请验证泵接受该时长并能自行结束。"
+        }
+      }
+    }
+  },
+  "Normal lifetime is 3 days and 8 hours. Extended lifetime is shown as 5 days plus an 8-hour grace period (128 hours total). Closed Loop uses basal pulses during the final 8 hours. Other selected modes stay unchanged. Pump faults may stop delivery; this setting cannot extend the pump firmware limit.": {
+    "localizations": {
+      "zh-Hans": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "标准期限为 3 天 8 小时。延长期限按 5 天加 8 小时宽限期显示，共 128 小时。仅“闭环模式”在最后 8 小时使用脉冲闭环，其他所选模式保持原样。泵故障可能导致停输；此设置不能延长泵固件的时限。"
+        }
+      }
+    }
+  },
+  "Waiting to confirm the pump ended delivery.": {
+    "localizations": {
+      "zh-Hans": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "等待确认泵已自行结束输注。"
+        }
+      }
+    }
+  },
+  "Planned end": {
+    "localizations": {
+      "zh-Hans": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "预计结束"
+        }
+      }
+    }
+  },
+  "The selected minutes are sent directly to the pump. The pump ends the temporary basal without a phone cancellation. Device support is experimental and must be verified.": {
+    "localizations": {
+      "zh-Hans": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "直接向泵发送所选分钟数，由泵自行结束临时基础率，无需手机取消。设备支持情况仍须实测验证。"
+        }
+      }
+    }
+  }
   },
   "version" : "1.0"
 }
