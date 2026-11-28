@@ -1,8 +1,5 @@
 name: Build39 six-day pulse regression
 on:
-  push:
-    branches: [feat/build39-six-day-pulse-20261128]
-    paths-ignore: ['docs/**']
   workflow_dispatch:
 jobs:
   mode:
