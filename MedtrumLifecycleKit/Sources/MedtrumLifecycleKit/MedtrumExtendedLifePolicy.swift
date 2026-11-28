@@ -17,6 +17,13 @@ public struct MedtrumExtendedLifePolicy: Codable, Equatable {
 
     public init() {}
 
+    // Compile-only extraction of the current driver's activation-clock window for the regression.
+    public func isWithinPulseWindow(sessionID: Data, activatedAt: Date?, now: Date) -> Bool {
+        guard let activatedAt else { return false }
+        let age = now.timeIntervalSince(activatedAt)
+        return age.isFinite && age >= 432_000 && age < 518_400
+    }
+
     public mutating func observe(age: TimeInterval, sessionID: Data, at: Date) {
         guard age.isFinite, age >= 0, !sessionID.isEmpty, at.timeIntervalSince1970.isFinite else { return }
         if observedSessionID == sessionID, let observedAge, age <= observedAge { return }

@@ -10,7 +10,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: sudo xcode-select -s /Applications/Xcode_26.5.app/Contents/Developer
+      - name: Test shared session-age policy
+        run: |
+          set -o pipefail
+          swift test --package-path MedtrumLifecycleKit 2>&1 | tee six-day-policy.log
       - name: Test effective dosing mode
+        if: always()
         run: |
           set -o pipefail
           swift test --package-path AlgorithmPackage --filter BasalOnlyDosingModeTests 2>&1 | tee six-day-mode.log
@@ -18,7 +23,7 @@ jobs:
         if: always()
         with:
           name: six-day-mode-log
-          path: six-day-mode.log
+          path: six-day-*.log
   driver:
     runs-on: macos-26
     steps:

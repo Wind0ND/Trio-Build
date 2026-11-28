@@ -56,6 +56,30 @@ final class ShortTempBasalTests: XCTestCase {
         }
     }
 
+    func testPulseWindowUsesReportedAgeAndPersistsItsClosureAcrossClockRollback() throws {
+        let state = makeState()
+        state.pumpSN = Data([18, 187, 192, 52])
+        state.expiryMode = .extended
+        state.patchActivationIsProvisional = false
+        state.patchActivatedAt = start.addingTimeInterval(-514_800)
+        state.extendedLifePolicy.observe(age: 518_399, sessionID: state.patchId, at: start)
+        let manager = MedtrumPumpManager(state: state, bluetooth: nil)
+        XCTAssertTrue(manager.isExtendedPulseWindow(at: start))
+        XCTAssertFalse(manager.isExtendedPulseWindow(at: start.addingTimeInterval(1)))
+        let restored = MedtrumPumpManager(state: MedtrumPumpState(rawValue: manager.rawState), bluetooth: nil)
+        XCTAssertFalse(restored.isExtendedPulseWindow(at: start.addingTimeInterval(-60)))
+    }
+
+    func testPulseWindowStartsWhenVerifiedPumpAgeReaches120Hours() throws {
+        let state = makeState()
+        state.pumpSN = Data([18, 187, 192, 52])
+        state.expiryMode = .extended
+        state.patchActivationIsProvisional = false
+        state.patchActivatedAt = start.addingTimeInterval(-3600)
+        state.extendedLifePolicy.observe(age: 432_000, sessionID: state.patchId, at: start)
+        XCTAssertTrue(MedtrumPumpManager(state: state, bluetooth: nil).isExtendedPulseWindow(at: start))
+    }
+
     func testOriginalCompanionKeepsParentThroughPreWritePreparation() throws {
         for rate in [0.0, 0.4, 1.0, 1.2] {
             let state = makeState()
