@@ -7,7 +7,7 @@ public struct MedtrumShortTempBasal: Codable, Equatable {
     public let sessionStartedAt: Date
     public let commandID: UUID
     public let rate: Double
-    public let minutes: Int
+    public private(set) var minutes: Int
     public private(set) var requestedAt: Date
     public private(set) var confirmedStart: Date?
     public private(set) var pumpStart: Date?
@@ -34,10 +34,16 @@ public struct MedtrumShortTempBasal: Codable, Equatable {
         var result = self
         result.requestedAt = date
         result.requestedUptime = uptime
-        result.deadlineUptime = uptime + result.targetEnd.timeIntervalSince(date)
         result.confirmedStart = nil
         result.pumpStart = nil
         result.segmentSequence = nil
+        if nativeTiming == true, pulseParentCommandID != nil, let absoluteEnd {
+            let remainingMinutes = absoluteEnd.timeIntervalSince(date) / 60
+            let rounded = nativeCompanionRoundsUp == true ? ceil(remainingMinutes) : floor(remainingMinutes)
+            guard rounded >= 1, rounded <= 120 else { return nil }
+            result.minutes = Int(rounded)
+        }
+        result.deadlineUptime = uptime + result.targetEnd.timeIntervalSince(date)
         return result.isValid ? result : nil
     }
     public func deadlineHasPassed(at date: Date, uptime: TimeInterval = ProcessInfo.processInfo.systemUptime) -> Bool {
@@ -79,7 +85,14 @@ public struct MedtrumShortTempBasal: Codable, Equatable {
 
     public var targetEnd: Date {
         let relative = (confirmedStart ?? requestedAt).addingTimeInterval(Double(minutes) * 60)
-        return absoluteEnd.map { min($0, relative) } ?? relative
+        // The native timer ends a whole number of minutes after the actual pump start.
+        // For companions absoluteEnd retains the algorithm endpoint for write validation.
+        return nativeTiming == true ? relative : (absoluteEnd.map { min($0, relative) } ?? relative)
+    }
+    public func permitsNativeWrite(at date: Date) -> Bool {
+        guard nativeTiming == true, pulseParentCommandID != nil,
+              nativeCompanionRoundsUp != true, let absoluteEnd else { return true }
+        return date.addingTimeInterval(nativeDuration) <= absoluteEnd
     }
     public var estimatedUnits: Double { rate * max(0, targetEnd.timeIntervalSince(confirmedStart ?? requestedAt)) / 3600 }
 

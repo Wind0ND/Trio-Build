@@ -811,13 +811,13 @@ public extension MedtrumPumpManager {
                 finish(.communication(MedtrumWriteError.noData))
                 return
             }
-            let actualDuration = Self.pumpTempBasalDuration(requested: duration, automatic: isShort ? false : automatic,
-                nativeTiming: shortIntentTemplate?.nativeTiming == true)
             let commandID = shortIntentTemplate?.commandID ?? (isShort ? UUID() : decisionId)
             let preparedTemplate = shortIntentTemplate?.preparedForWrite(at: Date(), uptime: ProcessInfo.processInfo.systemUptime)
             guard shortIntentTemplate == nil || preparedTemplate != nil else {
                 finish(.configuration(MedtrumWriteError.contextChanged)); return
             }
+            let actualDuration = preparedTemplate?.nativeTiming == true ? preparedTemplate!.nativeDuration :
+                Self.pumpTempBasalDuration(requested: duration, automatic: isShort ? false : automatic)
             var tempBasalDose = UnfinalizedDose(
                 decisionId: commandID, tempRate: unitsPerHour, duration: actualDuration,
                 insulinType: self.state.insulinType, automatic: automatic, startDate: preparedTemplate?.requestedAt ?? Date()
@@ -856,7 +856,8 @@ public extension MedtrumPumpManager {
                           self.state.pendingTempBasal?.estimatedEndDate == tempBasalDose.estimatedEndDate,
                           self.state.pendingTempBasal?.value == tempBasalDose.value,
                           !automatic || self.state.basalRecoveryCheckpoint?.matches(tempBasalDose) == true else { return false }
-                    return !isShort || self.state.shortTempBasal?.commandID == commandID
+                    return (!isShort || self.state.shortTempBasal?.commandID == commandID) &&
+                        (shortIntent?.permitsNativeWrite(at: Date()) ?? true)
                 }
             })
             if case let .failure(error) = result {

@@ -15,6 +15,8 @@ final class MedtrumShortTempBasalTests: XCTestCase {
         XCTAssertEqual(prepared.nativeDuration, 60)
         XCTAssertEqual(prepared.targetEnd, start.addingTimeInterval(70))
         XCTAssertEqual(prepared.deadlineUptime, 160)
+        XCTAssertTrue(prepared.permitsNativeWrite(at: start.addingTimeInterval(10)))
+        XCTAssertFalse(prepared.permitsNativeWrite(at: start.addingTimeInterval(61)))
         XCTAssertNil(intent.preparedForWrite(at: start.addingTimeInterval(61), uptime: 151))
         intent.nativeCompanionRoundsUp = true
         let protective = try XCTUnwrap(intent.preparedForWrite(at: start.addingTimeInterval(10), uptime: 100))

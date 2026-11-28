@@ -234,7 +234,8 @@ extension MedtrumPumpManager {
             callback(.configuration(MedtrumWriteError.contextChanged)); return
         }
         template.nativeTiming = pending.nativeTiming
-        template.absoluteEnd = pending.nativeTiming == true ? template.requestedAt.addingTimeInterval(duration) : end
+        template.absoluteEnd = end
+        template.nativeCompanionRoundsUp = pending.nativeTiming == true ? rate <= basalPulseScheduledRate : nil
         template.pulseParentCommandID = pending.commandID
         template.alarmPrepared = template.nativeTiming != true
         guard template.isValid else { callback(.configuration(MedtrumWriteError.contextChanged)); return }
@@ -411,7 +412,11 @@ extension MedtrumPumpManager {
         if deliveryLock.withLock({ state.shortTempBasal?.commandID == command && state.shortTempBasal?.nativeTiming == true }) {
             deliveryLock.withLock { shortTempBasalCheckInFlight = false }
             if error { reportNativeTempBasalFailure(command: command) }
-            DispatchQueue.global(qos: .utility).async { [weak self] in try? self?.checkpointDelivery() }
+            DispatchQueue.global(qos: .utility).async { [weak self] in
+                guard let self else { return }
+                do { try self.checkpointDelivery() }
+                catch { self.pumpDelegate.notify { $0?.pumpManager(self, didError: .configuration(MedtrumWriteError.persistenceFailed)) } }
+            }
             return
         }
         let shouldAlert = deliveryLock.withLock {
